@@ -1,6 +1,6 @@
 # 松屿 SONG ISLE · 个人技术空间与数字档案
 
-> **品牌**：松屿 (SONG ISLE) · 杨松  
+> **品牌**：松屿 (SONG ISLE) 
 > **核心定位**：个人技术内容与项目展示空间（“技术网站 × 编辑杂志 × 个人数字空间”）  
 > **设计系统**：Quiet Digital · Minimal · Technical · Calm · Refined · Digital Island  
 > **基础色板**：底色 `#F7F8FA` · 主字 `#111827` · 次级字 `#64748B` · 细边框 `#E5E7EB` · 强调色 `#6F88B5`
