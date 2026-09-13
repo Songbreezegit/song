@@ -1,0 +1,14 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script type="module">
+import React, {useState} from 'react';
+import {createRoot} from 'react-dom/client';
+import {SiteLoader} from '/src/components/SiteLoader.tsx';
+import '/src/index.css'; import '/src/App.css';
+function Test() {
+ const [run,setRun]=useState(0), [report,setReport]=useState('选择首次或再次访问测试'), [loading,setLoading]=useState(false);
+ const begin=(first)=>{if(first)sessionStorage.removeItem('song-isle-intro');else sessionStorage.setItem('song-isle-intro','seen'); window.started=performance.now();setRun(v=>v+1);setLoading(true);setReport('计时中');};
+ const ready=React.useCallback(()=>setReport('资源就绪、Hero 开始进入：'+Math.round(performance.now()-window.started)+'ms'),[]);
+ return React.createElement('div',null,React.createElement('div',{style:{position:'fixed',zIndex:100,top:20,left:20}},React.createElement('button',{onClick:()=>begin(true)},'测试首次访问'), ' / ', React.createElement('button',{onClick:()=>begin(false)},'测试再次访问'),React.createElement('p',{role:'status'},report)),loading&&React.createElement(SiteLoader,{key:run,onReady:ready}));
+}
+createRoot(document.getElementById('root')).render(React.createElement(Test));
+</script></body></html>
+

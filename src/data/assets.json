@@ -1,0 +1,212 @@
+{
+  "about-badge-curious-human": {
+    "src": "/assets/about/about-badge-curious-human.webp",
+    "width": 700,
+    "height": 314
+  },
+  "about-divider-nice-to-meet-you": {
+    "src": "/assets/about/about-divider-nice-to-meet-you.webp",
+    "width": 700,
+    "height": 182
+  },
+  "about-hero-illustration": {
+    "src": "/assets/about/about-hero-illustration.webp",
+    "width": 1400,
+    "height": 1046
+  },
+  "about-icon-code": {
+    "src": "/assets/about/about-icon-code.webp",
+    "width": 700,
+    "height": 550
+  },
+  "about-icon-envelope": {
+    "src": "/assets/about/about-icon-envelope.webp",
+    "width": 600,
+    "height": 700
+  },
+  "about-icon-mountain": {
+    "src": "/assets/about/about-icon-mountain.webp",
+    "width": 700,
+    "height": 610
+  },
+  "about-icon-profile-list": {
+    "src": "/assets/about/about-icon-profile-list.webp",
+    "width": 651,
+    "height": 700
+  },
+  "about-icon-spark": {
+    "src": "/assets/about/about-icon-spark.webp",
+    "width": 655,
+    "height": 700
+  },
+  "about-icon-sprout": {
+    "src": "/assets/about/about-icon-sprout.webp",
+    "width": 662,
+    "height": 700
+  },
+  "contact-badge-open-for-ideas": {
+    "src": "/assets/contact/contact-badge-open-for-ideas.webp",
+    "width": 700,
+    "height": 258
+  },
+  "contact-hero-illustration": {
+    "src": "/assets/contact/contact-hero-illustration.webp",
+    "width": 1395,
+    "height": 1051
+  },
+  "contact-icon-bilibili": {
+    "src": "/assets/contact/contact-icon-bilibili.webp",
+    "width": 675,
+    "height": 700
+  },
+  "contact-icon-github": {
+    "src": "/assets/contact/contact-icon-github.webp",
+    "width": 582,
+    "height": 700
+  },
+  "contact-icon-link": {
+    "src": "/assets/contact/contact-icon-link.webp",
+    "width": 700,
+    "height": 699
+  },
+  "contact-icon-message": {
+    "src": "/assets/contact/contact-icon-message.webp",
+    "width": 700,
+    "height": 636
+  },
+  "contact-icon-spark": {
+    "src": "/assets/contact/contact-icon-spark.webp",
+    "width": 700,
+    "height": 588
+  },
+  "contact-icon-x": {
+    "src": "/assets/contact/contact-icon-x.webp",
+    "width": 677,
+    "height": 700
+  },
+  "home-background-grid": {
+    "src": "/assets/home/home-background-grid.webp",
+    "width": 700,
+    "height": 700
+  },
+  "home-badge-now-building": {
+    "src": "/assets/home/home-badge-now-building.webp",
+    "width": 700,
+    "height": 355
+  },
+  "home-badge-open-source": {
+    "src": "/assets/home/home-badge-open-source.webp",
+    "width": 700,
+    "height": 258
+  },
+  "home-decoration-leaves": {
+    "src": "/assets/home/home-decoration-leaves.webp",
+    "width": 700,
+    "height": 677
+  },
+  "home-hero-illustration": {
+    "src": "/assets/home/home-hero-illustration.webp",
+    "width": 1083,
+    "height": 1198
+  },
+  "home-logo-wordmark": {
+    "src": "/assets/home/home-logo-wordmark.webp",
+    "width": 700,
+    "height": 158
+  },
+  "home-scroll-indicator": {
+    "src": "/assets/home/home-scroll-indicator.webp",
+    "width": 361,
+    "height": 700
+  },
+  "notes-badge-self-learning": {
+    "src": "/assets/notes/notes-badge-self-learning.webp",
+    "width": 700,
+    "height": 293
+  },
+  "notes-divider-more-notes": {
+    "src": "/assets/notes/notes-divider-more-notes.webp",
+    "width": 700,
+    "height": 131
+  },
+  "notes-hero-illustration": {
+    "src": "/assets/notes/notes-hero-illustration.webp",
+    "width": 1400,
+    "height": 1039
+  },
+  "notes-icon-github-shield": {
+    "src": "/assets/notes/notes-icon-github-shield.webp",
+    "width": 699,
+    "height": 700
+  },
+  "notes-icon-note-list": {
+    "src": "/assets/notes/notes-icon-note-list.webp",
+    "width": 690,
+    "height": 700
+  },
+  "notes-icon-sprout": {
+    "src": "/assets/notes/notes-icon-sprout.webp",
+    "width": 700,
+    "height": 677
+  },
+  "notes-scroll-indicator": {
+    "src": "/assets/notes/notes-scroll-indicator.webp",
+    "width": 497,
+    "height": 700
+  },
+  "notes-slogan-small-notes": {
+    "src": "/assets/notes/notes-slogan-small-notes.webp",
+    "width": 700,
+    "height": 472
+  },
+  "work-badge-good-projects": {
+    "src": "/assets/work/work-badge-good-projects.webp",
+    "width": 700,
+    "height": 258
+  },
+  "work-badge-open-source": {
+    "src": "/assets/work/work-badge-open-source.webp",
+    "width": 700,
+    "height": 237
+  },
+  "work-decoration-rays": {
+    "src": "/assets/work/work-decoration-rays.webp",
+    "width": 700,
+    "height": 536
+  },
+  "work-divider-more-to-explore": {
+    "src": "/assets/work/work-divider-more-to-explore.webp",
+    "width": 700,
+    "height": 104
+  },
+  "work-hero-illustration": {
+    "src": "/assets/work/work-hero-illustration.webp",
+    "width": 1400,
+    "height": 1015
+  },
+  "work-icon-layers": {
+    "src": "/assets/work/work-icon-layers.webp",
+    "width": 700,
+    "height": 686
+  },
+  "work-icon-sprout": {
+    "src": "/assets/work/work-icon-sprout.webp",
+    "width": 700,
+    "height": 699
+  },
+  "work-project-cover-fuji": {
+    "src": "/assets/work/work-project-cover-fuji.webp",
+    "width": 700,
+    "height": 651
+  },
+  "work-scroll-indicator": {
+    "src": "/assets/work/work-scroll-indicator.webp",
+    "width": 486,
+    "height": 700
+  },
+  "work-slogan-small-projects": {
+    "src": "/assets/work/work-slogan-small-projects.webp",
+    "width": 700,
+    "height": 577
+  }
+}
