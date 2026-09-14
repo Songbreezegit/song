@@ -80,7 +80,7 @@ export const PROFILE = {
     github: 'https://github.com/Songbreezegit',
     x: 'https://x.com/song_breezed',
     email: 'dogfishgcordialf@gmail.com',
-    bilibili: 'https://space.bilibili.com',
+    bilibili: 'https://space.bilibili.com/399489276',
   },
 };
 
@@ -97,7 +97,7 @@ export const PROJECTS: Project[] = [
     featured: true,
     description: '基于 Jetpack Compose 构建的 Android 记账应用，注重交互细节与全本地离线隐私保护，杜绝人情对账糊涂账。',
     techStack: ['Android', 'Kotlin', 'Jetpack Compose', 'Room Database', 'Material 3', 'MVI'],
-    githubUrl: 'https://github.com/Songbreezegit/lizhang',
+    githubUrl: 'https://github.com/Songbreezegit/LizhangApp.git',
     liveUrl: '',
     imageTheme: {
       bgColor: '#1E293B',
@@ -660,7 +660,7 @@ export const CONTACT_DATA = {
   githubUser: '@Songbreezegit',
   x: 'https://x.com/song_breezed',
   xUser: '@song_breezed',
-  bilibili: 'https://space.bilibili.com',
+  bilibili: 'https://space.bilibili.com/399489276',
   bilibiliUser: '松屿 (Bilibili)',
   status: 'Open for freelance, interesting open-source collabs & discussions.',
 };
