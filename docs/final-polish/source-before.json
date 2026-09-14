@@ -1,0 +1,102 @@
+[
+  {
+    "Path": "D:\\code\\song\\src\\App.css",
+    "Hash": "3A7C066A8D874321DC67F379DC6B60981C07A2252D3593C3CAE23F96C40A4F10"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\App.tsx",
+    "Hash": "48827378976E2296D177ABDFFCD94E6D3D3CB949EF21F5CACE3304990A13E6F4"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\home-calibration.css",
+    "Hash": "CFCEF36C63E23A6EF089E7B5CB35F361AB7342EBBE212DF03191267FAAF269C7"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\index.css",
+    "Hash": "0942DED16C92A5F94F8C6EA32597E9C57B26EC1D166B38D1C9974D102F5DCD8F"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\main.tsx",
+    "Hash": "AC5F938588586CB32965C7020C34572E76E16CE81525E5CDB23ACE9D03A496CA"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\Asset.tsx",
+    "Hash": "D1F1E91CCF70668D40B769851E1E38B64D429E951EA33C1806457AEE3D9E81FB"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\CTAButton.tsx",
+    "Hash": "2787EA4BCFA7137156905051E0672183937042E720AD41D9C4EF82AD03CAF562"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\DetailModal.tsx",
+    "Hash": "26A1C59AB3B47581768DB056F8ADFBEE79016C67F5DE6753DF3AF052D5AAAAE7"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\Footer.tsx",
+    "Hash": "6FCC8C85511075C0E5D6C04D2FBA6FDDA74DF1786F6C82190387FC56491C42B9"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\Navbar.tsx",
+    "Hash": "E7B8F35169E2E6970D9FC619DAF7A1CD082C64D3C7D62F78891311A738F9663F"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\NoteCard.tsx",
+    "Hash": "8EC6E0E5383A36E2FE6157706836D8FE65D2372DD48EF5EE6B0876D93890E6F6"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\ProjectCard.tsx",
+    "Hash": "9EE04DB79EA24D2E064F7C3323328A82443C025CE9609518A64367EB6554CC2B"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\ScrollReveal.tsx",
+    "Hash": "27748761ACA7CEE7CAB3F29353FF695A992ECC73E909ED12E998AA2F30DECFF6"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\SiteLoader.tsx",
+    "Hash": "0DC7DC1AF434F626DF122CC529479FCFAFD1A5F7152847A1F7E3EFDCD6FA730E"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\sections\\AboutSection.tsx",
+    "Hash": "0AE214B599875471FF3427F2B989E3D66594186223D5F9D0A34A867FBADDCABB"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\sections\\ContactSection.tsx",
+    "Hash": "FF8E81D782D24B37F0B099B1543C0E7B25CD7949B6CD0656B250780977F8555A"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\sections\\HeroSection.tsx",
+    "Hash": "02D75D97BA2D0EBBEDED96756D82D9AA436AFB0941A604C5448C4FCAD4A439F7"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\sections\\NotesSection.tsx",
+    "Hash": "86CA58E79916DFA31C1A5D3919D335F1E474E07686083476C4C82BE9E60A843B"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\sections\\WorkSection.tsx",
+    "Hash": "A0F0344988B9EDF04C670F153FC53DEC0E38453B7C5E3C7E482F5751777A5FE7"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\context\\ThemeContext.tsx",
+    "Hash": "DFF970B2EDA93562920BA053C4AFD4A44DF536A7FC0832820CDDBE8A96501ED5"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\context\\ThemeContextDefinition.ts",
+    "Hash": "775F49967EABC1ABC699539530408AB5C2C7B76056968D9D9DF7CA1FEB08FC02"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\context\\useTheme.ts",
+    "Hash": "D61B3E63EAC23D42EA62AEF58969EB1824E3638AAB7B3C19007DFC82C035C47C"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\data\\portfolioData.ts",
+    "Hash": "6E4289FE6738E128192BEE4FC94B223E1AFB19DA0C05D18A1C54D79AB0E6D64B"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\hooks\\usePointerShift.ts",
+    "Hash": "E1D496F1136A158D64B8ED007BC67CE412920644739DA2B795B9E1E2420E2171"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\hooks\\useScrollReveal.ts",
+    "Hash": "FC93C3FA070320197B9E98B10BFB6D8B45B01E1C378ECA2CCF9B4B56603245FF"
+  }
+]

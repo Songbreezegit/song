@@ -1,0 +1,30 @@
+[
+  {
+    "Path": "D:\\code\\song\\src\\components\\sections\\WorkSection.tsx",
+    "Hash": "A0F0344988B9EDF04C670F153FC53DEC0E38453B7C5E3C7E482F5751777A5FE7"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\sections\\NotesSection.tsx",
+    "Hash": "86CA58E79916DFA31C1A5D3919D335F1E474E07686083476C4C82BE9E60A843B"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\sections\\AboutSection.tsx",
+    "Hash": "0AE214B599875471FF3427F2B989E3D66594186223D5F9D0A34A867FBADDCABB"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\sections\\ContactSection.tsx",
+    "Hash": "FF8E81D782D24B37F0B099B1543C0E7B25CD7949B6CD0656B250780977F8555A"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\components\\SiteLoader.tsx",
+    "Hash": "0DC7DC1AF434F626DF122CC529479FCFAFD1A5F7152847A1F7E3EFDCD6FA730E"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\App.tsx",
+    "Hash": "48827378976E2296D177ABDFFCD94E6D3D3CB949EF21F5CACE3304990A13E6F4"
+  },
+  {
+    "Path": "D:\\code\\song\\src\\data\\portfolioData.ts",
+    "Hash": "6E4289FE6738E128192BEE4FC94B223E1AFB19DA0C05D18A1C54D79AB0E6D64B"
+  }
+]

@@ -1,0 +1,53 @@
+/* The accepted Home container is the site-wide source of truth.
+   Keep 86vw verbatim: 100% - 14vw differs when a scrollbar is present. */
+:root {
+  --site-max-width: 1400px;
+  --site-gutter: 7vw;
+  --site-container-width: min(86vw, var(--site-max-width));
+}
+.container { width:var(--site-container-width);margin-inline:auto; }
+@media(max-width:900px) {
+  :root { --site-gutter:28px;--site-container-width:calc(100% - 2 * var(--site-gutter)); }
+}
+@media(max-width:600px) {
+  :root { --site-gutter:20px; }
+}
+
+/* Trim only section padding by 12%; content still determines the height. */
+.section { padding-top:77.44px;padding-bottom:57.2px; }
+.contact-section { padding-top:74.8px; }
+@media(max-width:800px) {
+  .section { padding-top:72.16px; }
+}
+@media(max-width:600px) {
+  .section { padding-top:70.4px; }
+}
+
+/* Preserve reading measures inside the wider outer rails. */
+.note-row p { max-width:62ch; }
+.note-featured p,.about-bio p { max-width:52ch; }
+@media(min-width:1051px) {
+  .about-grid { column-gap:48px; }
+}
+
+/* Secondary badges remain smaller than Home; motion is unchanged. */
+.work-illustration .floating-badge { width:190.4px;top:-15px; }
+.notes-illustration .floating-badge { width:190.4px;top:-29px; }
+.about-illustration .floating-badge { width:212.8px;top:-5px; }
+.contact-illustration .floating-badge { width:218.4px;top:-43px; }
+@media(max-width:1050px) {
+  .work-illustration .floating-badge { width:156.8px; }
+  .contact-illustration .floating-badge { width:184.8px; }
+}
+@media(max-width:800px) {
+  .work-illustration .floating-badge { top:-27px; }
+  .notes-illustration .floating-badge { width:145.6px;top:-20px; }
+  .about-illustration .floating-badge { width:162.4px;top:-25px; }
+  .contact-illustration .floating-badge { width:162.4px;top:-30px; }
+}
+@media(max-width:600px) {
+  .work-illustration .floating-badge { top:-10px; }
+  .notes-illustration .floating-badge { width:162.4px;top:-5px; }
+  .about-illustration .floating-badge { top:-20px; }
+  .contact-illustration .floating-badge { width:179.2px;top:-32px; }
+}

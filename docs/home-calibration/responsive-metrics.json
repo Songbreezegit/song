@@ -1,0 +1,555 @@
+[
+  {
+    "clientWidth": 1425,
+    "items": [
+      {
+        "display": "grid",
+        "font": "16px",
+        "height": 779.9999389648438,
+        "selector": ".home-grid",
+        "width": 1238.3948974609375,
+        "x": 93.1386489868164,
+        "y": 78.35293579101562
+      },
+      {
+        "display": "block",
+        "font": "96.48px",
+        "height": 299.3193054199219,
+        "selector": ".hero-copy h1",
+        "width": 594.4285278320312,
+        "x": 93.1386489868164,
+        "y": 188.52099609375
+      },
+      {
+        "display": "block",
+        "font": "96.48px",
+        "height": 89.72268676757812,
+        "selector": ".hero-last",
+        "width": 571.525146484375,
+        "x": 93.1386489868164,
+        "y": 398.11761474609375
+      },
+      {
+        "display": "flex",
+        "font": "16px",
+        "height": 619.1974487304688,
+        "selector": ".hero-art",
+        "width": 643.9537353515625,
+        "x": 687.5671997070312,
+        "y": 177.16384887695312
+      },
+      {
+        "display": "block",
+        "font": "16px",
+        "height": 804.4158935546875,
+        "selector": ".hero-person",
+        "width": 727.1974487304688,
+        "x": 687.5671997070312,
+        "y": 131.9369659423828
+      },
+      {
+        "display": "flex",
+        "font": "14px",
+        "height": 48.39075469970703,
+        "selector": ".hero-meta",
+        "width": 594.4285278320312,
+        "x": 93.1386489868164,
+        "y": 747.9705200195312
+      },
+      {
+        "display": "grid",
+        "font": "16px",
+        "height": 83.19327545166016,
+        "selector": ".header-inner",
+        "width": 1238.3948974609375,
+        "x": 93.1386489868164,
+        "y": 0
+      },
+      {
+        "display": "flex",
+        "font": "16px",
+        "height": 67.97898864746094,
+        "selector": ".site-header nav",
+        "width": 418.3739318847656,
+        "x": 503.142822265625,
+        "y": 7.600840091705322
+      }
+    ],
+    "scrollWidth": 1425,
+    "width": 1440
+  },
+  {
+    "clientWidth": 1521,
+    "items": [
+      {
+        "display": "grid",
+        "font": "16px",
+        "height": 793.8402709960938,
+        "selector": ".home-grid",
+        "width": 1320.9578857421875,
+        "x": 99.85713958740234,
+        "y": 78.35293579101562
+      },
+      {
+        "display": "block",
+        "font": "102.912px",
+        "height": 318.7940979003906,
+        "selector": ".hero-copy h1",
+        "width": 634.0587768554688,
+        "x": 99.85713958740234,
+        "y": 188.52099609375
+      },
+      {
+        "display": "block",
+        "font": "102.912px",
+        "height": 95.69747161865234,
+        "selector": ".hero-last",
+        "width": 609.6176147460938,
+        "x": 99.85713958740234,
+        "y": 411.61761474609375
+      },
+      {
+        "display": "flex",
+        "font": "16px",
+        "height": 660.4789428710938,
+        "selector": ".hero-art",
+        "width": 686.8865356445312,
+        "x": 733.9158935546875,
+        "y": 149.72268676757812
+      },
+      {
+        "display": "block",
+        "font": "16px",
+        "height": 858.0377807617188,
+        "selector": ".hero-person",
+        "width": 775.6764526367188,
+        "x": 733.9158935546875,
+        "y": 92.15545654296876
+      },
+      {
+        "display": "flex",
+        "font": "14px",
+        "height": 48.39075469970703,
+        "selector": ".hero-meta",
+        "width": 634.0587768554688,
+        "x": 99.85713958740234,
+        "y": 761.8108520507812
+      },
+      {
+        "display": "grid",
+        "font": "16px",
+        "height": 83.19327545166016,
+        "selector": ".header-inner",
+        "width": 1320.9578857421875,
+        "x": 99.85713958740234,
+        "y": 0
+      },
+      {
+        "display": "flex",
+        "font": "16px",
+        "height": 67.97898864746094,
+        "selector": ".site-header nav",
+        "width": 418.3739318847656,
+        "x": 551.142822265625,
+        "y": 7.600840091705322
+      }
+    ],
+    "scrollWidth": 1521,
+    "width": 1536
+  },
+  {
+    "clientWidth": 1585,
+    "items": [
+      {
+        "display": "grid",
+        "font": "16px",
+        "height": 806.9495239257812,
+        "selector": ".home-grid",
+        "width": 1376.4578857421875,
+        "x": 104.36974334716795,
+        "y": 78.35293579101562
+      },
+      {
+        "display": "block",
+        "font": "107.236px",
+        "height": 331.9033508300781,
+        "selector": ".hero-copy h1",
+        "width": 660.6932373046875,
+        "x": 104.36974334716795,
+        "y": 188.52099609375
+      },
+      {
+        "display": "block",
+        "font": "107.236px",
+        "height": 99.7184829711914,
+        "selector": ".hero-last",
+        "width": 635.2310791015625,
+        "x": 104.36974334716795,
+        "y": 420.7058715820313
+      },
+      {
+        "display": "flex",
+        "font": "16px",
+        "height": 664.9915771484375,
+        "selector": ".hero-art",
+        "width": 715.7520751953125,
+        "x": 765.06298828125,
+        "y": 158.31932067871094
+      },
+      {
+        "display": "block",
+        "font": "16px",
+        "height": 873.88232421875,
+        "selector": ".hero-person",
+        "width": 789.9957275390625,
+        "x": 765.06298828125,
+        "y": 89.420166015625
+      },
+      {
+        "display": "flex",
+        "font": "14px",
+        "height": 48.39075469970703,
+        "selector": ".hero-meta",
+        "width": 660.6932373046875,
+        "x": 104.36974334716795,
+        "y": 774.9201049804688
+      },
+      {
+        "display": "grid",
+        "font": "16px",
+        "height": 83.19327545166016,
+        "selector": ".header-inner",
+        "width": 1376.4578857421875,
+        "x": 104.36974334716795,
+        "y": 0
+      },
+      {
+        "display": "flex",
+        "font": "16px",
+        "height": 67.97898864746094,
+        "selector": ".site-header nav",
+        "width": 418.3739318847656,
+        "x": 583.4117431640625,
+        "y": 7.600840091705322
+      }
+    ],
+    "scrollWidth": 1585,
+    "width": 1600
+  },
+  {
+    "clientWidth": 1009,
+    "items": [
+      {
+        "display": "grid",
+        "font": "16px",
+        "height": 689.9999389648438,
+        "selector": ".home-grid",
+        "width": 881.0924072265625,
+        "x": 64.05882263183594,
+        "y": 78.35293579101562
+      },
+      {
+        "display": "block",
+        "font": "68.644px",
+        "height": 214.97897338867188,
+        "selector": ".hero-copy h1",
+        "width": 422.9243469238281,
+        "x": 64.05882263183594,
+        "y": 183.7310791015625
+      },
+      {
+        "display": "block",
+        "font": "68.644px",
+        "height": 63.83192825317383,
+        "selector": ".hero-last",
+        "width": 406.6512451171875,
+        "x": 64.05882263183594,
+        "y": 334.8781433105469
+      },
+      {
+        "display": "flex",
+        "font": "16px",
+        "height": 440.5462036132813,
+        "selector": ".hero-art",
+        "width": 458.16802978515625,
+        "x": 486.983154296875,
+        "y": 267.80670166015625
+      },
+      {
+        "display": "block",
+        "font": "16px",
+        "height": 506.8108825683594,
+        "selector": ".hero-person",
+        "width": 458.16802978515625,
+        "x": 486.983154296875,
+        "y": 266.5335998535156
+      },
+      {
+        "display": "flex",
+        "font": "12px",
+        "height": 61.38655090332031,
+        "selector": ".hero-meta",
+        "width": 422.9243469238281,
+        "x": 64.05882263183594,
+        "y": 646.9663696289062
+      },
+      {
+        "display": "grid",
+        "font": "16px",
+        "height": 83.19327545166016,
+        "selector": ".header-inner",
+        "width": 881.0924072265625,
+        "x": 64.05882263183594,
+        "y": 0
+      },
+      {
+        "display": "flex",
+        "font": "16px",
+        "height": 67.97898864746094,
+        "selector": ".site-header nav",
+        "width": 354.3907470703125,
+        "x": 327.4033508300781,
+        "y": 7.600840091705322
+      }
+    ],
+    "scrollWidth": 1009,
+    "width": 1024
+  },
+  {
+    "clientWidth": 753,
+    "items": [
+      {
+        "display": "grid",
+        "font": "16px",
+        "height": 649.9915771484375,
+        "selector": ".home-grid",
+        "width": 696.6680297851562,
+        "x": 27.99579620361328,
+        "y": 77.99999237060547
+      },
+      {
+        "display": "block",
+        "font": "61px",
+        "height": 191.8109130859375,
+        "selector": ".hero-copy h1",
+        "width": 334.3991394042969,
+        "x": 27.99579620361328,
+        "y": 180.37814331054688
+      },
+      {
+        "display": "block",
+        "font": "61px",
+        "height": 56.722686767578125,
+        "selector": ".hero-last",
+        "width": 361.3487243652344,
+        "x": 27.99579620361328,
+        "y": 315.46636962890625
+      },
+      {
+        "display": "flex",
+        "font": "16px",
+        "height": 400.7142639160156,
+        "selector": ".hero-art",
+        "width": 362.25628662109375,
+        "x": 362.3949279785156,
+        "y": 193.63864135742188
+      },
+      {
+        "display": "block",
+        "font": "16px",
+        "height": 400.7142639160156,
+        "selector": ".hero-person",
+        "width": 362.25628662109375,
+        "x": 362.3949279785156,
+        "y": 193.63864135742188
+      },
+      {
+        "display": "flex",
+        "font": "13px",
+        "height": 66.0504150390625,
+        "selector": ".hero-meta",
+        "width": 696.6553955078125,
+        "x": 27.99579620361328,
+        "y": 601.941162109375
+      },
+      {
+        "display": "grid",
+        "font": "16px",
+        "height": 77.19327545166016,
+        "selector": ".header-inner",
+        "width": 696.6680297851562,
+        "x": 27.99579620361328,
+        "y": 0
+      },
+      {
+        "display": "flex",
+        "font": "16px",
+        "height": 64.99159240722656,
+        "selector": ".site-header nav",
+        "width": 308.1050109863281,
+        "x": 222.2772979736328,
+        "y": 6.100840091705322
+      }
+    ],
+    "scrollWidth": 753,
+    "width": 768
+  },
+  {
+    "clientWidth": 415,
+    "items": [
+      {
+        "display": "grid",
+        "font": "16px",
+        "height": 1027.96630859375,
+        "selector": ".home-grid",
+        "width": 375.4537658691406,
+        "x": 20.004199981689453,
+        "y": 71.99999237060547
+      },
+      {
+        "display": "block",
+        "font": "57.7258px",
+        "height": 179.02940368652344,
+        "selector": ".hero-copy h1",
+        "width": 375.4537658691406,
+        "x": 20.004199981689453,
+        "y": 153.78150939941406
+      },
+      {
+        "display": "block",
+        "font": "57.7258px",
+        "height": 54.26470184326172,
+        "selector": ".hero-last",
+        "width": 341.93695068359375,
+        "x": 20.004199981689453,
+        "y": 278.54620361328125
+      },
+      {
+        "display": "flex",
+        "font": "16px",
+        "height": 414.3907165527344,
+        "selector": ".hero-art",
+        "width": 352.91595458984375,
+        "x": 31.273107528686523,
+        "y": 553.083984375
+      },
+      {
+        "display": "block",
+        "font": "16px",
+        "height": 390.3907470703125,
+        "selector": ".hero-person",
+        "width": 352.91595458984375,
+        "x": 31.273107528686523,
+        "y": 577.083984375
+      },
+      {
+        "display": "flex",
+        "font": "12px",
+        "height": 61.499996185302734,
+        "selector": ".hero-meta",
+        "width": 375.4537658691406,
+        "x": 20.004199981689453,
+        "y": 995.4705200195312
+      },
+      {
+        "display": "grid",
+        "font": "16px",
+        "height": 71.19327545166016,
+        "selector": ".header-inner",
+        "width": 375.4537658691406,
+        "x": 20.004199981689453,
+        "y": 0
+      },
+      {
+        "display": "none",
+        "font": "16px",
+        "height": 0,
+        "selector": ".site-header nav",
+        "width": 0,
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "scrollWidth": 415,
+    "width": 431
+  },
+  {
+    "clientWidth": 375,
+    "items": [
+      {
+        "display": "grid",
+        "font": "16px",
+        "height": 969.88232421875,
+        "selector": ".home-grid",
+        "width": 335.11761474609375,
+        "x": 20.004199981689453,
+        "y": 71.99999237060547
+      },
+      {
+        "display": "block",
+        "font": "52.3208px",
+        "height": 162.8949432373047,
+        "selector": ".hero-copy h1",
+        "width": 335.11761474609375,
+        "x": 20.004199981689453,
+        "y": 153.78150939941406
+      },
+      {
+        "display": "block",
+        "font": "52.3208px",
+        "height": 49.172264099121094,
+        "selector": ".hero-last",
+        "width": 309.9201354980469,
+        "x": 20.004199981689453,
+        "y": 267.5041809082031
+      },
+      {
+        "display": "flex",
+        "font": "16px",
+        "height": 372.441162109375,
+        "selector": ".hero-art",
+        "width": 314.9999694824219,
+        "x": 30.06302261352539,
+        "y": 536.9495239257812
+      },
+      {
+        "display": "block",
+        "font": "16px",
+        "height": 348.441162109375,
+        "selector": ".hero-person",
+        "width": 314.9999694824219,
+        "x": 30.06302261352539,
+        "y": 560.9495239257812
+      },
+      {
+        "display": "flex",
+        "font": "12px",
+        "height": 61.499996185302734,
+        "selector": ".hero-meta",
+        "width": 335.11761474609375,
+        "x": 20.004199981689453,
+        "y": 937.386474609375
+      },
+      {
+        "display": "grid",
+        "font": "16px",
+        "height": 71.19327545166016,
+        "selector": ".header-inner",
+        "width": 335.11761474609375,
+        "x": 20.004199981689453,
+        "y": 0
+      },
+      {
+        "display": "none",
+        "font": "16px",
+        "height": 0,
+        "selector": ".site-header nav",
+        "width": 0,
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "scrollWidth": 375,
+    "width": 390
+  }
+]
