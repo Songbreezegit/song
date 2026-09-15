@@ -5,10 +5,12 @@ import { Asset, FloatingBadge } from '../Asset';
 import { ProjectCard } from '../ProjectCard';
 import { ScrollReveal } from '../ScrollReveal';
 const selectedIds = ['lizhang', 'fuji-photo', 'online-exam', 'dev-tools'];
-export function WorkSection({ onSelectProject }: { onSelectProject: (p: Project) => void }) {
+export function WorkSection({ onSelectProject, projects = PROJECTS }: { onSelectProject: (p: Project) => void; projects?: Project[] }) {
  const [expanded, setExpanded] = useState(false);
- const selected = selectedIds.map(id => PROJECTS.find(p => p.id === id)!);
- const other = PROJECTS.filter(p => !selectedIds.includes(p.id));
+ const dataList = projects.length > 0 ? projects : PROJECTS;
+ const matched = dataList.filter(p => selectedIds.includes(p.id) || p.featured).slice(0, 4);
+ const selected = matched.length > 0 ? matched : dataList.slice(0, 4);
+ const other = dataList.filter(p => !selected.some(s => s.id === p.id));
  return <section id="work" className="section work-section"><div className="container">
   <ScrollReveal className="work-heading"><div><p className="eyebrow">01 / Selected work</p><h2>Small projects.<br /><span className="sage-text">Useful things.</span></h2><p className="section-intro">用代码和设计，做一些让生活更好的小东西。</p></div>
    <div className="work-illustration"><Asset name="work-hero-illustration" alt="松屿在桌前与猫一起构建项目" /><FloatingBadge name="work-badge-good-projects" /></div>

@@ -9,9 +9,8 @@ const visuals: Record<string, AssetName> = {
 export function ProjectCard({ project, onSelect, variant = '' }: { project: Project; onSelect: (p: Project) => void; variant?: string }) {
  return <article className={`project-card ${variant} project-${project.id}`}>
   <button className="project-link" onClick={() => onSelect(project)} aria-label={`查看项目：${project.title}`}>
-   <div className="project-image"><Asset name={visuals[project.id] ?? 'work-icon-layers'} /><span className="project-image-label">{project.subtitle}</span></div>
+    <div className="project-image">{project.coverImage ? <img src={project.coverImage} alt={project.title} className="asset" loading="lazy" /> : <Asset name={visuals[project.id] ?? 'work-icon-layers'} />}<span className="project-image-label">{project.subtitle}</span></div>
    <div className="project-copy"><span className="small-label">{project.categoryLabel}</span><h3>{project.title}<ArrowUpRight size={23} /></h3><p>{project.description}</p></div>
   </button>
  </article>;
 }
-
