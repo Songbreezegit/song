@@ -40,8 +40,6 @@
   background:linear-gradient(180deg,var(--bg-page-base),var(--section-tint) 16%,var(--section-tint) 82%,var(--bg-page-base));
 }
 .site-footer { background:linear-gradient(var(--bg-page-base),var(--bg-footer));border-top-color:color-mix(in srgb,var(--line) 55%,transparent); }
-.project-fuji-photo .project-image { background:var(--surface-blue); }
-.project-dev-tools .project-image { background:var(--surface-sage); }
 .site-header { height:84px; }
 .site-header .header-inner,.home-section .home-grid { width:var(--site-container-width); }
 .header-inner { display:grid;grid-template-columns:1fr auto 1fr;gap:24px; }
