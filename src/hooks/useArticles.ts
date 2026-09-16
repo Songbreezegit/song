@@ -14,6 +14,7 @@ export function useArticles() {
       setArticles(data);
       setError(null);
     } catch (err) {
+      setArticles([]);
       setError(err instanceof Error ? err : new Error('获取文章列表失败'));
     } finally {
       setLoading(false);

@@ -5,6 +5,7 @@ import type { SiteSettingsRecord } from '../../types/database';
 
 export function AdminSiteSettings() {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -33,6 +34,10 @@ export function AdminSiteSettings() {
       try {
         setLoading(true);
         const data = await fetchSiteSettings();
+        if (!data) {
+          setFeedback({ type: 'success', message: '尚无站点设置，请填写后保存。' });
+          return;
+        }
         setSiteIntro(data.site_intro || '');
         setBasedIn(data.based_in || '');
 
@@ -53,6 +58,7 @@ export function AdminSiteSettings() {
 
         setAboutData(data.about || null);
       } catch (err) {
+        setLoadError(true);
         setFeedback({
           type: 'error',
           message: err instanceof Error ? err.message : '加载站点设置失败',
@@ -67,6 +73,7 @@ export function AdminSiteSettings() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (loadError) return;
     try {
       setSaving(true);
       setFeedback(null);
@@ -124,7 +131,7 @@ export function AdminSiteSettings() {
           type="button"
           className="admin-btn admin-btn-primary"
           onClick={handleSubmit}
-          disabled={saving}
+          disabled={saving || loadError}
         >
           {saving ? (
             <div className="admin-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
@@ -343,12 +350,25 @@ export function AdminSiteSettings() {
           </div>
         </div>
 
+        <div className="admin-card">
+          <h3 className="admin-card-title">About</h3>
+          {(['greeting', 'role', 'bio', 'location'] as const).map(field => (
+            <div className="admin-form-group" key={field}>
+              <label className="admin-label" htmlFor={'about-' + field}>{field}</label>
+              <textarea id={'about-' + field} className="admin-textarea" value={aboutData?.[field] || ''}
+                onChange={e => setAboutData(prev => ({ greeting: '', role: '', bio: '', location: '', whatIDo: [], techStack: [], now: [], path: [], ...prev, [field]: e.target.value }))} />
+            </div>
+          ))}
+          {(['whatIDo', 'techStack', 'now', 'path'] as const).map(field => (
+            <AboutListEditor key={field} field={field} about={aboutData} onChange={setAboutData} />
+          ))}
+        </div>
         {/* Submit Bar */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
           <button
             type="submit"
             className="admin-btn admin-btn-primary"
-            disabled={saving}
+            disabled={saving || loadError}
           >
             {saving ? (
               <div className="admin-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
@@ -361,4 +381,26 @@ export function AdminSiteSettings() {
       </form>
     </div>
   );
+}
+
+function AboutListEditor({ field, about, onChange }: {
+  field: 'whatIDo' | 'techStack' | 'now' | 'path';
+  about: SiteSettingsRecord['about'] | null;
+  onChange: (value: SiteSettingsRecord['about']) => void;
+}) {
+  const rows = (about?.[field] || []) as unknown as Record<string, string | string[]>[];
+  const fields = { whatIDo: ['title', 'desc'], techStack: ['category', 'items'], now: ['label', 'value'], path: ['year', 'event'] }[field];
+  const update = (next: Record<string, string | string[]>[]) => onChange({
+    greeting: '', role: '', bio: '', location: '', whatIDo: [], techStack: [], now: [], path: [], ...about, [field]: next,
+  } as SiteSettingsRecord['about']);
+  return <fieldset className="admin-form-group"><legend>{field}</legend>
+    {rows.map((row, index) => <div key={index} className="admin-section-block">
+      {fields.map(key => <label key={key} className="admin-label">{key}
+        <input className="admin-input" value={Array.isArray(row[key]) ? row[key].join(', ') : row[key] || ''}
+          onChange={e => update(rows.map((item, i) => i === index ? { ...item, [key]: key === 'items' ? e.target.value.split(',').map(v => v.trim()) : e.target.value } : item))} />
+      </label>)}
+      <button type="button" className="admin-btn admin-btn-secondary" onClick={() => update(rows.filter((_, i) => i !== index))}>删除条目</button>
+    </div>)}
+    <button type="button" className="admin-btn admin-btn-secondary" onClick={() => update([...rows, Object.fromEntries(fields.map(key => [key, key === 'items' ? [] : '']))])}>添加条目</button>
+  </fieldset>;
 }

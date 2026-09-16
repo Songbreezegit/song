@@ -25,6 +25,7 @@ interface RecentItem {
 export function AdminDashboard() {
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [articles, setArticles] = useState<ArticleRecord[]>([]);
+  const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,11 +37,13 @@ export function AdminDashboard() {
       try {
         setLoading(true);
         const [projList, artList] = await Promise.all([
-          fetchAllProjects().catch(() => []),
-          fetchAllArticles().catch(() => []),
+          fetchAllProjects(),
+          fetchAllArticles(),
         ]);
         setProjects(projList);
         setArticles(artList);
+      } catch {
+        setError(true);
       } finally {
         setLoading(false);
       }
@@ -74,6 +77,7 @@ export function AdminDashboard() {
 
   return (
     <div>
+      {error && <p role="alert" className="admin-alert admin-alert-error">统计加载失败，请刷新重试。</p>}
       {/* Quick Actions */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
         <Link to="/admin/projects/new" className="admin-btn admin-btn-primary">
@@ -93,7 +97,7 @@ export function AdminDashboard() {
       <div className="admin-stats-grid">
         <div className="admin-stat-card">
           <div className="admin-stat-label">Projects · 作品项目</div>
-          <div className="admin-stat-value">{loading ? '...' : projects.length}</div>
+          <div className="admin-stat-value">{loading ? '...' : error ? '—' : projects.length}</div>
           <div style={{ display: 'flex', gap: '12px', marginTop: '10px', fontSize: '13px', color: 'var(--admin-text-secondary)' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <CheckCircle2 size={13} color="var(--admin-success)" />
@@ -108,7 +112,7 @@ export function AdminDashboard() {
 
         <div className="admin-stat-card">
           <div className="admin-stat-label">Articles · 思考与笔记</div>
-          <div className="admin-stat-value">{loading ? '...' : articles.length}</div>
+          <div className="admin-stat-value">{loading ? '...' : error ? '—' : articles.length}</div>
           <div style={{ display: 'flex', gap: '12px', marginTop: '10px', fontSize: '13px', color: 'var(--admin-text-secondary)' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <CheckCircle2 size={13} color="var(--admin-success)" />

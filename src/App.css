@@ -215,3 +215,5 @@ html{scroll-padding-top:78px}.section{scroll-margin-top:0}
 .note-featured h3{max-width:none;text-wrap:balance}.hero-copy h1,.section h2{word-spacing:.04em}.contact-copy h2{font-size:clamp(60px,6.1vw,86px)}
 @media(max-width:600px){.contact-copy h2{font-size:68px}}
 .dark .hero-person,.dark .work-illustration>img,.dark .notes-illustration>img,.dark .about-illustration>img,.dark .contact-illustration>img{background:transparent;border-radius:0;filter:invert(.9) hue-rotate(180deg) grayscale(.25)}
+
+.data-state { padding: 24px 0; color: var(--text-secondary, #64748b); }

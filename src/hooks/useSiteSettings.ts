@@ -14,6 +14,7 @@ export function useSiteSettings() {
       setSettings(data);
       setError(null);
     } catch (err) {
+      setSettings(null);
       setError(err instanceof Error ? err : new Error('获取站点设置失败'));
     } finally {
       setLoading(false);

@@ -11,24 +11,11 @@ export async function fetchPublishedProjects(): Promise<Project[]> {
     return PROJECTS;
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('status', 'published')
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: false });
-
-    if (error || !data || data.length === 0) {
-      console.warn('Supabase projects query returned empty or error, falling back to local data:', error?.message);
-      return PROJECTS;
-    }
-
-    return (data as ProjectRecord[]).map(projectRecordToUiModel);
-  } catch (err) {
-    console.error('Error fetching published projects:', err);
-    return PROJECTS;
-  }
+  const { data, error } = await supabase
+    .from('projects').select('*').eq('status', 'published')
+    .order('sort_order', { ascending: true }).order('created_at', { ascending: false });
+  if (error) throw error;
+  return ((data || []) as ProjectRecord[]).map(projectRecordToUiModel);
 }
 
 export async function fetchAllProjects(): Promise<ProjectRecord[]> {
@@ -98,6 +85,7 @@ export async function createProject(
     .select()
     .single();
 
+  if (error?.code === '23505') throw new Error('Slug 已存在，请更换其他 Slug。');
   if (error) throw error;
   return data as ProjectRecord;
 }
@@ -133,6 +121,7 @@ export async function updateProject(
     .select()
     .single();
 
+  if (error?.code === '23505') throw new Error('Slug 已存在，请更换其他 Slug。');
   if (error) throw error;
   return data as ProjectRecord;
 }

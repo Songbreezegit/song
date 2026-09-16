@@ -14,6 +14,7 @@ export function useProjects() {
       setProjects(data);
       setError(null);
     } catch (err) {
+      setProjects([]);
       setError(err instanceof Error ? err : new Error('获取项目列表失败'));
     } finally {
       setLoading(false);

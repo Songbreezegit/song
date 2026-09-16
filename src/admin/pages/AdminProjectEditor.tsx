@@ -37,6 +37,7 @@ export function AdminProjectEditor() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(!isNew);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -49,6 +50,7 @@ export function AdminProjectEditor() {
   const [categoryLabel, setCategoryLabel] = useState('Web / React');
   const [year, setYear] = useState(new Date().getFullYear().toString());
   const [featured, setFeatured] = useState(false);
+  const [sortOrder, setSortOrder] = useState(0);
   const [status, setStatus] = useState<ContentStatus>('draft');
 
   const [description, setDescription] = useState('');
@@ -83,6 +85,7 @@ export function AdminProjectEditor() {
         setLoading(true);
         const data = await getProjectById(id!);
         if (!data) {
+          setLoadFailed(true);
           setFeedback({ type: 'error', message: '未找到指定项目' });
           return;
         }
@@ -96,6 +99,7 @@ export function AdminProjectEditor() {
         setYear(data.year);
         setFeatured(data.featured);
         setStatus(data.status);
+        setSortOrder(data.sort_order);
         setDescription(data.description);
         setOverview(data.overview);
         setDevelopmentNotes(data.development_notes);
@@ -107,6 +111,7 @@ export function AdminProjectEditor() {
         setCoverImage(data.cover_image || '');
         if (data.image_theme) setImageTheme(data.image_theme);
       } catch (err) {
+        setLoadFailed(true);
         setFeedback({ type: 'error', message: err instanceof Error ? err.message : '加载项目失败' });
       } finally {
         setLoading(false);
@@ -176,7 +181,7 @@ export function AdminProjectEditor() {
       setFeedback(null);
       const { url } = await uploadMedia(file, 'projects');
       setCoverImage(url);
-      setFeedback({ type: 'success', message: '封面图片已成功上传并关联' });
+      setFeedback({ type: 'success', message: '封面图片已上传，请保存项目以关联' });
     } catch (err) {
       setFeedback({
         type: 'error',
@@ -190,7 +195,13 @@ export function AdminProjectEditor() {
 
   // Save Form Handler
   const handleSubmit = async (targetStatus?: ContentStatus) => {
+    if (uploadingCover) return;
+    if (loadFailed) return;
     const finalStatus = targetStatus || status;
+    if (!Number.isInteger(sortOrder) || sortOrder < -2147483648 || sortOrder > 2147483647) {
+      setFeedback({ type: 'error', message: 'Sort Order 必须是有效整数。' });
+      return;
+    }
 
     if (!title.trim()) {
       setFeedback({ type: 'error', message: '请输入项目标题' });
@@ -234,7 +245,7 @@ export function AdminProjectEditor() {
         live_url: liveUrl.trim(),
         cover_image: coverImage.trim(),
         image_theme: imageTheme,
-        sort_order: 0,
+        sort_order: sortOrder,
       };
 
       if (isNew) {
@@ -286,7 +297,7 @@ export function AdminProjectEditor() {
             type="button"
             className="admin-btn admin-btn-secondary"
             onClick={() => handleSubmit('draft')}
-            disabled={saving}
+            disabled={saving || uploadingCover || loadFailed}
           >
             <Save size={15} />
             <span>存为草稿</span>
@@ -295,7 +306,7 @@ export function AdminProjectEditor() {
             type="button"
             className="admin-btn admin-btn-primary"
             onClick={() => handleSubmit('published')}
-            disabled={saving}
+            disabled={saving || uploadingCover || loadFailed}
           >
             {saving ? (
               <div className="admin-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
@@ -319,6 +330,10 @@ export function AdminProjectEditor() {
       )}
 
       <form onSubmit={(e: FormEvent) => { e.preventDefault(); handleSubmit(); }}>
+        <div className="admin-form-group">
+          <label className="admin-label" htmlFor="sort-order">Sort Order</label>
+          <input id="sort-order" className="admin-input" type="number" step="1" value={sortOrder} onChange={(e) => setSortOrder(e.target.valueAsNumber)} />
+        </div>
         {/* 1. Basic Information */}
         <div className="admin-card">
           <div className="admin-card-header">
@@ -745,19 +760,20 @@ export function AdminProjectEditor() {
                 />
               </label>
               <div className="admin-label-desc" style={{ marginTop: '6px' }}>
-                支持 JPG, PNG, WEBP 格式，最大 5MB
+                支持 JPG, JPEG, PNG, WEBP 格式，最大 5MB
               </div>
             </div>
           </div>
         </div>
 
+        <button type="submit" className="admin-btn admin-btn-primary" disabled={saving || uploadingCover || loadFailed}>保存当前状态</button>
         {/* Save Bar */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
           <button
             type="button"
             className="admin-btn admin-btn-secondary"
             onClick={() => handleSubmit('draft')}
-            disabled={saving}
+            disabled={saving || uploadingCover || loadFailed}
           >
             <Save size={15} />
             <span>存为草稿</span>
@@ -766,7 +782,7 @@ export function AdminProjectEditor() {
             type="button"
             className="admin-btn admin-btn-primary"
             onClick={() => handleSubmit('published')}
-            disabled={saving}
+            disabled={saving || uploadingCover || loadFailed}
           >
             {saving ? (
               <div className="admin-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />

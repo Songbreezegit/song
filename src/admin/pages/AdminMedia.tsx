@@ -121,6 +121,7 @@ export function AdminMedia() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <p style={{ margin: 0, fontSize: '14px', color: 'var(--admin-text-secondary)' }}>
           管理 Supabase Storage <code>media</code> 存储桶中的封面图片与上传媒体资源。
+          仅支持 JPG、JPEG、PNG、WEBP，最大 5MB。
         </p>
 
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -137,7 +138,7 @@ export function AdminMedia() {
             <span>{uploading ? '上传中...' : '上传新图片'}</span>
             <input
               type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
+              accept="image/png,image/jpeg,image/webp"
               onChange={handleFileUpload}
               disabled={uploading}
               style={{ display: 'none' }}

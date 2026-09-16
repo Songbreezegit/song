@@ -1,3 +1,4 @@
+import { ArticleTableEditor } from '../components/ArticleTableEditor';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
@@ -38,6 +39,7 @@ export function AdminArticleEditor() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(!isNew);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -54,6 +56,7 @@ export function AdminArticleEditor() {
   const [year, setYear] = useState(new Date().getFullYear().toString());
   const [readTime, setReadTime] = useState('3 min');
   const [excerpt, setExcerpt] = useState('');
+  const [sortOrder, setSortOrder] = useState(0);
   const [status, setStatus] = useState<ContentStatus>('draft');
 
   // Tags
@@ -73,6 +76,7 @@ export function AdminArticleEditor() {
         setLoading(true);
         const data = await getArticleById(id!);
         if (!data) {
+          setLoadFailed(true);
           setFeedback({ type: 'error', message: '未找到指定文章' });
           return;
         }
@@ -87,10 +91,12 @@ export function AdminArticleEditor() {
         setReadTime(data.read_time);
         setExcerpt(data.excerpt);
         setStatus(data.status);
+        setSortOrder(data.sort_order);
         setTags(data.tags || []);
         setLead(data.content?.lead || '');
         setSections(data.content?.sections || []);
       } catch (err) {
+        setLoadFailed(true);
         setFeedback({
           type: 'error',
           message: err instanceof Error ? err.message : '加载文章失败',
@@ -210,7 +216,12 @@ export function AdminArticleEditor() {
 
   // Submit Handler
   const handleSubmit = async (targetStatus?: ContentStatus) => {
+    if (loadFailed) return;
     const finalStatus = targetStatus || status;
+    if (!Number.isInteger(sortOrder) || sortOrder < -2147483648 || sortOrder > 2147483647) {
+      setFeedback({ type: 'error', message: 'Sort Order 必须是有效整数。' });
+      return;
+    }
 
     if (!title.trim()) {
       setFeedback({ type: 'error', message: '请输入文章标题' });
@@ -250,7 +261,7 @@ export function AdminArticleEditor() {
           lead: lead.trim(),
           sections,
         },
-        sort_order: 0,
+        sort_order: sortOrder,
         published_at: finalStatus === 'published' ? new Date().toISOString() : null,
       };
 
@@ -303,7 +314,7 @@ export function AdminArticleEditor() {
             type="button"
             className="admin-btn admin-btn-secondary"
             onClick={() => handleSubmit('draft')}
-            disabled={saving}
+            disabled={saving || loadFailed}
           >
             <Save size={15} />
             <span>存为草稿</span>
@@ -312,7 +323,7 @@ export function AdminArticleEditor() {
             type="button"
             className="admin-btn admin-btn-primary"
             onClick={() => handleSubmit('published')}
-            disabled={saving}
+            disabled={saving || loadFailed}
           >
             {saving ? (
               <div className="admin-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
@@ -336,6 +347,10 @@ export function AdminArticleEditor() {
       )}
 
       <form onSubmit={(e: FormEvent) => { e.preventDefault(); handleSubmit(); }}>
+        <div className="admin-form-group">
+          <label className="admin-label" htmlFor="sort-order">Sort Order</label>
+          <input id="sort-order" className="admin-input" type="number" step="1" value={sortOrder} onChange={(e) => setSortOrder(e.target.valueAsNumber)} />
+        </div>
         {/* 1. Basic Information */}
         <div className="admin-card">
           <div className="admin-card-header">
@@ -653,6 +668,7 @@ export function AdminArticleEditor() {
                   </button>
                 </div>
 
+                <ArticleTableEditor table={section.table} onChange={table => handleSectionFieldChange(idx, 'table', table)} />
                 {/* Code Block Editor */}
                 {section.code && (
                   <div style={{ background: '#FFFFFF', padding: '12px', border: '1px solid var(--admin-border)', borderRadius: '6px', marginBottom: '12px' }}>
@@ -761,13 +777,14 @@ export function AdminArticleEditor() {
           )}
         </div>
 
+        <button type="submit" className="admin-btn admin-btn-primary" disabled={saving || loadFailed}>保存当前状态</button>
         {/* Save Bar */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
           <button
             type="button"
             className="admin-btn admin-btn-secondary"
             onClick={() => handleSubmit('draft')}
-            disabled={saving}
+            disabled={saving || loadFailed}
           >
             <Save size={15} />
             <span>存为草稿</span>
@@ -776,7 +793,7 @@ export function AdminArticleEditor() {
             type="button"
             className="admin-btn admin-btn-primary"
             onClick={() => handleSubmit('published')}
-            disabled={saving}
+            disabled={saving || loadFailed}
           >
             {saving ? (
               <div className="admin-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />

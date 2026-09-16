@@ -11,24 +11,11 @@ export async function fetchPublishedArticles(): Promise<Article[]> {
     return ARTICLES;
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('articles')
-      .select('*')
-      .eq('status', 'published')
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: false });
-
-    if (error || !data || data.length === 0) {
-      console.warn('Supabase articles query returned empty or error, falling back to local data:', error?.message);
-      return ARTICLES;
-    }
-
-    return (data as ArticleRecord[]).map(articleRecordToUiModel);
-  } catch (err) {
-    console.error('Error fetching published articles:', err);
-    return ARTICLES;
-  }
+  const { data, error } = await supabase
+    .from('articles').select('*').eq('status', 'published')
+    .order('sort_order', { ascending: true }).order('created_at', { ascending: false });
+  if (error) throw error;
+  return ((data || []) as ArticleRecord[]).map(articleRecordToUiModel);
 }
 
 export async function fetchAllArticles(): Promise<ArticleRecord[]> {
@@ -98,6 +85,7 @@ export async function createArticle(
     .select()
     .single();
 
+  if (error?.code === '23505') throw new Error('Slug 已存在，请更换其他 Slug。');
   if (error) throw error;
   return data as ArticleRecord;
 }
@@ -133,6 +121,7 @@ export async function updateArticle(
     .select()
     .single();
 
+  if (error?.code === '23505') throw new Error('Slug 已存在，请更换其他 Slug。');
   if (error) throw error;
   return data as ArticleRecord;
 }
