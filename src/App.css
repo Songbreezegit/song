@@ -202,15 +202,9 @@ html{scroll-padding-top:78px}.section{scroll-margin-top:0}
 
 .data-state { padding: 24px 0; color: var(--text-secondary, #64748b); }
 
-/* Work covers: visuals above, all project copy below. */
-.project-image{position:relative;width:100%;min-width:0;border-radius:25px;background:var(--soft-green);aspect-ratio:16/10;min-height:320px;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.project-image>.asset{position:absolute;width:88%;height:auto;max-height:90%;object-fit:contain;border-radius:14px;transition:transform 400ms ease-out}
-.project-fuji-photo .project-image{background:#e0e9f2}
-.project-online-exam .project-image{background:var(--soft-blue)}
-.project-dev-tools .project-image{background:#e9eee5}
-.project-copy h3 svg{flex-shrink:0;transition:transform 400ms ease-out}
-@media(hover:hover){.project-link:hover .project-image>.asset{transform:scale(1.025)}.project-link:hover .project-copy h3 svg{transform:translate(3px,-3px)}}
+/* Work metadata shares the cover interaction timing. */
+.project-copy h3 svg{flex-shrink:0;transition:transform var(--work-cover-transition)}
+@media(hover:hover) and (pointer:fine){.project-link:hover .project-copy h3 svg{transform:translate(3px,-3px)}}
 .project-link:focus-visible .project-copy h3 svg{transform:translate(3px,-3px)}
-@media(max-width:1050px){.project-image{min-height:280px}}
-@media(max-width:600px){.project-image{aspect-ratio:auto;min-height:0;padding-block:4%}.project-image>.asset{position:static;width:94%;max-height:none}.project-copy p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}}
-@media(prefers-reduced-motion:reduce){.project-link:hover .project-image>.asset,.project-link:hover .project-copy h3 svg,.project-link:focus-visible .project-copy h3 svg{transform:none}}
+@media(max-width:600px){.project-copy p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}}
+@media(prefers-reduced-motion:reduce){.project-link:hover .project-copy h3 svg,.project-link:focus-visible .project-copy h3 svg{transform:none}}
