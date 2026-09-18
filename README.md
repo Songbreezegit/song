@@ -20,6 +20,63 @@
 
 ---
 
+## 🌐 国际化支持 (Internationalization)
+
+松屿 · SONG ISLE 采用显式语言前缀与模块化 i18n 架构，支持三种语言：
+
+- **简体中文**：`zh`（路由前缀 `/zh/`，默认 SEO `zh-CN`）
+- **English**：`en`（路由前缀 `/en/`，SEO `en`）
+- **日本語**：`ja`（路由前缀 `/ja/`，SEO `ja`）
+
+### 1. 路由与访问规范
+- **根路径检测**：访问 `/` 会自动读取用户偏好 (`localStorage.getItem('preferred-language')`) 或浏览器语言首选，自动重定向至对应语言主页（如 `/zh/` 或 `/en/`）。
+- **页面映射**：各核心页面均对应显式 URL：
+  - 中文：`/zh/`, `/zh/work`, `/zh/notes`, `/zh/about`, `/zh/contact`
+  - 英文：`/en/`, `/en/work`, `/en/notes`, `/en/about`, `/en/contact`
+  - 日文：`/ja/`, `/ja/work`, `/ja/notes`, `/ja/about`, `/ja/contact`
+- **语言切换**：点击导航栏中的语言切换器（桌面端：`中 / EN / 日`，移动端：抽屉菜单按钮）时，会保持用户当前浏览的页面与查询参数（例如从 `/zh/work?project=lizhang` 平滑切换到 `/en/work?project=lizhang`）。
+
+### 2. 语言字典目录结构
+所有界面与页面文案按模块分离，存放于 `src/locales/`：
+```text
+src/locales/
+├── zh/    # 简体中文
+│   ├── common.json  # 通用 UI、按钮、导航、Footer、404
+│   ├── home.json    # 首页 Hero 与核心标语
+│   ├── work.json    # 作品集 UI 与弹窗文案
+│   ├── notes.json   # 笔记 UI、分类与空状态
+│   ├── about.json   # 关于我、技能、经历
+│   └── contact.json # 联系方式与社交链接
+├── en/    # English (自然地道表达)
+└── ja/    # 日本語 (現代的なWebスタイル)
+```
+
+### 3. 如何新增翻译条目
+在对应模块的 JSON 文件（如 `common.json`）中添加键值对：
+```json
+{
+  "actions": {
+    "myNewButton": "按钮文本"
+  }
+}
+```
+在 React 组件中直接通过 `useI18n` 消费：
+```tsx
+const { t } = useI18n();
+<button>{t('common.actions.myNewButton')}</button>
+```
+
+### 4. 如何扩展新语言（如 `fr`, `de` 等）
+1. 在 `src/i18n/types.ts` 中的 `SupportedLanguage` 联合类型中增加对应代码。
+2. 在 `src/i18n/config.ts` 中的 `SUPPORTED_LANGUAGES` 数组与 `LANGUAGE_METAS` 中注册该语言的简写、全名及 HTML/OG 属性。
+3. 在 `src/locales/<lang>/` 目录下添加对应的 6 个 JSON 字典文件并在 `src/i18n/dictionaries.ts` 中引入。
+
+### 5. Work / Notes 内容的多语言维护
+- **作品 (Work)**：项目详情字段定义在 `src/data/projectTranslations.ts`，支持按 `slug` 为特定语言定制 `title`、`subtitle`、`description`、`features` 与 `developmentNotes`。调用 `resolveProject(project, lang)` 即可自动根据语言回退解析。
+- **笔记 (Notes)**：支持灵活的内容回退机制（Fallback 顺序：`ja -> en -> zh`，`en -> zh`，`zh -> zh`）。对于暂未人工翻译的文章，系统会自动展示中文原文并在详情内温和提示当前语言状态，绝不触发 404。
+
+---
+
 ## 🎨 视觉系统与排版规范
 
 - **背景与表面**：页面主背景采用柔和素雅的 `#F7F8FA`，容器采用纯白 `#FFFFFF`，通过 1px 细发丝边框 `#E5E7EB` 划分层级，绝无厚重刺眼的投影或高饱和霓虹色。
