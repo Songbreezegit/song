@@ -1,0 +1,19 @@
+{
+  "eyebrow": "02 / Notes to myself",
+  "titleMain": "Learning.",
+  "titleSub1": "A little, ",
+  "titleSub2": "every day.",
+  "intro": "记录一些想法、学习笔记、开发心得，还有生活里不时冒出来的思考。",
+  "illustrationAlt": "松屿坐在书本和植物旁写笔记，猫在一旁小憩",
+  "emptyMessage": "暂无已发布笔记。",
+  "sloganAlt": "Small Notes. Big Thoughts.",
+  "archiveBadge": "A GROWING COLLECTION OF THOUGHTS",
+  "collapse": "收起笔记",
+  "browseAll": "浏览全部 {count} 篇笔记",
+  "filterAria": "按笔记分类筛选",
+  "emptyCategory": "此分类的笔记已展示在上方。",
+  "readAria": "阅读：{title}",
+  "readNote": "Read the note",
+  "allCategory": "全部",
+  "fallbackNotice": "本文目前仅提供中文版本。"
+}

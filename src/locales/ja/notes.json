@@ -1,0 +1,19 @@
+{
+  "eyebrow": "02 / Notes to myself",
+  "titleMain": "Learning.",
+  "titleSub1": "A little, ",
+  "titleSub2": "every day.",
+  "intro": "日々の学び、開発の気づき、頭に浮かんだ小さな思考の断片を書き留めています。",
+  "illustrationAlt": "本と植物のそばでノートを書く松屿と、傍らで眠る猫",
+  "emptyMessage": "公開中のノートはまだありません。",
+  "sloganAlt": "Small Notes. Big Thoughts.",
+  "archiveBadge": "A GROWING COLLECTION OF THOUGHTS",
+  "collapse": "ノートを閉じる",
+  "browseAll": "すべてのノート（{count} 件）を見る",
+  "filterAria": "ノートのカテゴリーを絞り込む",
+  "emptyCategory": "このカテゴリーのノートはすべて上に表示されています。",
+  "readAria": "読む：{title}",
+  "readNote": "Read the note",
+  "allCategory": "すべて",
+  "fallbackNotice": "この記事は現在、中国語版のみ提供されています。"
+}

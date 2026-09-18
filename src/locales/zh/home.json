@@ -1,0 +1,16 @@
+{
+  "hero": {
+    "eyebrow": "Hi, I'm Songyu.",
+    "name": "松屿",
+    "verb": "builds",
+    "suffix": "useful things.",
+    "role": "Builder / Developer / Learner / Creator",
+    "defaultIntro": "写代码，做产品，探索有趣的技术与设计。喜欢极简、高效和有温度的数字体验。",
+    "ctaWork": "View Work",
+    "ctaContact": "Let's Talk",
+    "illustrationAlt": "松屿与猫坐在写着 Good Ideas Build A Brighter Web 的方台上",
+    "currently": "Currently",
+    "basedIn": "Based in",
+    "scrollAria": "向下探索作品"
+  }
+}

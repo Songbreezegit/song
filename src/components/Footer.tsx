@@ -1,5 +1,27 @@
 import { ArrowUp } from 'lucide-react';
-export function Footer() {
- return <footer className="site-footer"><div className="container footer-inner"><a href="#home" className="footer-brand">SONG ISLE<span>Small things, made with care.</span></a><span>© {new Date().getFullYear()} 松屿</span><a href="#home" className="text-link">Back to top<ArrowUp size={16} /></a></div></footer>;
-}
+import { useI18n } from '../i18n/useI18n';
 
+export function Footer() {
+  const { language, t } = useI18n();
+
+  const handleBackToTop = (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  return (
+    <footer className="site-footer">
+      <div className="container footer-inner">
+        <a href={`/${language}/`} onClick={handleBackToTop} className="footer-brand">
+          SONG ISLE
+          <span>{t('common.brandSubtitle')}</span>
+        </a>
+        <span>{t('common.copyright', { year: new Date().getFullYear() })}</span>
+        <a href={`/${language}/`} onClick={handleBackToTop} className="text-link">
+          {t('common.backToTop')}
+          <ArrowUp size={16} />
+        </a>
+      </div>
+    </footer>
+  );
+}

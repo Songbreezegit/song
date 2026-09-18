@@ -1,0 +1,52 @@
+{
+  "eyebrow": "03 / The person behind the pixels",
+  "titleMain": "about",
+  "titleSub1": "this ",
+  "titleSub2": "builder.",
+  "introGreeting": "こんにちは、松屿（ヤン・ソン）です。",
+  "introSub": "学び、創り、分かち合う歩みの中で、成長を続けています。",
+  "role": "Developer / Designer / Builder / Open Source",
+  "illustrationAlt": "ソファでラップトップを開く松屿と、隣にいる猫と植物",
+  "whoIAm": {
+    "eyebrow": "Who I am",
+    "title": "素朴な機能に、丁寧な手触りを。",
+    "bio": "コンピュータサイエンス専攻の学生であり、オープンソース愛好家。ネイティブAndroid（Kotlin / Jetpack Compose）、モダンWeb技術、実用的なAIアプリケーションに注力しています。実践的なエンジニアリング哲学を重んじ、生活や学習のリアルな課題を解決するツールを作り続けています。",
+    "location": "中国・重慶"
+  },
+  "whatLearning": {
+    "eyebrow": "What I'm learning",
+    "title": "Still a work in progress.",
+    "building": "Building",
+    "learning": "Learning",
+    "exploring": "Exploring"
+  },
+  "whatBuild": {
+    "eyebrow": "What I build",
+    "items": [
+      {
+        "title": "Native Mobile Apps",
+        "desc": "滑らかな操作感、厳格なローカルプライバシー、美しいアーキテクチャ設計を追求。"
+      },
+      {
+        "title": "Productivity Tools",
+        "desc": "頻繁で煩雑な日常のタスクを、ワンクリックで完結する軽量ツールやCLIに凝縮。"
+      },
+      {
+        "title": "Personal Web Spaces",
+        "desc": "静謐な美意識、工芸的なディテール、アクセシビリティを両立したWeb空間の構築。"
+      }
+    ]
+  },
+  "awayFromKeyboard": {
+    "eyebrow": "Away from the keyboard",
+    "title1": "Code. Coffee.",
+    "title2": "A little everyday life.",
+    "desc": "猫、ドリップコーヒー、写真撮影、デジタルノートの整理、そして静かな午後の散歩が好きです。"
+  },
+  "details": {
+    "summary": "More about me / 技術スタック、ツール、これまでの歩み",
+    "toolkit": "My toolkit",
+    "path": "My path"
+  },
+  "dividerAlt": "Nice to meet you!"
+}

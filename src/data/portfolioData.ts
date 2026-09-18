@@ -31,6 +31,9 @@ export interface Article {
       };
     }[];
   };
+  lang?: 'zh' | 'en' | 'ja';
+  isFallback?: boolean;
+  translations?: Partial<Record<'zh' | 'en' | 'ja', Partial<Article>>>;
 }
 
 export interface Project {
@@ -60,7 +63,11 @@ export interface Project {
     challenge: string;
     solution: string;
   }[];
+  translations?: Partial<Record<'zh' | 'en' | 'ja', import('./projectTranslations').LocalizedProjectFields>>;
 }
+
+export { resolveProject, resolveArticle } from './i18nDataResolvers';
+
 
 export const PROFILE = {
   name: '松屿',

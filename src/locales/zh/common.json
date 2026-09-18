@@ -1,0 +1,49 @@
+{
+  "brand": "松屿 · SONG ISLE",
+  "brandTagline": "Notes, tools, experiments and things I build.",
+  "brandSubtitle": "Small things, made with care.",
+  "copyright": "© {year} 松屿",
+  "skipToContent": "跳至主要内容",
+  "backToTop": "回到顶部",
+  "nav": {
+    "home": "首页",
+    "work": "作品",
+    "notes": "笔记",
+    "about": "关于",
+    "contact": "联系",
+    "stayCurious": "Stay Curious.",
+    "ariaBrand": "松屿，返回首页",
+    "ariaNav": "主导航",
+    "ariaOpenMenu": "打开菜单",
+    "ariaCloseMenu": "关闭菜单",
+    "ariaThemeLight": "切换浅色模式",
+    "ariaThemeDark": "切换深色模式"
+  },
+  "actions": {
+    "viewWork": "查看作品",
+    "letsTalk": "联系交流",
+    "readMore": "阅读更多",
+    "viewProject": "查看项目",
+    "viewSource": "查看源码",
+    "liveDemo": "在线预览",
+    "copyEmail": "复制邮箱",
+    "emailCopied": "邮箱已复制",
+    "copyFailed": "未能复制，请手动选择复制",
+    "copy": "复制",
+    "copied": "已复制",
+    "close": "关闭",
+    "retry": "重试",
+    "backHome": "返回首页"
+  },
+  "status": {
+    "loading": "正在加载...",
+    "error": "加载失败",
+    "empty": "暂无数据"
+  },
+  "notFound": {
+    "badge": "404",
+    "title": "页面迷航于松屿",
+    "description": "抱歉，您探索的路径不存在或已被移动到新的海域。",
+    "backHome": "返回首页"
+  }
+}

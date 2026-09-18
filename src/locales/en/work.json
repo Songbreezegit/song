@@ -1,0 +1,23 @@
+{
+  "eyebrow": "01 / Selected work",
+  "titleMain": "Small projects.",
+  "titleSub": "Useful things.",
+  "intro": "Crafting small, thoughtful tools and software that make everyday life a little better.",
+  "illustrationAlt": "Songyu building projects at a desk with a cat nearby",
+  "emptyMessage": "No published projects yet.",
+  "sloganAlt": "Small Projects. Big Changes.",
+  "moreBadge": "EXPERIMENTS, TOOLS & OPEN SOURCE",
+  "collapse": "Collapse projects",
+  "moreCount": "{count} more projects to explore",
+  "viewAria": "View project: {title}",
+  "modal": {
+    "titleFallback": "Content details",
+    "overview": "Key Features",
+    "techStack": "Tech Stack",
+    "devNotes": "Engineering Notes",
+    "viewSource": "Source Code",
+    "liveDemo": "Live Demo",
+    "closeAria": "Close details",
+    "emptyDetail": "Content not found. It may be unpublished or removed."
+  }
+}

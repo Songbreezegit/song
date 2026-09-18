@@ -1,0 +1,49 @@
+{
+  "brand": "SONG ISLE",
+  "brandTagline": "Notes, tools, experiments and things I build.",
+  "brandSubtitle": "Small things, made with care.",
+  "copyright": "© {year} Songyu",
+  "skipToContent": "Skip to main content",
+  "backToTop": "Back to top",
+  "nav": {
+    "home": "Home",
+    "work": "Work",
+    "notes": "Notes",
+    "about": "About",
+    "contact": "Contact",
+    "stayCurious": "Stay Curious.",
+    "ariaBrand": "SONG ISLE, back to home",
+    "ariaNav": "Main navigation",
+    "ariaOpenMenu": "Open menu",
+    "ariaCloseMenu": "Close menu",
+    "ariaThemeLight": "Switch to light mode",
+    "ariaThemeDark": "Switch to dark mode"
+  },
+  "actions": {
+    "viewWork": "View Work",
+    "letsTalk": "Let's Talk",
+    "readMore": "Read more",
+    "viewProject": "View project",
+    "viewSource": "Source Code",
+    "liveDemo": "Live Demo",
+    "copyEmail": "Copy email address",
+    "emailCopied": "Email copied to clipboard",
+    "copyFailed": "Could not copy, please select and copy manually",
+    "copy": "Copy",
+    "copied": "Copied",
+    "close": "Close",
+    "retry": "Retry",
+    "backHome": "Back to Home"
+  },
+  "status": {
+    "loading": "Loading...",
+    "error": "Failed to load",
+    "empty": "No items found"
+  },
+  "notFound": {
+    "badge": "404",
+    "title": "Lost on Song Isle",
+    "description": "The path you are looking for does not exist or has drifted to another shore.",
+    "backHome": "Return Home"
+  }
+}

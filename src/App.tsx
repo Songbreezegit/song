@@ -13,12 +13,16 @@ import { type Project, type Article } from './data/portfolioData';
 import { useProjects } from './hooks/useProjects';
 import { useArticles } from './hooks/useArticles';
 import { useSiteSettings } from './hooks/useSiteSettings';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { SeoHead } from './components/SeoHead';
+import { useI18n } from './i18n/useI18n';
 import './App.css';
 
 export function App() {
+  const { language, t } = useI18n();
+  const { section } = useParams<{ section?: string }>();
   const [ready, setReady] = useState(false);
-  const [activeSection, setActiveSection] = useState('home');
+  const [activeSection, setActiveSection] = useState(() => section || 'home');
 
   const { projects, loading: projectsLoading, error: projectsError, refresh: refreshProjects } = useProjects();
   const { articles, loading: articlesLoading, error: articlesError, refresh: refreshArticles } = useArticles();
@@ -62,12 +66,23 @@ export function App() {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (!ready) return;
+    if (section && ['work', 'notes', 'about', 'contact'].includes(section)) {
+      const el = document.getElementById(section);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [section, ready]);
+
   return (
     <ThemeProvider>
+      <SeoHead language={language} section={section || activeSection} detailItem={detailItem} />
       <div className={`site ${ready ? 'is-ready' : 'is-entering'}`}>
         <SiteLoader onReady={onReady} />
         <a className="skip-link" href="#main">
-          跳至主要内容
+          {t('common.skipToContent')}
         </a>
         <Navbar activeSection={activeSection} />
         <main id="main">
