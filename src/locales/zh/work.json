@@ -1,0 +1,23 @@
+{
+  "eyebrow": "01 / Selected work",
+  "titleMain": "Small projects.",
+  "titleSub": "Useful things.",
+  "intro": "用代码和设计，做一些让生活更好的小东西。",
+  "illustrationAlt": "松屿在桌前与猫一起构建项目",
+  "emptyMessage": "暂无已发布项目。",
+  "sloganAlt": "Small Projects. Big Changes.",
+  "moreBadge": "EXPERIMENTS, TOOLS & OPEN SOURCE",
+  "collapse": "收起项目",
+  "moreCount": "还有 {count} 个项目，继续看看",
+  "viewAria": "查看项目：{title}",
+  "modal": {
+    "titleFallback": "内容详情",
+    "overview": "主要特性",
+    "techStack": "技术栈",
+    "devNotes": "工程思考",
+    "viewSource": "查看源码",
+    "liveDemo": "在线预览",
+    "closeAria": "关闭详情",
+    "emptyDetail": "未找到内容，可能尚未发布或已移除。"
+  }
+}

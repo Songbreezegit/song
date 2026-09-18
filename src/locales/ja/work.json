@@ -1,0 +1,23 @@
+{
+  "eyebrow": "01 / Selected work",
+  "titleMain": "Small projects.",
+  "titleSub": "Useful things.",
+  "intro": "コードとデザインで、日々の暮らしを少し良くする小さなものづくりを。",
+  "illustrationAlt": "デスクで猫と一緒にプロジェクトを作る松屿",
+  "emptyMessage": "公開中のプロジェクトはまだありません。",
+  "sloganAlt": "Small Projects. Big Changes.",
+  "moreBadge": "EXPERIMENTS, TOOLS & OPEN SOURCE",
+  "collapse": "プロジェクトを閉じる",
+  "moreCount": "他 {count} 件のプロジェクトを見る",
+  "viewAria": "プロジェクトを見る：{title}",
+  "modal": {
+    "titleFallback": "コンテンツ詳細",
+    "overview": "主な特徴",
+    "techStack": "技術スタック",
+    "devNotes": "設計と開発の思考",
+    "viewSource": "ソースコード",
+    "liveDemo": "デモを見る",
+    "closeAria": "詳細を閉じる",
+    "emptyDetail": "コンテンツが見つかりませんでした。未公開または削除された可能性があります。"
+  }
+}

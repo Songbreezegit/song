@@ -1,0 +1,16 @@
+{
+  "hero": {
+    "eyebrow": "Hi, I'm Songyu.",
+    "name": "松屿",
+    "verb": "builds",
+    "suffix": "useful things.",
+    "role": "Builder / Developer / Learner / Creator",
+    "defaultIntro": "Writing code, crafting products, and exploring the intersection of technology and thoughtful design. Focused on minimal, calm, and purposeful digital experiences.",
+    "ctaWork": "View Work",
+    "ctaContact": "Let's Talk",
+    "illustrationAlt": "Songyu sitting with a cat beside a platform inscribed 'Good Ideas Build A Brighter Web'",
+    "currently": "Currently",
+    "basedIn": "Based in",
+    "scrollAria": "Scroll down to explore work"
+  }
+}

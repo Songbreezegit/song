@@ -1,0 +1,52 @@
+{
+  "eyebrow": "03 / The person behind the pixels",
+  "titleMain": "about",
+  "titleSub1": "this ",
+  "titleSub2": "builder.",
+  "introGreeting": "你好，我是杨松。",
+  "introSub": "在学习、创造与分享中，持续成长。",
+  "role": "Developer / Designer / Builder / Open Source",
+  "illustrationAlt": "松屿坐在沙发上使用笔记本电脑，身旁是猫和植物",
+  "whoIAm": {
+    "eyebrow": "Who I am",
+    "title": "把朴素的功能，做精致。",
+    "bio": "计算机专业在读开发者与开源爱好者。专注 Android 原生开发（Kotlin / Jetpack Compose）、现代 Web 技术与 AI 场景落地。崇尚实用主义工程哲学，坚持动手创造工具来解决真实生活与学习中的问题。",
+    "location": "Chongqing, China"
+  },
+  "whatLearning": {
+    "eyebrow": "What I'm learning",
+    "title": "Still a work in progress.",
+    "building": "Building",
+    "learning": "Learning",
+    "exploring": "Exploring"
+  },
+  "whatBuild": {
+    "eyebrow": "What I build",
+    "items": [
+      {
+        "title": "Native Mobile Apps",
+        "desc": "追求丝滑流畅的交互、严苛的本地隐私防护与清晰的架构设计。"
+      },
+      {
+        "title": "Productivity Tools",
+        "desc": "把高频繁琐的日常操作，凝练为一键执行的轻量小工具与 CLI。"
+      },
+      {
+        "title": "Personal Web Spaces",
+        "desc": "构建兼具静谧美感、工匠细节与无障碍体验的现代网络空间。"
+      }
+    ]
+  },
+  "awayFromKeyboard": {
+    "eyebrow": "Away from the keyboard",
+    "title1": "Code. Coffee.",
+    "title2": "A little everyday life.",
+    "desc": "喜欢猫、咖啡、摄影、整理数字笔记和在安静的午后散步。"
+  },
+  "details": {
+    "summary": "More about me / 技术、工具与一路走来的记录",
+    "toolkit": "My toolkit",
+    "path": "My path"
+  },
+  "dividerAlt": "Nice to meet you!"
+}

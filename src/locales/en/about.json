@@ -1,0 +1,52 @@
+{
+  "eyebrow": "03 / The person behind the pixels",
+  "titleMain": "about",
+  "titleSub1": "this ",
+  "titleSub2": "builder.",
+  "introGreeting": "Hi, I'm Songyu (Yang Song).",
+  "introSub": "Learning, creating, and sharing along an evolving path.",
+  "role": "Developer / Designer / Builder / Open Source",
+  "illustrationAlt": "Songyu on a sofa working on a laptop beside a cat and plants",
+  "whoIAm": {
+    "eyebrow": "Who I am",
+    "title": "Crafting simple utilities with care and refinement.",
+    "bio": "CS student and open-source enthusiast. Focused on native Android engineering (Kotlin / Jetpack Compose), modern web technologies, and practical AI applications. Driven by pragmatic problem solving—building dedicated tools for real everyday workflows.",
+    "location": "Chongqing, China"
+  },
+  "whatLearning": {
+    "eyebrow": "What I'm learning",
+    "title": "Still a work in progress.",
+    "building": "Building",
+    "learning": "Learning",
+    "exploring": "Exploring"
+  },
+  "whatBuild": {
+    "eyebrow": "What I build",
+    "items": [
+      {
+        "title": "Native Mobile Apps",
+        "desc": "Prioritizing fluid micro-interactions, offline privacy, and clean architecture."
+      },
+      {
+        "title": "Productivity Tools",
+        "desc": "Condensing repetitive workflows into single-click utilities and CLI tools."
+      },
+      {
+        "title": "Personal Web Spaces",
+        "desc": "Creating quiet, accessible digital spaces with editorial craft and attention to detail."
+      }
+    ]
+  },
+  "awayFromKeyboard": {
+    "eyebrow": "Away from the keyboard",
+    "title1": "Code. Coffee.",
+    "title2": "A little everyday life.",
+    "desc": "Cats, pour-over coffee, photography, organizing digital notes, and quiet afternoon walks."
+  },
+  "details": {
+    "summary": "More about me / Tools, technologies, and milestones",
+    "toolkit": "My toolkit",
+    "path": "My path"
+  },
+  "dividerAlt": "Nice to meet you!"
+}

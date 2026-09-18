@@ -1,0 +1,49 @@
+{
+  "brand": "SONG ISLE",
+  "brandTagline": "Notes, tools, experiments and things I build.",
+  "brandSubtitle": "Small things, made with care.",
+  "copyright": "© {year} 松屿 (Songyu)",
+  "skipToContent": "メインコンテンツへスキップ",
+  "backToTop": "トップへ戻る",
+  "nav": {
+    "home": "ホーム",
+    "work": "作品",
+    "notes": "ノート",
+    "about": "プロフィール",
+    "contact": "コンタクト",
+    "stayCurious": "Stay Curious.",
+    "ariaBrand": "SONG ISLE ホームに戻る",
+    "ariaNav": "メインナビゲーション",
+    "ariaOpenMenu": "メニューを開く",
+    "ariaCloseMenu": "メニューを閉じる",
+    "ariaThemeLight": "ライトモードに切り替え",
+    "ariaThemeDark": "ダークモードに切り替え"
+  },
+  "actions": {
+    "viewWork": "作品を見る",
+    "letsTalk": "話してみる",
+    "readMore": "続きを読む",
+    "viewProject": "プロジェクトを見る",
+    "viewSource": "ソースコード",
+    "liveDemo": "デモを見る",
+    "copyEmail": "メールアドレスをコピー",
+    "emailCopied": "メールアドレスをコピーしました",
+    "copyFailed": "コピーに失敗しました。手動で選択してコピーしてください",
+    "copy": "コピー",
+    "copied": "コピー済み",
+    "close": "閉じる",
+    "retry": "再試行",
+    "backHome": "ホームに戻る"
+  },
+  "status": {
+    "loading": "読み込み中...",
+    "error": "読み込みに失敗しました",
+    "empty": "データがありません"
+  },
+  "notFound": {
+    "badge": "404",
+    "title": "ページが見つかりません",
+    "description": "お探しの航路は存在しないか、別の島へ移動した可能性があります。",
+    "backHome": "ホームに戻る"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "eyebrow": "02 / Notes to myself",
+  "titleMain": "Learning.",
+  "titleSub1": "A little, ",
+  "titleSub2": "every day.",
+  "intro": "A quiet repository of thoughts, engineering takeaways, and sparks of reflection.",
+  "illustrationAlt": "Songyu writing notes beside books and plants with a cat resting",
+  "emptyMessage": "No published notes yet.",
+  "sloganAlt": "Small Notes. Big Thoughts.",
+  "archiveBadge": "A GROWING COLLECTION OF THOUGHTS",
+  "collapse": "Collapse notes",
+  "browseAll": "Browse all {count} notes",
+  "filterAria": "Filter notes by category",
+  "emptyCategory": "All notes in this category are shown above.",
+  "readAria": "Read: {title}",
+  "readNote": "Read the note",
+  "allCategory": "All",
+  "fallbackNotice": "This note is currently available in Chinese only."
+}

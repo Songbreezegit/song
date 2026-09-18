@@ -1,0 +1,16 @@
+{
+  "hero": {
+    "eyebrow": "こんにちは、松屿です。",
+    "name": "松屿",
+    "verb": "builds",
+    "suffix": "useful things.",
+    "role": "Builder / Developer / Learner / Creator",
+    "defaultIntro": "コードを書き、プロダクトを作り、心地よい技術とデザインを探求しています。シンプルで静謐、温かみのあるデジタル体験を大切にしています。",
+    "ctaWork": "View Work",
+    "ctaContact": "Let's Talk",
+    "illustrationAlt": "猫とともに「Good Ideas Build A Brighter Web」と刻まれた台座に座る松屿",
+    "currently": "Currently",
+    "basedIn": "Based in",
+    "scrollAria": "作品を探索する"
+  }
+}
