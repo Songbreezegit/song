@@ -14,11 +14,12 @@ import { useProjects } from './hooks/useProjects';
 import { useArticles } from './hooks/useArticles';
 import { useSiteSettings } from './hooks/useSiteSettings';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { SeoHead } from './components/SeoHead';
 import { useI18n } from './i18n/useI18n';
 import './App.css';
 
 export function App() {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const { section } = useParams<{ section?: string }>();
   const [ready, setReady] = useState(false);
   const [activeSection, setActiveSection] = useState(() => section || 'home');
@@ -77,6 +78,7 @@ export function App() {
 
   return (
     <ThemeProvider>
+      <SeoHead language={language} section={section || activeSection} detailItem={detailItem} />
       <div className={`site ${ready ? 'is-ready' : 'is-entering'}`}>
         <SiteLoader onReady={onReady} />
         <a className="skip-link" href="#main">

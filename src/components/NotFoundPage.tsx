@@ -4,10 +4,19 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 import { useI18n } from '../i18n/useI18n';
 import { useTheme } from '../context/useTheme';
 import { Moon, Sun, ArrowLeft } from 'lucide-react';
+import { useEffect } from 'react';
+import { LANGUAGE_METAS } from '../i18n/config';
 
 export function NotFoundPage() {
   const { language, t } = useI18n();
   const { theme, toggleTheme } = useTheme();
+
+  useEffect(() => {
+    const meta = LANGUAGE_METAS[language] || LANGUAGE_METAS.zh;
+    document.documentElement.lang = meta.htmlLang;
+    const brand = language === 'zh' ? '松屿 · SONG ISLE' : 'SONG ISLE';
+    document.title = `404 · ${brand}`;
+  }, [language]);
 
   return (
     <div className="not-found-page">
