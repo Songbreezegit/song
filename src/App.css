@@ -229,3 +229,8 @@ html{scroll-padding-top:78px}.section{scroll-margin-top:0}
 .not-found-desc{font-size:16px;color:var(--muted);line-height:1.7;margin-bottom:32px}
 .not-found-actions{display:flex;justify-content:center}
 
+/* Article fallback banner */
+.article-fallback-banner{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;background:color-mix(in srgb,var(--sage) 12%,var(--paper));border:1px solid color-mix(in srgb,var(--sage) 35%,var(--line));border-radius:8px;font-size:13px;color:var(--ink);margin-bottom:24px;line-height:1.5}
+.article-fallback-banner svg{color:var(--sage);flex-shrink:0}
+
+
