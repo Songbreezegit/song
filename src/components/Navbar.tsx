@@ -70,7 +70,6 @@ export function Navbar({ activeSection }: { activeSection: string }) {
               {t(key)}
             </Link>
           ))}
-          <LanguageSwitcher variant="mobile" onLanguageSelect={() => setOpen(false)} />
         </nav>
 
         <div className="header-actions">

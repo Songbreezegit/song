@@ -11,7 +11,6 @@ interface LanguageSwitcherProps {
 }
 
 export function LanguageSwitcher({
-  variant = 'desktop',
   className = '',
   onLanguageSelect,
 }: LanguageSwitcherProps) {
@@ -36,32 +35,6 @@ export function LanguageSwitcher({
     );
     onLanguageSelect?.();
   };
-
-  if (variant === 'mobile') {
-    return (
-      <div
-        className={`lang-switcher-mobile ${className}`.trim()}
-        role="group"
-        aria-label="Language selection"
-      >
-        {SUPPORTED_LANGUAGES.map((lang) => {
-          const meta = LANGUAGE_METAS[lang];
-          const isActive = language === lang;
-          return (
-            <button
-              key={lang}
-              type="button"
-              className={`lang-mobile-btn ${isActive ? 'is-active' : ''}`}
-              onClick={() => handleSwitch(lang)}
-              aria-pressed={isActive}
-            >
-              {meta.label}
-            </button>
-          );
-        })}
-      </div>
-    );
-  }
 
   return (
     <div
