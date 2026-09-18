@@ -1,7 +1,10 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
 import App from './App';
-
+import { NotFoundPage } from './components/NotFoundPage';
+import { I18nProvider } from './i18n/I18nProvider';
+import { isSupportedLanguage, getStoredLanguage, detectBrowserLanguage } from './i18n/utils';
+import { ThemeProvider } from './context/ThemeContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import { AdminAuthGuard } from './admin/components/AdminAuthGuard';
 
@@ -22,19 +25,72 @@ const AdminLoadingFallback = (
   </div>
 );
 
+const VALID_SECTIONS = ['work', 'notes', 'about', 'contact'] as const;
+
+function RootRedirect() {
+  const lang = getStoredLanguage() || detectBrowserLanguage();
+  return <Navigate to={`/${lang}/`} replace />;
+}
+
+function LocalizedRoute() {
+  const { lang, section } = useParams<{ lang?: string; section?: string }>();
+  const navigate = useNavigate();
+
+  // Direct section access without lang prefix (e.g. /work, /notes)
+  if (lang && (VALID_SECTIONS as readonly string[]).includes(lang)) {
+    const detected = getStoredLanguage() || detectBrowserLanguage();
+    return <Navigate to={`/${detected}/${lang}`} replace />;
+  }
+
+  // Unsupported language code (e.g. /fr/work or /fr)
+  if (!lang || !isSupportedLanguage(lang)) {
+    const validSection = section && (VALID_SECTIONS as readonly string[]).includes(section) ? section : '';
+    return <Navigate to={`/en/${validSection ? validSection : ''}`} replace />;
+  }
+
+  // Unsupported section (e.g. /en/something-unknown)
+  if (section && !(VALID_SECTIONS as readonly string[]).includes(section)) {
+    return (
+      <I18nProvider language={lang} onLanguageChange={(l) => navigate(`/${l}/${section}`)}>
+        <ThemeProvider>
+          <NotFoundPage />
+        </ThemeProvider>
+      </I18nProvider>
+    );
+  }
+
+  return (
+    <I18nProvider language={lang} onLanguageChange={(l) => navigate(`/${l}/${section || ''}`)}>
+      <App />
+    </I18nProvider>
+  );
+}
+
+function LocalizedDeepNotFound() {
+  const { lang } = useParams<{ lang?: string }>();
+  const navigate = useNavigate();
+  const safeLang = lang && isSupportedLanguage(lang) ? lang : 'en';
+
+  return (
+    <I18nProvider language={safeLang} onLanguageChange={(l) => navigate(`/${l}/`)}>
+      <ThemeProvider>
+        <NotFoundPage />
+      </ThemeProvider>
+    </I18nProvider>
+  );
+}
+
 export function AppRouter() {
   return (
     <BrowserRouter>
       <AdminAuthProvider>
         <Suspense fallback={AdminLoadingFallback}>
           <Routes>
-            {/* Public SONG ISLE Site */}
-            <Route path="/" element={<App />} />
+            {/* Root language detection redirect */}
+            <Route path="/" element={<RootRedirect />} />
 
-            {/* Admin Login */}
+            {/* Admin Login & Protected Console */}
             <Route path="/admin/login" element={<AdminLogin />} />
-
-            {/* Admin Protected Console */}
             <Route
               path="/admin"
               element={
@@ -45,23 +101,24 @@ export function AppRouter() {
             >
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
-
               <Route path="projects" element={<AdminProjects />} />
               <Route path="projects/new" element={<AdminProjectEditor />} />
               <Route path="projects/:id" element={<AdminProjectEditor />} />
-
               <Route path="articles" element={<AdminArticles />} />
               <Route path="articles/new" element={<AdminArticleEditor />} />
               <Route path="articles/:id" element={<AdminArticleEditor />} />
-
               <Route path="site" element={<AdminSiteSettings />} />
               <Route path="media" element={<AdminMedia />} />
-
               <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
             </Route>
 
-            {/* Fallback to home */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Public Multilingual Routes */}
+            <Route path="/:lang" element={<LocalizedRoute />} />
+            <Route path="/:lang/:section" element={<LocalizedRoute />} />
+            <Route path="/:lang/*" element={<LocalizedDeepNotFound />} />
+
+            {/* Fallback */}
+            <Route path="*" element={<RootRedirect />} />
           </Routes>
         </Suspense>
       </AdminAuthProvider>
