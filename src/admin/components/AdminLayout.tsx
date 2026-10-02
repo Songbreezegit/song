@@ -1,56 +1,31 @@
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  FolderGit2,
-  FileText,
-  Sliders,
-  Image as ImageIcon,
   LogOut,
   ExternalLink,
   Menu,
   X,
 } from 'lucide-react';
-import { useAdminAuth } from '../../context/useAdminAuth';
-import '../admin.css';
-
-const navItems = [
-  { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/admin/projects', label: 'Projects', icon: FolderGit2 },
-  { to: '/admin/articles', label: 'Articles', icon: FileText },
-  { to: '/admin/site', label: 'Site Settings', icon: Sliders },
-  { to: '/admin/media', label: 'Media Library', icon: ImageIcon },
-];
+import { useAdminAuth } from '../auth/useAdminAuth';
+import { adminRoutes, ADMIN_LOGIN, getAdminPageTitle } from '../routes';
+import { useAdminAction } from '../hooks/useAdminAction';
+import { AdminFeedback } from './AdminFeedback';
+import { AdminErrorBoundary } from './AdminErrorBoundary';
+import { AdminLoading } from './AdminLoading';
 
 export function AdminLayout() {
   const { user, logout } = useAdminAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/admin/login');
-  };
-
-  const getPageTitle = () => {
-    const path = location.pathname;
-    if (path.includes('/admin/projects/new')) return '新建项目';
-    if (path.includes('/admin/projects/')) return '编辑项目';
-    if (path === '/admin/projects') return '项目管理';
-    if (path.includes('/admin/articles/new')) return '新建文章';
-    if (path.includes('/admin/articles/')) return '编辑文章';
-    if (path === '/admin/articles') return '文章管理';
-    if (path === '/admin/site') return '站点设置';
-    if (path === '/admin/media') return '媒体资源';
-    return '管理控制台';
-  };
+  const { run, pendingKey, feedback } = useAdminAction('退出登录失败，请重试。');
+  const handleLogout = () => run('logout', logout, { onSuccess: () => navigate(ADMIN_LOGIN, { replace: true }) });
 
   return (
     <div className="admin-body">
       <div className="admin-layout">
         {/* Sidebar */}
-        <aside className={`admin-sidebar ${mobileNavOpen ? 'open' : ''}`}>
+        <aside id="admin-sidebar" className={`admin-sidebar ${mobileNavOpen ? 'open' : ''}`}>
           <div className="admin-sidebar-brand">
             <NavLink to="/admin/dashboard" onClick={() => setMobileNavOpen(false)}>
               松屿 SONG ISLE <span className="badge">CMS</span>
@@ -64,20 +39,20 @@ export function AdminLayout() {
             </button>
           </div>
 
-          <nav className="admin-nav">
-            {navItems.map((item) => {
-              const Icon = item.icon;
+          <nav className="admin-nav" aria-label="后台导航">
+            {adminRoutes.filter(item => item.navigation).map((item) => {
+              const Icon = item.navigation!.icon;
               return (
                 <NavLink
-                  key={item.to}
-                  to={item.to}
+                  key={item.path}
+                  to={`/admin/${item.path}`}
                   className={({ isActive }) =>
                     `admin-nav-item ${isActive ? 'active' : ''}`
                   }
                   onClick={() => setMobileNavOpen(false)}
                 >
                   <Icon size={18} />
-                  <span>{item.label}</span>
+                  <span>{item.navigation!.label}</span>
                 </NavLink>
               );
             })}
@@ -96,6 +71,7 @@ export function AdminLayout() {
             </a>
             <button
               onClick={handleLogout}
+              disabled={Boolean(pendingKey)}
               className="admin-btn admin-btn-danger admin-btn-sm"
               style={{ width: '100%', justifyContent: 'flex-start' }}
             >
@@ -113,10 +89,12 @@ export function AdminLayout() {
                 className="admin-btn admin-btn-secondary admin-btn-sm mobile-menu-toggle"
                 onClick={() => setMobileNavOpen(!mobileNavOpen)}
                 aria-label="切换菜单"
+                aria-expanded={mobileNavOpen}
+                aria-controls="admin-sidebar"
               >
                 <Menu size={18} />
               </button>
-              <h2 className="admin-topbar-title">{getPageTitle()}</h2>
+              <h2 className="admin-topbar-title">{getAdminPageTitle(location.pathname)}</h2>
             </div>
             <div className="admin-topbar-right">
               <span style={{ fontSize: '13px', color: 'var(--admin-text-secondary)' }}>
@@ -126,7 +104,10 @@ export function AdminLayout() {
           </header>
 
           <main className="admin-content">
-            <Outlet />
+            <AdminFeedback feedback={feedback} />
+            <AdminErrorBoundary key={location.pathname}>
+              <Suspense fallback={<AdminLoading />}><Outlet /></Suspense>
+            </AdminErrorBoundary>
           </main>
         </div>
       </div>

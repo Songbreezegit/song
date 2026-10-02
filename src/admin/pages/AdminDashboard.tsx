@@ -1,83 +1,17 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  FolderGit2,
-  FileText,
-  Plus,
-  ArrowRight,
-  Clock,
-  CheckCircle2,
-  FileEdit,
-} from 'lucide-react';
-import { fetchAllProjects } from '../../services/projectService';
-import { fetchAllArticles } from '../../services/articleService';
-import type { ProjectRecord, ArticleRecord } from '../../types/database';
-import { isSupabaseConfigured } from '../../lib/supabase';
+import { FolderGit2, FileText, Plus, ArrowRight, Clock, CheckCircle2, FileEdit } from 'lucide-react';
+import { fetchAdminDashboard, type AdminDashboardData } from '../../services/adminService';
+import { useAdminQuery } from '../hooks/useAdminQuery';
+import { AdminQueryError } from '../components/AdminQueryError';
 
-interface RecentItem {
-  id: string;
-  title: string;
-  type: 'project' | 'article';
-  status: string;
-  updated_at: string;
-}
+const emptyDashboard: AdminDashboardData = { projects: { total: 0, published: 0, draft: 0 }, articles: { total: 0, published: 0, draft: 0 }, recentItems: [] };
 
 export function AdminDashboard() {
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [articles, setArticles] = useState<ArticleRecord[]>([]);
-  const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadData() {
-      if (!isSupabaseConfigured) {
-        setLoading(false);
-        return;
-      }
-      try {
-        setLoading(true);
-        const [projList, artList] = await Promise.all([
-          fetchAllProjects(),
-          fetchAllArticles(),
-        ]);
-        setProjects(projList);
-        setArticles(artList);
-      } catch {
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
-  }, []);
-
-  const publishedProjects = projects.filter((p) => p.status === 'published').length;
-  const draftProjects = projects.filter((p) => p.status === 'draft').length;
-
-  const publishedArticles = articles.filter((a) => a.status === 'published').length;
-  const draftArticles = articles.filter((a) => a.status === 'draft').length;
-
-  // Combine and sort recent updates
-  const recentItems: RecentItem[] = [
-    ...projects.map((p) => ({
-      id: p.id,
-      title: p.title,
-      type: 'project' as const,
-      status: p.status,
-      updated_at: p.updated_at,
-    })),
-    ...articles.map((a) => ({
-      id: a.id,
-      title: a.title,
-      type: 'article' as const,
-      status: a.status,
-      updated_at: a.updated_at,
-    })),
-  ].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()).slice(0, 6);
+  const { data, loading, error, reload } = useAdminQuery(fetchAdminDashboard, emptyDashboard, '统计加载失败，请重试。');
 
   return (
     <div>
-      {error && <p role="alert" className="admin-alert admin-alert-error">统计加载失败，请刷新重试。</p>}
+      <AdminQueryError error={error} onRetry={reload} />
       {/* Quick Actions */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
         <Link to="/admin/projects/new" className="admin-btn admin-btn-primary">
@@ -97,30 +31,30 @@ export function AdminDashboard() {
       <div className="admin-stats-grid">
         <div className="admin-stat-card">
           <div className="admin-stat-label">Projects · 作品项目</div>
-          <div className="admin-stat-value">{loading ? '...' : error ? '—' : projects.length}</div>
+          <div className="admin-stat-value">{loading ? '...' : error ? '—' : data.projects.total}</div>
           <div style={{ display: 'flex', gap: '12px', marginTop: '10px', fontSize: '13px', color: 'var(--admin-text-secondary)' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <CheckCircle2 size={13} color="var(--admin-success)" />
-              {publishedProjects} 已发布
+              {loading || error ? '—' : data.projects.published} 已发布
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <FileEdit size={13} color="var(--admin-warning)" />
-              {draftProjects} 草稿
+              {loading || error ? '—' : data.projects.draft} 草稿
             </span>
           </div>
         </div>
 
         <div className="admin-stat-card">
           <div className="admin-stat-label">Articles · 思考与笔记</div>
-          <div className="admin-stat-value">{loading ? '...' : error ? '—' : articles.length}</div>
+          <div className="admin-stat-value">{loading ? '...' : error ? '—' : data.articles.total}</div>
           <div style={{ display: 'flex', gap: '12px', marginTop: '10px', fontSize: '13px', color: 'var(--admin-text-secondary)' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <CheckCircle2 size={13} color="var(--admin-success)" />
-              {publishedArticles} 已发布
+              {loading || error ? '—' : data.articles.published} 已发布
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <FileEdit size={13} color="var(--admin-warning)" />
-              {draftArticles} 草稿
+              {loading || error ? '—' : data.articles.draft} 草稿
             </span>
           </div>
         </div>
@@ -137,7 +71,7 @@ export function AdminDashboard() {
             <div className="admin-spinner" style={{ margin: '0 auto 12px' }} />
             正在加载数据...
           </div>
-        ) : recentItems.length === 0 ? (
+        ) : error ? null : data.recentItems.length === 0 ? (
           <p style={{ color: 'var(--admin-text-secondary)', margin: 0, fontSize: '13px' }}>
             暂无更新记录。请新建项目或文章。
           </p>
@@ -154,7 +88,7 @@ export function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {recentItems.map((item) => (
+                {data.recentItems.map((item) => (
                   <tr key={`${item.type}-${item.id}`}>
                     <td style={{ fontWeight: 500 }}>{item.title}</td>
                     <td>

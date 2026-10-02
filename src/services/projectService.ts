@@ -71,7 +71,7 @@ export async function createProject(
 
   const isSlugAvailable = await checkProjectSlugAvailable(projectData.slug);
   if (!isSlugAvailable) {
-    throw new Error(`Slug "${projectData.slug}" 已存在，请使用其他 Slug。`);
+    throw new Error(`Slug "${projectData.slug}" 已存在，请更换！`);
   }
 
   const { data, error } = await supabase
@@ -101,7 +101,7 @@ export async function updateProject(
   if (projectData.slug) {
     const isSlugAvailable = await checkProjectSlugAvailable(projectData.slug, id);
     if (!isSlugAvailable) {
-      throw new Error(`Slug "${projectData.slug}" 已存在，请更换其他 Slug。`);
+      throw new Error(`Slug "${projectData.slug}" 已存在，请更换！`);
     }
   }
 

@@ -94,6 +94,8 @@ const { t } = useI18n();
 
 ## 🛠️ 本地运行与构建
 
+管理后台的模块分层、认证与编辑器流程、扩展方式和验证命令见 [管理后台架构](docs/admin-architecture.md)。
+
 ```bash
 # 进入项目目录
 cd d:\code\song

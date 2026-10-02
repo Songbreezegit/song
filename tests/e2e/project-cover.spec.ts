@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 
-const base = 'http://127.0.0.1:5175';
+const base = 'http://127.0.0.1:5175/zh/';
 const ratios = [[1920, 1080], [1600, 1200], [1500, 1000], [1200, 1200], [1080, 1440], [2100, 900]];
 
 test('covers: existing Work layout and detail navigation remain functional at seven widths', async ({ page }) => {
@@ -36,13 +36,17 @@ async function setup(page: Page, fixtures = true) {
   const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
   const { ProjectCover } = await import('/src/components/ProjectCover.tsx');
   const { ProjectCard } = await import('/src/components/ProjectCard.tsx');
+  const { I18nProvider } = await import('/src/i18n/I18nProvider.tsx');
   document.getElementById('root')!.style.display = 'none';
   const host = document.createElement('div');
   host.id = 'cover-harness';
   host.style.cssText = 'width:calc(100% - 40px);max-width:1240px;margin:20px auto';
   document.body.append(host);
   const root = ReactDOM.createRoot(host);
-  Object.assign(window, { renderCovers: (items: Record<string, unknown>[], cards = false) => root.render(React.createElement('div', { className: 'project-grid' }, items.map((props, index) => React.createElement('div', { key: index, className: `project-slot slot-${index % 4}` }, cards ? React.createElement(ProjectCard, { project: props, onSelect: () => {} }) : React.createElement(ProjectCover, props))))) });
+  Object.assign(window, { renderCovers: (items: Record<string, unknown>[], cards = false) => {
+    const children = items.map((props, index) => React.createElement('div', { key: index, className: `project-slot slot-${index % 4}` }, cards ? React.createElement(ProjectCard, { project: props, onSelect: () => {} }) : React.createElement(ProjectCover, props)));
+    root.render(React.createElement(I18nProvider, { language: 'zh' }, React.createElement('div', { className: 'project-grid' }, children)));
+  } });
  });
  return errors;
 }

@@ -1,106 +1,17 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Plus,
-  Edit2,
-  Trash2,
-  CheckCircle,
-  AlertCircle,
-  Star,
-  RefreshCw,
-} from 'lucide-react';
-import {
-  fetchAllProjects,
-  deleteProject,
-  updateProjectStatus,
-} from '../../services/projectService';
-import type { ProjectRecord, ContentStatus } from '../../types/database';
-import { isSupabaseConfigured } from '../../lib/supabase';
+import { Plus, Edit2, Trash2, RefreshCw, Star } from 'lucide-react';
+import { fetchAllProjects, deleteProject, updateProjectStatus } from '../../services/projectService';
+import type { ProjectRecord } from '../../types/database';
+import { useContentCollection } from '../hooks/useContentCollection';
+import { AdminFeedback } from '../components/AdminFeedback';
+import { AdminLoading } from '../components/AdminLoading';
+import { AdminQueryError } from '../components/AdminQueryError';
+
+const config = { label: '项目', load: fetchAllProjects, remove: deleteProject, updateStatus: updateProjectStatus };
 
 export function AdminProjects() {
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [loading, setLoading] = useState(Boolean(isSupabaseConfigured));
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [actionInProgress, setActionInProgress] = useState<string | null>(null);
-
-  const loadProjects = async () => {
-    if (!isSupabaseConfigured) {
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      const data = await fetchAllProjects();
-      setProjects(data);
-    } catch (err) {
-      setFeedback({
-        type: 'error',
-        message: err instanceof Error ? err.message : '加载项目列表失败',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    let active = true;
-    if (!isSupabaseConfigured) return;
-    fetchAllProjects()
-      .then((data) => {
-        if (active) {
-          setProjects(data);
-          setLoading(false);
-        }
-      })
-      .catch((err) => {
-        if (active) {
-          setFeedback({
-            type: 'error',
-            message: err instanceof Error ? err.message : '加载项目列表失败',
-          });
-          setLoading(false);
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const handleStatusChange = async (id: string, newStatus: ContentStatus) => {
-    try {
-      setActionInProgress(id);
-      await updateProjectStatus(id, newStatus);
-      setFeedback({ type: 'success', message: `项目状态已更新为：${newStatus}` });
-      await loadProjects();
-    } catch (err) {
-      setFeedback({
-        type: 'error',
-        message: err instanceof Error ? err.message : '更新状态失败',
-      });
-    } finally {
-      setActionInProgress(null);
-    }
-  };
-
-  const handleDelete = async (id: string, title: string) => {
-    if (!window.confirm(`确定要彻底删除项目「${title}」吗？此操作不可撤销。`)) {
-      return;
-    }
-
-    try {
-      setActionInProgress(id);
-      await deleteProject(id);
-      setFeedback({ type: 'success', message: `项目「${title}」已删除` });
-      setProjects((prev) => prev.filter((p) => p.id !== id));
-    } catch (err) {
-      setFeedback({
-        type: 'error',
-        message: err instanceof Error ? err.message : '删除项目失败',
-      });
-    } finally {
-      setActionInProgress(null);
-    }
-  };
+  const { data: projects, loading, error, reload: loadProjects, feedback, pendingKey: actionInProgress,
+    changeStatus: handleStatusChange, remove: handleDelete } = useContentCollection<ProjectRecord>(config);
 
   return (
     <div>
@@ -113,7 +24,7 @@ export function AdminProjects() {
             onClick={loadProjects}
             className="admin-btn admin-btn-secondary"
             title="刷新"
-            disabled={loading}
+            disabled={loading || Boolean(actionInProgress)}
           >
             <RefreshCw size={15} className={loading ? 'admin-spinner' : ''} />
           </button>
@@ -124,23 +35,13 @@ export function AdminProjects() {
         </div>
       </div>
 
-      {feedback && (
-        <div
-          className={`admin-alert ${
-            feedback.type === 'success' ? 'admin-alert-success' : 'admin-alert-error'
-          }`}
-        >
-          {feedback.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
-          <div>{feedback.message}</div>
-        </div>
-      )}
+      <AdminFeedback feedback={feedback} />
 
       <div className="admin-card" style={{ padding: 0 }}>
         {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--admin-text-secondary)' }}>
-            <div className="admin-spinner" style={{ margin: '0 auto 12px' }} />
-            正在加载项目列表...
-          </div>
+          <AdminLoading message="正在加载项目列表..." />
+        ) : error ? (
+          <AdminQueryError error={error} onRetry={loadProjects} />
         ) : projects.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', color: 'var(--admin-text-secondary)' }}>
             <p>暂无项目记录。</p>
@@ -206,7 +107,7 @@ export function AdminProjects() {
                           <button
                             className="admin-btn admin-btn-secondary admin-btn-sm"
                             onClick={() => handleStatusChange(project.id, 'published')}
-                            disabled={actionInProgress === project.id}
+                            disabled={Boolean(actionInProgress)}
                             title="发布到前台"
                           >
                             发布
@@ -215,7 +116,7 @@ export function AdminProjects() {
                           <button
                             className="admin-btn admin-btn-secondary admin-btn-sm"
                             onClick={() => handleStatusChange(project.id, 'draft')}
-                            disabled={actionInProgress === project.id}
+                            disabled={Boolean(actionInProgress)}
                             title="转为草稿下线"
                           >
                             转草稿
@@ -231,7 +132,7 @@ export function AdminProjects() {
                         <button
                           className="admin-btn admin-btn-danger admin-btn-sm"
                           onClick={() => handleDelete(project.id, project.title)}
-                          disabled={actionInProgress === project.id}
+                          disabled={Boolean(actionInProgress)}
                           title="删除项目"
                         >
                           <Trash2 size={13} />

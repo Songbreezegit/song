@@ -71,7 +71,7 @@ export async function createArticle(
 
   const isSlugAvailable = await checkArticleSlugAvailable(articleData.slug);
   if (!isSlugAvailable) {
-    throw new Error(`Slug "${articleData.slug}" 已存在，请更换其他 Slug。`);
+    throw new Error(`Slug "${articleData.slug}" 已存在，请更换！`);
   }
 
   const { data, error } = await supabase
@@ -101,7 +101,7 @@ export async function updateArticle(
   if (articleData.slug) {
     const isSlugAvailable = await checkArticleSlugAvailable(articleData.slug, id);
     if (!isSlugAvailable) {
-      throw new Error(`Slug "${articleData.slug}" 已存在，请更换其他 Slug。`);
+      throw new Error(`Slug "${articleData.slug}" 已存在，请更换！`);
     }
   }
 
