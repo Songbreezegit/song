@@ -34,7 +34,7 @@ beforeAll(async () => {
     insert into projects(id, slug, title, status) values ('private-project', 'private-project', 'Hidden', 'draft'), ('archived-project', 'archived-project', 'Hidden archive', 'archived');
     insert into articles(id, slug, title, status) values ('private-article', 'private-article', 'Hidden', 'draft'), ('archived-article', 'archived-article', 'Hidden archive', 'archived');
     insert into storage.objects(bucket_id,name) values ('media','public.png'), ('other','private.png');`);
-  const migration = readFileSync('supabase/migrations/20261004070228_enforce_admin_mfa.sql', 'utf8');
+  const migration = readFileSync('supabase/migrations/20261004093439_enforce_admin_mfa.sql', 'utf8');
   await expect(db.exec(migration)).rejects.toThrow('bind the sole admin TOTP');
   await db.exec('rollback');
   await db.exec(`insert into auth.mfa_factors values ('${admin}', 'verified', 'totp');`);
