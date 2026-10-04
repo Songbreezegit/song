@@ -653,3 +653,7 @@
   margin: 0;
   min-width: 0;
 }
+/* The enrollment secret exists only in the current login screen's memory. */
+.admin-mfa-setup { margin: 16px 0; }
+.admin-mfa-setup img { display: block; max-width: 100%; background: white; margin: 0 auto 12px; }
+.admin-mfa-secret { display: block; overflow-wrap: anywhere; padding: 12px 0; user-select: all; }

@@ -23,7 +23,7 @@ test('public languages never initialize admin authentication or load admin modul
   await login(page);
   await expect(page).toHaveURL(/\/admin\/dashboard$/);
   await expect(page.locator('.admin-stat-value').first()).toHaveText('0');
-  expect(state.membershipRequests).toBe(1);
+  expect(state.membershipRequests).toBe(2);
   const adminScripts: string[] = [];
   page.on('request', request => {
     if (/\/src\/(?:admin\/|services\/adminService)/.test(request.url())) adminScripts.push(request.url());

@@ -1,8 +1,10 @@
 import { Upload, ExternalLink, Image as ImageIcon } from 'lucide-react';
 import type { useProjectEditor } from './useProjectEditor';
+import { safeImageUrl } from '../../../lib/safeUrl';
 
 export function ProjectCoverFields({ editor }: { editor: ReturnType<typeof useProjectEditor> }) {
   const { draft, setField, uploadingCover, handleCoverUpload } = editor;
+  const coverUrl = safeImageUrl(draft.cover_image);
   return (
         <div className="admin-grid-2">
           <div className="admin-card">
@@ -38,16 +40,16 @@ export function ProjectCoverFields({ editor }: { editor: ReturnType<typeof usePr
               <h3 className="admin-card-title">封面图片 (Cover Image)</h3>
             </div>
 
-            {draft.cover_image ? (
+            {coverUrl ? (
               <div style={{ marginBottom: '14px' }}>
                 <img
-                  src={draft.cover_image}
+                  src={coverUrl}
                   alt="封面预览"
                   style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--admin-border)' }}
                 />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
                   <a
-                    href={draft.cover_image}
+                    href={coverUrl}
                     target="_blank"
                     rel="noreferrer"
                     style={{ fontSize: '12px', color: 'var(--admin-accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}

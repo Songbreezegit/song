@@ -7,7 +7,7 @@ import { AdminLoading } from './AdminLoading';
 import { ADMIN_LOGIN } from '../routes';
 
 export function AdminAuthGuard({ children }: { children: ReactNode }) {
-  const { session, isAdmin, loading, authError, logout } = useAdminAuth();
+  const { session, isAdmin, mfaRequired, loading, authError, logout } = useAdminAuth();
   const location = useLocation();
   const action = useAdminAction('退出登录失败，请重试。');
 
@@ -15,7 +15,7 @@ export function AdminAuthGuard({ children }: { children: ReactNode }) {
     return <AdminLoading screen message="正在验证管理员凭据..." />;
   }
 
-  if (!session) {
+  if (!session || mfaRequired) {
     return <Navigate to={ADMIN_LOGIN} state={{ from: location }} replace />;
   }
 

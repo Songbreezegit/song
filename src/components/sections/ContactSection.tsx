@@ -5,10 +5,13 @@ import { Asset, FloatingBadge, type AssetName } from '../Asset';
 import { CTAButton } from '../CTAButton';
 import { ScrollReveal } from '../ScrollReveal';
 import { useI18n } from '../../i18n/useI18n';
+import { safeExternalUrl, safeMailto } from '../../lib/safeUrl';
 
 export function ContactSection(props: SiteSettingsProps) {
   const { language, t } = useI18n();
   const contact = props.settings?.contact;
+  const emailUrl = safeMailto(contact?.email || 'dogfishgcordialf@gmail.com');
+  const githubUrl = safeExternalUrl(contact?.github || 'https://github.com/Songbreezegit');
 
   const socials: { label: string; user: string | undefined; href: string; icon: AssetName }[] = [
     { label: 'GitHub', user: contact?.githubUser || 'Songbreezegit', href: contact?.github || 'https://github.com/Songbreezegit', icon: 'contact-icon-github' },
@@ -46,16 +49,16 @@ export function ContactSection(props: SiteSettingsProps) {
             </h2>
             <p className="section-intro">{t('contact.intro')}</p>
             <div className="cta-row">
-              <CTAButton href={`mailto:${contact?.email || 'dogfishgcordialf@gmail.com'}`}>
+              {emailUrl && <CTAButton href={emailUrl}>
                 {t('contact.ctaEmail')}
-              </CTAButton>
-              <CTAButton
-                href={contact?.github || 'https://github.com/Songbreezegit'}
+              </CTAButton>}
+              {githubUrl && <CTAButton
+                href={githubUrl}
                 external
                 secondary
               >
                 {t('contact.ctaGithub')}
-              </CTAButton>
+              </CTAButton>}
             </div>
           </ScrollReveal>
           <ScrollReveal className="contact-illustration">
@@ -72,7 +75,7 @@ export function ContactSection(props: SiteSettingsProps) {
             <Asset name="about-icon-envelope" />
             <div>
               <span className="small-label">{t('contact.dropLine')}</span>
-              <a href={`mailto:${contact?.email || 'dogfishgcordialf@gmail.com'}`}>
+              <a href={safeMailto(contact?.email || 'dogfishgcordialf@gmail.com')}>
                 {contact?.email || 'dogfishgcordialf@gmail.com'}
               </a>
             </div>
@@ -90,11 +93,11 @@ export function ContactSection(props: SiteSettingsProps) {
 
           <div className="socials">
             {socials
-              .filter((s) => s.href)
+              .filter((s) => safeExternalUrl(s.href))
               .map((s) => (
                 <a
                   key={s.label}
-                  href={s.href}
+                  href={safeExternalUrl(s.href)}
                   target="_blank"
                   rel="noreferrer"
                   className="social-link"

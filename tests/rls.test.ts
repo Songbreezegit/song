@@ -13,10 +13,14 @@ beforeAll(async () => {
     create role anon; create role authenticated;
     create schema auth; create schema storage;
     create table auth.users(id uuid primary key);
+    create table auth.mfa_factors(user_id uuid, status text, factor_type text);
     create function auth.uid() returns uuid language sql stable as
       $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
     grant usage on schema public, auth, storage to anon, authenticated;
     grant execute on function auth.uid() to anon, authenticated;
+    create function auth.jwt() returns jsonb language sql stable as
+      $$ select jsonb_build_object('aal', nullif(current_setting('request.jwt.claim.aal', true), '')) $$;
+    grant execute on function auth.jwt() to anon, authenticated;
     create table storage.buckets(id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
     create table storage.objects(id uuid primary key default gen_random_uuid(), bucket_id text, name text);
     alter table storage.objects enable row level security;
@@ -30,13 +34,51 @@ beforeAll(async () => {
     insert into projects(id, slug, title, status) values ('private-project', 'private-project', 'Hidden', 'draft'), ('archived-project', 'archived-project', 'Hidden archive', 'archived');
     insert into articles(id, slug, title, status) values ('private-article', 'private-article', 'Hidden', 'draft'), ('archived-article', 'archived-article', 'Hidden archive', 'archived');
     insert into storage.objects(bucket_id,name) values ('media','public.png'), ('other','private.png');`);
+  const migration = readFileSync('supabase/migrations/20261004070228_enforce_admin_mfa.sql', 'utf8');
+  await expect(db.exec(migration)).rejects.toThrow('bind the sole admin TOTP');
+  await db.exec('rollback');
+  await db.exec(`insert into auth.mfa_factors values ('${admin}', 'verified', 'totp');`);
+  await db.exec(migration);
 }, 30000);
 afterAll(async () => { await db.close(); });
 
-async function asRole(role: 'anon' | 'authenticated', user: string, action: () => Promise<void>) {
-  await db.exec(`set role ${role}; set request.jwt.claim.sub = '${user}';`);
-  try { await action(); } finally { await db.exec('reset role; reset request.jwt.claim.sub;'); }
+async function asRole(role: 'anon' | 'authenticated', user: string, action: () => Promise<void>, aal = 'aal2') {
+  await db.exec(`set role ${role}; set request.jwt.claim.sub = '${user}'; set request.jwt.claim.aal = '${aal}';`);
+  try { await action(); } finally { await db.exec('reset role; reset request.jwt.claim.sub; reset request.jwt.claim.aal;'); }
 }
+
+it.each(['aal1', ''])('admin at %s can verify membership and read public data but cannot read drafts or mutate', async aal => {
+  await asRole('authenticated', admin, async () => {
+    expect((await db.query('select * from admin_users')).rows).toHaveLength(1);
+    for (const table of ['projects', 'articles']) {
+      expect((await db.query(`select status from ${table}`)).rows.every(row => row.status === 'published')).toBe(true);
+      expect((await db.query(`select id from ${table} where status in ('draft','archived')`)).rows).toEqual([]);
+      await expect(db.exec(`insert into ${table}(slug,title) values ('mfa-denied','Denied')`)).rejects.toThrow();
+      expect((await db.query(`update ${table} set title='Denied' returning id`)).rows).toEqual([]);
+      expect((await db.query(`delete from ${table} returning id`)).rows).toEqual([]);
+    }
+    expect((await db.query('select id from site_settings')).rows).toHaveLength(1);
+    expect((await db.query("update site_settings set site_intro='Denied' returning id")).rows).toEqual([]);
+    expect((await db.query('delete from site_settings returning id')).rows).toEqual([]);
+    await expect(db.exec("insert into site_settings(id) values ('mfa-denied')")).rejects.toThrow();
+    expect((await db.query('select name from storage.objects')).rows).toEqual([{ name: 'public.png' }]);
+    await expect(db.exec("insert into storage.objects(bucket_id,name) values ('media','mfa-denied.png')")).rejects.toThrow();
+    expect((await db.query("update storage.objects set name='Denied' returning id")).rows).toEqual([]);
+    expect((await db.query('delete from storage.objects returning id')).rows).toEqual([]);
+  }, aal);
+});
+
+it('a permissive policy cannot bypass the MFA write restriction', async () => {
+  await db.exec('create policy accidental_authenticated_insert on projects for insert to authenticated with check (true)');
+  try {
+    await asRole('authenticated', admin, async () => {
+      await expect(db.exec("insert into projects(slug,title) values ('bypass','Denied')")).rejects.toThrow();
+    }, 'aal1');
+    await asRole('authenticated', other, async () => {
+      await expect(db.exec("insert into projects(slug,title) values ('bypass','Denied')")).rejects.toThrow();
+    });
+  } finally { await db.exec('drop policy accidental_authenticated_insert on projects'); }
+});
 
 it.each(['anon', 'authenticated'] as const)('%s reads only published content and cannot mutate or self-enroll', async role => {
   await asRole(role, role === 'anon' ? '' : other, async () => {

@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import { Sprout } from 'lucide-react';
 import './ProjectCover.css';
+import { safeImageUrl } from '../lib/safeUrl';
 
 export interface ProjectCoverProps {
  src?: string | null;
@@ -12,7 +13,8 @@ export interface ProjectCoverProps {
 
 export function ProjectCover(props: ProjectCoverProps) {
  // Reset loading/error state when the source changes, without an effect.
- return <CoverImage key={props.src ?? ''} {...props} />;
+ const src = safeImageUrl(props.src);
+ return <CoverImage key={src ?? ''} {...props} src={src} />;
 }
 
 function CoverImage({ src, alt, fit = 'cover', position = 'center', blend = 'soft' }: ProjectCoverProps) {

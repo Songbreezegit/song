@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const backend = vi.hoisted(() => {
   const query: Record<string, ReturnType<typeof vi.fn>> = {};
@@ -27,7 +27,9 @@ beforeEach(() => {
   backend.configured = true;
   backend.query.then.mockImplementation(resolve => Promise.resolve({ data: [], error: null }).then(resolve));
   backend.query.maybeSingle.mockResolvedValue({ data: null, error: null });
+  vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ width: 1, height: 1, close: vi.fn() }));
 });
+afterEach(() => vi.unstubAllGlobals());
 
 describe('configured public data never revives static content', () => {
   it('returns empty published lists and missing settings', async () => {
@@ -71,7 +73,7 @@ it('requires admin membership and fails closed on errors', async () => {
 
 it('reports duplicate slug even when a concurrent insert wins after precheck', async () => {
   backend.query.single.mockResolvedValue({ error: { code: '23505' }, data: null });
-  await expect(createProject({ slug: 'duplicate', status: 'draft' } as ProjectRecord)).rejects.toThrow('Slug 已存在');
+  await expect(createProject({ title: 'Test', slug: 'duplicate', status: 'draft' } as ProjectRecord)).rejects.toThrow('Slug 已存在');
 });
 
 describe('media validation and listing', () => {
@@ -83,7 +85,16 @@ describe('media validation and listing', () => {
   });
   it.each([['jpg', 'image/jpeg'], ['jpeg', 'image/jpeg'], ['png', 'image/png'], ['webp', 'image/webp']])('accepts %s', async (ext, type) => {
     backend.storage.upload.mockResolvedValue({ error: null });
-    expect((await uploadMedia(new File(['image'], `ok.${ext}`, { type }))).path).toMatch(new RegExp(`\\.${ext}$`));
+    const bytes = type === 'image/jpeg' ? new Uint8Array([255, 216, 255]) : type === 'image/png' ? new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]) : new TextEncoder().encode('RIFF1234WEBP');
+    expect((await uploadMedia(new File([bytes], `ok.${ext}`, { type }))).path).toMatch(new RegExp(`\\.${ext}$`));
+  });
+  it('rejects forged image MIME/extension and corrupt images before Storage', async () => {
+    await expect(uploadMedia(new File(['<script>bad</script>'], 'fake.png', { type: 'image/png' }))).rejects.toThrow('内容与文件格式');
+    const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+    await expect(uploadMedia(new File([png], 'fake.jpg', { type: 'image/png' }))).rejects.toThrow('内容与文件格式');
+    vi.mocked(createImageBitmap).mockRejectedValue(new Error('decode failed'));
+    await expect(uploadMedia(new File([png], 'broken.png', { type: 'image/png' }))).rejects.toThrow('无法解码');
+    expect(backend.storage.upload).not.toHaveBeenCalled();
   });
   it('retains nested folder paths and paginates past 100 objects', async () => {
     backend.storage.list.mockImplementation((folder, { offset }) => Promise.resolve({ error: null, data:

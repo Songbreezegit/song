@@ -1,15 +1,15 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { ArrowRight, AlertCircle } from 'lucide-react';
 import { useAdminAuth } from '../auth/useAdminAuth';
 import { getAdminReturnPath } from '../routes';
 import { useAdminAction } from '../hooks/useAdminAction';
 import { AdminLoading } from '../components/AdminLoading';
 import { AdminFeedback } from '../components/AdminFeedback';
+import { AdminMfaForm } from '../auth/AdminMfaForm';
 
 export function AdminLogin() {
-  const { login, isConfigured, isAdmin, authError, loading: authLoading } = useAdminAuth();
-  const navigate = useNavigate();
+  const { login, isConfigured, isAdmin, mfaRequired, session, authError, loading: authLoading } = useAdminAuth();
   const location = useLocation();
   const from = getAdminReturnPath((location.state as { from?: unknown } | null)?.from);
 
@@ -28,7 +28,7 @@ export function AdminLogin() {
     await run('login', async () => {
       const { error } = await login(email, password);
       if (error) throw error;
-    }, { onSuccess: () => navigate(from, { replace: true }) });
+    }, { onSuccess: () => setPassword('') });
   };
 
   if (isAdmin) return <Navigate to={from} replace />;
@@ -54,7 +54,7 @@ export function AdminLogin() {
 
           <AdminFeedback feedback={feedback || (authError ? { type: 'error', message: authError } : null)} />
 
-          <form onSubmit={handleSubmit}>
+          {mfaRequired ? <AdminMfaForm key={session?.user.id} /> : <form onSubmit={handleSubmit}>
             <div className="admin-form-group">
               <label className="admin-label" htmlFor="email">
                 管理员邮箱
@@ -112,7 +112,7 @@ export function AdminLogin() {
                 </>
               )}
             </button>
-          </form>
+          </form>}
 
           <div style={{ marginTop: '24px', textAlign: 'center' }}>
             <a

@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { validateArticleInput } from '../lib/contentValidation';
 import { ARTICLES, type Article } from '../data/portfolioData';
 import {
   type ArticleRecord,
@@ -69,6 +70,7 @@ export async function createArticle(
     throw new Error('Supabase 未配置，无法创建文章。请在 .env.local 中配置环境变量。');
   }
 
+  validateArticleInput(articleData, true);
   const isSlugAvailable = await checkArticleSlugAvailable(articleData.slug);
   if (!isSlugAvailable) {
     throw new Error(`Slug "${articleData.slug}" 已存在，请更换！`);
@@ -98,6 +100,7 @@ export async function updateArticle(
     throw new Error('Supabase 未配置，无法更新文章。');
   }
 
+  validateArticleInput(articleData);
   if (articleData.slug) {
     const isSlugAvailable = await checkArticleSlugAvailable(articleData.slug, id);
     if (!isSlugAvailable) {

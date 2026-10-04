@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { validateProjectInput } from '../lib/contentValidation';
 import { PROJECTS, type Project } from '../data/portfolioData';
 import {
   type ProjectRecord,
@@ -69,6 +70,7 @@ export async function createProject(
     throw new Error('Supabase 未配置，无法创建项目。请在 .env.local 中配置环境变量。');
   }
 
+  validateProjectInput(projectData, true);
   const isSlugAvailable = await checkProjectSlugAvailable(projectData.slug);
   if (!isSlugAvailable) {
     throw new Error(`Slug "${projectData.slug}" 已存在，请更换！`);
@@ -98,6 +100,7 @@ export async function updateProject(
     throw new Error('Supabase 未配置，无法更新项目。');
   }
 
+  validateProjectInput(projectData);
   if (projectData.slug) {
     const isSlugAvailable = await checkProjectSlugAvailable(projectData.slug, id);
     if (!isSlugAvailable) {

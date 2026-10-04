@@ -144,7 +144,10 @@ test('mobile empty states fit viewport and detail follows browser back/forward',
 
 test('media upload/list/delete and project cover upload', async ({ page }) => {
   const state = await fixture(page); await login(page); await expect(page).toHaveURL(/dashboard$/);
-  const file = { name: 'cover.png', mimeType: 'image/png', buffer: Buffer.from('test image fixture') };
+  const file = { name: 'cover.png', mimeType: 'image/png', buffer: Buffer.from(await page.evaluate(() => {
+    const canvas = document.createElement('canvas'); canvas.width = 2; canvas.height = 2;
+    return canvas.toDataURL('image/png').split(',')[1];
+  }), 'base64') };
   await page.goto('/admin/media');
   await page.locator('input[type=file]').setInputFiles({ ...file, name: 'bad.gif', mimeType: 'image/gif' });
   await expect(page.getByText('不支持的文件格式。仅支持 JPG, JPEG, PNG, WEBP 格式图片。')).toBeVisible();

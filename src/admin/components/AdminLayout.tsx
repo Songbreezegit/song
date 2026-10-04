@@ -14,7 +14,7 @@ import { AdminErrorBoundary } from './AdminErrorBoundary';
 import { AdminLoading } from './AdminLoading';
 
 export function AdminLayout() {
-  const { user, logout } = useAdminAuth();
+  const { user, logout, idleRemaining } = useAdminAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -104,6 +104,9 @@ export function AdminLayout() {
           </header>
 
           <main className="admin-content">
+            {idleRemaining !== null && <div className="admin-alert admin-alert-info" role="alert">
+              将在 {Math.ceil(idleRemaining / 1000)} 秒后因闲置退出。请及时保存未提交的内容；继续操作可延长会话。
+            </div>}
             <AdminFeedback feedback={feedback} />
             <AdminErrorBoundary key={location.pathname}>
               <Suspense fallback={<AdminLoading />}><Outlet /></Suspense>

@@ -1,12 +1,52 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Session } from '@supabase/supabase-js';
-import { createSessionResolver, type AdminSessionState } from '../src/admin/auth/sessionResolver';
+import { createSessionResolver as createResolver, type AdminSessionState } from '../src/admin/auth/sessionResolver';
+import { getSessionAal } from '../src/admin/auth/mfa';
 
-const session = (userId: string, token = userId) => ({ user: { id: userId }, access_token: token } as Session);
+const session = (userId: string, token = userId, aal = 'aal2') => ({ user: { id: userId }, access_token: `e30.${btoa(JSON.stringify({ sub: userId, aal, nonce: token }))}.signature` } as Session);
+const createSessionResolver = (verify: Parameters<typeof createResolver>[0], publish: Parameters<typeof createResolver>[1],
+  check: Parameters<typeof createResolver>[2] = async value => ({ level: getSessionAal(value), factors: [{ id: 'totp', name: 'Test' }] })) => createResolver(verify, publish, check);
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 describe('admin session resolution', () => {
+  it.each([true, false])('requires MFA after password login (enrolled=%s)', async enrolled => {
+    const publish = vi.fn();
+    const resolver = createSessionResolver(async () => true, publish, async () => ({ level: 'aal1', factors: enrolled ? [{ id: 'totp', name: 'Test' }] : [] }));
+    const result = resolver.resolve(session('admin', 'password', 'aal1'));
+    await vi.runAllTimersAsync();
+    expect((await result).error).toBeNull();
+    expect(publish.mock.lastCall?.[0].status).toBe(enrolled ? 'mfa-required' : 'enrollment-required');
+    expect(publish.mock.calls.some(([value]) => value.status === 'authorized')).toBe(false);
+  });
+
+  it('immediately stops preserving the editor when a token drops to aal1', async () => {
+    const publish = vi.fn();
+    const resolver = createSessionResolver(async () => true, publish);
+    const initial = resolver.resolve(session('admin'));
+    await vi.runAllTimersAsync(); await initial;
+    const downgrade = resolver.resolve(session('admin', 'downgraded', 'aal1'));
+    expect(publish.mock.lastCall?.[0].status).toBe('checking');
+    await vi.runAllTimersAsync(); await downgrade;
+    expect(publish.mock.lastCall?.[0].status).toBe('mfa-required');
+  });
+
+  it('fails closed if server MFA lookup fails and ignores late MFA results after logout', async () => {
+    const publish = vi.fn();
+    let finish!: (value: { level: 'aal2'; factors: [] }) => void;
+    const check = vi.fn().mockRejectedValue(new Error('MFA unavailable'));
+    const resolver = createSessionResolver(async () => true, publish, check);
+    const failed = resolver.resolve(session('admin'));
+    await vi.runAllTimersAsync();
+    expect((await failed).error?.message).toBe('MFA unavailable');
+    expect(publish.mock.lastCall?.[0].status).toBe('error');
+    check.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    const pending = resolver.resolve(session('admin', 'retry'));
+    await vi.advanceTimersByTimeAsync(0);
+    await resolver.resolve(null);
+    finish({ level: 'aal2', factors: [] }); await pending;
+    expect(publish.mock.lastCall?.[0].status).toBe('anonymous');
+  });
   it('defers membership work outside the auth callback and shares login verification', async () => {
     const verify = vi.fn().mockResolvedValue(true);
     const publish = vi.fn();
