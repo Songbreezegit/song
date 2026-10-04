@@ -26,4 +26,13 @@ p{line-height:1.8}
 .dark .hero-person,.dark .work-illustration>img,.dark .notes-illustration>img,.dark .about-illustration>img,.dark .contact-illustration>img{background:#f3f5ed;border-radius:26px}
 .dark .floating-badge{filter:brightness(.85)}
 .dark .section-divider,.dark .notes-slogan,.dark .work-slogan{filter:brightness(1.8)}
+/* Keep the old theme opaque below the circular reveal in both directions. */
+::view-transition-group(root),::view-transition-old(root),::view-transition-new(root){animation:none}
+::view-transition-image-pair(root){isolation:isolate}
+::view-transition-old(root),::view-transition-new(root){mix-blend-mode:normal;opacity:1}
+::view-transition-old(root){z-index:1}
+::view-transition-new(root){z-index:2}
+/* Only suppress existing theme-color transitions while the snapshots are captured. */
+:root.theme-transitioning .cta{transition-property:transform}
+:root.theme-transitioning .site-header,:root.theme-transitioning .note-row button,:root.theme-transitioning .lang-btn{transition-property:none}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}*,*::before,*::after{animation:none!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.reveal{opacity:1!important;transform:none!important}}
