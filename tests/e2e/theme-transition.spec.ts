@@ -115,7 +115,7 @@ async function expectReveal(page: Page, index: number) {
   const radius = Math.hypot(Math.max(origin.x, result.width - origin.x), Math.max(origin.y, result.height - origin.y)) + 2;
   const { clipPath, ...timing } = result.motion.reveals[index];
   expect(timing).toEqual({
-    duration: 420,
+    duration: 520,
     easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
     fill: 'both',
     pseudoElement: '::view-transition-new(root)',
@@ -166,6 +166,9 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
 }
 
 for (const viewport of [
+  { name: '1920x1080', width: 1920, height: 1080 },
+  { name: '1600x900', width: 1600, height: 900 },
+  { name: '1280x800', width: 1280, height: 800 },
   { name: 'ultrawide', width: 2560, height: 1080 },
   { name: '16:9', width: 1280, height: 720 },
   { name: '4:3', width: 1024, height: 768 },
@@ -254,6 +257,19 @@ test('rapid clicks during capture and playback are ignored until completion', as
   await expectTheme(page, 'light');
 });
 
+for (const section of ['', 'theme-test-404']) {
+  test(`${section || 'home'} Space reveals both themes from the same button center`, async ({ page }) => {
+    await openPage(page, 'zh', section);
+    for (const [index, theme] of (['dark', 'light'] as const).entries()) {
+      await themeButton(page).focus();
+      await themeButton(page).press('Space');
+      await expectReveal(page, index);
+      await finishReveal(page, index + 1);
+      await expectTheme(page, theme);
+    }
+  });
+}
+
 async function capture(page: Page, info: TestInfo, name: string) {
   const buffer = await page.screenshot({ path: info.outputPath(`${name}.png`), animations: 'allow' });
   await info.attach(name, { body: buffer, contentType: 'image/png' });
@@ -307,13 +323,13 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
         expect(styles).toEqual({ oldOpacity: '1', newOpacity: '1', groupAnimation: 'none', oldAnimation: 'none', newAnimation: 'none' });
         const zero = await capture(page, info, `${theme}-0ms`);
         const progress = await page.evaluate(async () => {
-          window.__themeAnimation!.currentTime = 126;
+          window.__themeAnimation!.currentTime = 156;
           await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
           return window.__themeAnimation!.effect!.getComputedTiming().progress!;
         });
-        const middle = await capture(page, info, `${theme}-126ms`);
-        await page.evaluate(() => { window.__themeAnimation!.currentTime = 420; });
-        const after = await capture(page, info, `${theme}-420ms`);
+        const middle = await capture(page, info, `${theme}-156ms`);
+        await page.evaluate(() => { window.__themeAnimation!.currentTime = 520; });
+        const after = await capture(page, info, `${theme}-520ms`);
         const [oldPixels, zeroPixels, midPixels, newPixels] = await Promise.all([
           pixelSamples(page, before, points), pixelSamples(page, zero, points),
           pixelSamples(page, middle, points), pixelSamples(page, after, points),

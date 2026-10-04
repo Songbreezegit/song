@@ -110,7 +110,7 @@ describe('theme transition', () => {
         `circle(0px at ${origin.x}px ${origin.y}px)`,
         `circle(${radius}px at ${origin.x}px ${origin.y}px)`,
       ] }, {
-        duration: 420,
+        duration: 520,
         easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
         fill: 'both',
         pseudoElement: '::view-transition-new(root)',

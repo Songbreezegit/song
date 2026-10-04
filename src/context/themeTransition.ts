@@ -70,7 +70,7 @@ export function createThemeTransition() {
                 `circle(${radius}px at ${x}px ${y}px)`,
               ],
             }, {
-              duration: 420,
+              duration: 520,
               easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
               fill: 'both',
               pseudoElement: '::view-transition-new(root)',
