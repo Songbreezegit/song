@@ -27,10 +27,12 @@ for (const [port, enforce] of [[5180, false], [5181, true]]) {
     try {
       const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
       const headers = Object.assign({}, ...rules.filter(rule => rule.path === '/*' || rule.path === pathname || (rule.path.endsWith('*') && pathname.startsWith(rule.path.slice(0, -1)))).map(rule => rule.headers));
-      if (enforce && headers['Content-Security-Policy-Report-Only']) {
-        headers['Content-Security-Policy'] = headers['Content-Security-Policy-Report-Only'];
-        delete headers['Content-Security-Policy-Report-Only'];
-      }
+      // Exercise both rollout phases even after the source policy is promoted.
+      const policy = headers['Content-Security-Policy-Report-Only'] || headers['Content-Security-Policy'];
+      headers['Content-Security-Policy'] = enforce ? policy : policy.split('; ').filter(directive =>
+        /^(base-uri|object-src|frame-ancestors|form-action) /.test(directive)).join('; ');
+      if (enforce) delete headers['Content-Security-Policy-Report-Only'];
+      else headers['Content-Security-Policy-Report-Only'] = policy;
       const requested = resolve(root, '.' + pathname);
       if (!requested.startsWith(root + sep) && requested !== root) { response.writeHead(400); response.end(); return; }
       const file = existsSync(requested) && statSync(requested).isFile() ? requested : resolve(root, 'index.html');
