@@ -124,7 +124,7 @@
   .site-header .header-inner,.home-section .home-grid { width:var(--site-container-width); }
   .header-inner { grid-template-columns:1fr auto; }
   .brand { width:146px; }
-  .header-actions { grid-column:2;gap:5px; }
+  .header-actions { grid-column:2;gap:3px; }
   .site-header nav { display:none; }
   .site-header nav.nav-open { display:flex;top:71px;gap:0; }
   .home-grid { grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto;min-height:auto;padding-block:35px 43px;gap:28px; }

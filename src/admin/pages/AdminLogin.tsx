@@ -1,42 +1,38 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { ArrowRight, AlertCircle } from 'lucide-react';
-import { useAdminAuth } from '../../context/useAdminAuth';
-import '../admin.css';
+import { useAdminAuth } from '../auth/useAdminAuth';
+import { getAdminReturnPath } from '../routes';
+import { useAdminAction } from '../hooks/useAdminAction';
+import { AdminLoading } from '../components/AdminLoading';
+import { AdminFeedback } from '../components/AdminFeedback';
+import { AdminMfaForm } from '../auth/AdminMfaForm';
 
 export function AdminLogin() {
-  const { login, isConfigured } = useAdminAuth();
-  const navigate = useNavigate();
+  const { login, isConfigured, isAdmin, mfaRequired, session, authError, loading: authLoading } = useAdminAuth();
   const location = useLocation();
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/admin/dashboard';
+  const from = getAdminReturnPath((location.state as { from?: unknown } | null)?.from);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const { run, pendingKey, feedback, setFeedback } = useAdminAction('登录失败，请检查账号密码');
+  const loading = Boolean(pendingKey);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setErrorMsg('请输入邮箱和密码');
+      setFeedback({ type: 'error', message: '请输入邮箱和密码' });
       return;
     }
 
-    try {
-      setLoading(true);
-      setErrorMsg('');
+    await run('login', async () => {
       const { error } = await login(email, password);
-      if (error) {
-        setErrorMsg(error.message || '登录失败，请检查账号密码');
-      } else {
-        navigate(from, { replace: true });
-      }
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : '登录发生未知错误');
-    } finally {
-      setLoading(false);
-    }
+      if (error) throw error;
+    }, { onSuccess: () => setPassword('') });
   };
+
+  if (isAdmin) return <Navigate to={from} replace />;
+  if (authLoading && !loading) return <AdminLoading screen message="正在验证管理员凭据..." />;
 
   return (
     <div className="admin-body">
@@ -56,14 +52,9 @@ export function AdminLogin() {
             </div>
           )}
 
-          {errorMsg && (
-            <div className="admin-alert admin-alert-error">
-              <AlertCircle size={18} />
-              <div>{errorMsg}</div>
-            </div>
-          )}
+          <AdminFeedback feedback={feedback || (authError ? { type: 'error', message: authError } : null)} />
 
-          <form onSubmit={handleSubmit}>
+          {mfaRequired ? <AdminMfaForm key={session?.user.id} /> : <form onSubmit={handleSubmit}>
             <div className="admin-form-group">
               <label className="admin-label" htmlFor="email">
                 管理员邮箱
@@ -79,6 +70,7 @@ export function AdminLogin() {
                   disabled={loading}
                   required
                   autoFocus
+                  autoComplete="username"
                 />
               </div>
             </div>
@@ -97,6 +89,7 @@ export function AdminLogin() {
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
                   required
+                  autoComplete="current-password"
                 />
               </div>
             </div>
@@ -105,7 +98,7 @@ export function AdminLogin() {
               type="submit"
               className="admin-btn admin-btn-primary"
               style={{ width: '100%', marginTop: '8px', padding: '10px' }}
-              disabled={loading}
+              disabled={loading || !isConfigured}
             >
               {loading ? (
                 <>
@@ -119,7 +112,7 @@ export function AdminLogin() {
                 </>
               )}
             </button>
-          </form>
+          </form>}
 
           <div style={{ marginTop: '24px', textAlign: 'center' }}>
             <a

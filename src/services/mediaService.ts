@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { validateMediaImage } from '../lib/mediaValidation';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
@@ -31,6 +32,7 @@ export async function uploadMedia(
   if (!ext || !['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
     throw new Error('不支持的文件格式。仅支持 JPG, JPEG, PNG, WEBP 格式图片。');
   }
+  await validateMediaImage(file);
   const cleanName = file.name
     .replace(/\.[^/.]+$/, '')
     .replace(/[^a-zA-Z0-9_-]/g, '-')

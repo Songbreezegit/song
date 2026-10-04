@@ -637,3 +637,23 @@
     padding: 0 16px;
   }
 }
+.admin-loading-content {
+  padding: 60px 24px;
+  text-align: center;
+  color: var(--admin-text-secondary);
+}
+
+.admin-loading-content .admin-spinner {
+  margin: 0 auto 16px;
+}
+
+.admin-editor-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+/* The enrollment secret exists only in the current login screen's memory. */
+.admin-mfa-setup { margin: 16px 0; }
+.admin-mfa-setup img { display: block; max-width: 100%; background: white; margin: 0 auto 12px; }
+.admin-mfa-secret { display: block; overflow-wrap: anywhere; padding: 12px 0; user-select: all; }

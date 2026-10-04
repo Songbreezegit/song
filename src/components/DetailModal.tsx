@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { X, ArrowUpRight, Copy, Check, Info } from 'lucide-react';
 import { type Article, type Project, resolveProject, resolveArticle } from '../data/portfolioData';
 import { useI18n } from '../i18n/useI18n';
+import { safeExternalUrl } from '../lib/safeUrl';
 
 interface DetailModalProps {
   item: Article | Project | null;
@@ -197,14 +198,14 @@ export function DetailModal({
                 ))}
               </section>
               <div className="cta-row">
-                <a className="cta" href={project.githubUrl} target="_blank" rel="noreferrer">
+                {safeExternalUrl(project.githubUrl) && <a className="cta" href={safeExternalUrl(project.githubUrl)} target="_blank" rel="noreferrer">
                   {t('work.modal.viewSource')}
                   <ArrowUpRight size={17} />
-                </a>
-                {project.liveUrl && (
+                </a>}
+                {safeExternalUrl(project.liveUrl) && (
                   <a
                     className="cta cta-secondary"
-                    href={project.liveUrl}
+                    href={safeExternalUrl(project.liveUrl)}
                     target="_blank"
                     rel="noreferrer"
                   >

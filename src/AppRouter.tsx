@@ -5,25 +5,9 @@ import { NotFoundPage } from './components/NotFoundPage';
 import { I18nProvider } from './i18n/I18nProvider';
 import { isSupportedLanguage, getStoredLanguage, detectBrowserLanguage } from './i18n/utils';
 import { ThemeProvider } from './context/ThemeContext';
-import { AdminAuthProvider } from './context/AdminAuthContext';
-import { AdminAuthGuard } from './admin/components/AdminAuthGuard';
+import { RouteErrorBoundary } from './components/RouteErrorBoundary';
 
-const AdminLogin = lazy(() => import('./admin/pages/AdminLogin').then((m) => ({ default: m.AdminLogin })));
-const AdminLayout = lazy(() => import('./admin/components/AdminLayout').then((m) => ({ default: m.AdminLayout })));
-const AdminDashboard = lazy(() => import('./admin/pages/AdminDashboard').then((m) => ({ default: m.AdminDashboard })));
-const AdminProjects = lazy(() => import('./admin/pages/AdminProjects').then((m) => ({ default: m.AdminProjects })));
-const AdminProjectEditor = lazy(() => import('./admin/pages/AdminProjectEditor').then((m) => ({ default: m.AdminProjectEditor })));
-const AdminArticles = lazy(() => import('./admin/pages/AdminArticles').then((m) => ({ default: m.AdminArticles })));
-const AdminArticleEditor = lazy(() => import('./admin/pages/AdminArticleEditor').then((m) => ({ default: m.AdminArticleEditor })));
-const AdminSiteSettings = lazy(() => import('./admin/pages/AdminSiteSettings').then((m) => ({ default: m.AdminSiteSettings })));
-const AdminMedia = lazy(() => import('./admin/pages/AdminMedia').then((m) => ({ default: m.AdminMedia })));
-
-const AdminLoadingFallback = (
-  <div className="admin-loading-screen">
-    <div className="admin-spinner" />
-    <p>正在加载管理模块...</p>
-  </div>
-);
+const AdminApp = lazy(() => import('./admin/AdminApp'));
 
 const VALID_SECTIONS = ['work', 'notes', 'about', 'contact'] as const;
 
@@ -83,45 +67,32 @@ function LocalizedDeepNotFound() {
 export function AppRouter() {
   return (
     <BrowserRouter>
-      <AdminAuthProvider>
-        <Suspense fallback={AdminLoadingFallback}>
-          <Routes>
-            {/* Root language detection redirect */}
-            <Route path="/" element={<RootRedirect />} />
+      <Routes>
+        {/* Root language detection redirect */}
+        <Route path="/" element={<RootRedirect />} />
 
-            {/* Admin Login & Protected Console */}
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route
-              path="/admin"
-              element={
-                <AdminAuthGuard>
-                  <AdminLayout />
-                </AdminAuthGuard>
-              }
-            >
-              <Route index element={<Navigate to="/admin/dashboard" replace />} />
-              <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="projects" element={<AdminProjects />} />
-              <Route path="projects/new" element={<AdminProjectEditor />} />
-              <Route path="projects/:id" element={<AdminProjectEditor />} />
-              <Route path="articles" element={<AdminArticles />} />
-              <Route path="articles/new" element={<AdminArticleEditor />} />
-              <Route path="articles/:id" element={<AdminArticleEditor />} />
-              <Route path="site" element={<AdminSiteSettings />} />
-              <Route path="media" element={<AdminMedia />} />
-              <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
-            </Route>
+        {/* Admin Login & Protected Console */}
+        <Route path="/admin/*" element={
+          <RouteErrorBoundary fallback={
+            <div role="alert" style={{ padding: '60px', textAlign: 'center' }}>
+              <p>无法加载管理模块，请重新加载页面。</p>
+              <button type="button" onClick={() => window.location.reload()}>重新加载页面</button>
+            </div>
+          }>
+            <Suspense fallback={<div role="status" style={{ padding: '60px', textAlign: 'center' }}>正在加载管理模块...</div>}>
+              <AdminApp />
+            </Suspense>
+          </RouteErrorBoundary>
+        } />
 
-            {/* Public Multilingual Routes */}
-            <Route path="/:lang" element={<LocalizedRoute />} />
-            <Route path="/:lang/:section" element={<LocalizedRoute />} />
-            <Route path="/:lang/*" element={<LocalizedDeepNotFound />} />
+        {/* Public Multilingual Routes */}
+        <Route path="/:lang" element={<LocalizedRoute />} />
+        <Route path="/:lang/:section" element={<LocalizedRoute />} />
+        <Route path="/:lang/*" element={<LocalizedDeepNotFound />} />
 
-            {/* Fallback */}
-            <Route path="*" element={<RootRedirect />} />
-          </Routes>
-        </Suspense>
-      </AdminAuthProvider>
+        {/* Fallback */}
+        <Route path="*" element={<RootRedirect />} />
+      </Routes>
     </BrowserRouter>
   );
 }

@@ -1,0 +1,15 @@
+# Cloudflare Workers applies these headers to the built static asset responses.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://vfgmptjfcfgptaqblydd.supabase.co wss://vfgmptjfcfgptaqblydd.supabase.co https://cloudflareinsights.com; frame-src 'none'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'
+
+/admin
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
+/admin/*
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow

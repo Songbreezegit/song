@@ -28,5 +28,7 @@ dist-ssr
 
 /test-results/
 /playwright-report/
+/.security-preview/
+/security-test-results/
 
 /supabase/.temp/

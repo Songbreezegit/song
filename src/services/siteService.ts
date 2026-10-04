@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { validateSiteSettingsInput } from '../lib/contentValidation';
 import { PROFILE, ABOUT_DATA, CONTACT_DATA } from '../data/portfolioData';
 import type { SiteSettingsRecord } from '../types/database';
 
@@ -42,6 +43,7 @@ export async function updateSiteSettings(
     throw new Error('Supabase 未配置，无法保存站点设置。');
   }
 
+  validateSiteSettingsInput(settings);
   const { data, error } = await supabase
     .from('site_settings')
     .upsert(
