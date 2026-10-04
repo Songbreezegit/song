@@ -198,7 +198,6 @@ html{scroll-padding-top:78px}.section{scroll-margin-top:0}
 .home-scroll{display:grid;overflow:visible;height:auto}.home-scroll>img{grid-area:1/1}.home-scroll .scroll-letter{clip-path:inset(0 0 29% 0)}.home-scroll .scroll-arrow{clip-path:inset(71% 0 0 0);animation:scroll-arrow 1.8s ease-in-out infinite}@keyframes scroll-arrow{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
 .note-featured h3{max-width:none;text-wrap:balance}.hero-copy h1,.section h2{word-spacing:.04em}.contact-copy h2{font-size:clamp(60px,6.1vw,86px)}
 @media(max-width:600px){.contact-copy h2{font-size:68px}}
-.dark .hero-person,.dark .work-illustration>img,.dark .notes-illustration>img,.dark .about-illustration>img,.dark .contact-illustration>img{background:transparent;border-radius:0;filter:invert(.9) hue-rotate(180deg) grayscale(.25)}
 
 .data-state { padding: 24px 0; color: var(--text-secondary, #64748b); }
 

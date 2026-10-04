@@ -29,7 +29,10 @@ export function NotFoundPage() {
             <LanguageSwitcher variant="desktop" />
             <button
               className="icon-button"
-              onClick={toggleTheme}
+              onClick={(event) => {
+                const rect = event.currentTarget.getBoundingClientRect();
+                toggleTheme({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+              }}
               aria-label={theme === 'dark' ? t('common.nav.ariaThemeLight') : t('common.nav.ariaThemeDark')}
             >
               {theme === 'dark' ? <Sun size={19} /> : <Moon size={19} />}

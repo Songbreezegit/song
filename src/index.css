@@ -1,8 +1,14 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 :root {
- --paper:#fafaf7; --ink:#151714; --muted:#717775; --sage:#78957c; --line:#e1e5df;
- --work:#f3f6f0; --about:#f1f5f6; --card:#fff; --soft-green:#e7eee2; --soft-blue:#e8eef5;
+ /* One palette for the public site; legacy names remain aliases. */
+ --bg-page-base:#fafaf7; --bg-home:var(--bg-page-base);
+ --bg-work:#f7f9f5; --bg-notes:#f9faf7; --bg-about:#f5f8f8; --bg-contact:#f9f9f5; --bg-footer:#f7f7f3;
+ --surface-white:#ffffff; --surface-sage:#e9eee5; --surface-blue:#e8eef5; --surface-yellow:#f6f2df; --surface-pink:#f3e9e7;
+ --ink:#151714; --muted:#717775; --line:#e1e5df;
+ --sage-primary:#78957c; --sage-soft:#e7eee2; --sage-faint:#f4f7f1; --blue-soft:#e8eef5; --blue-faint:#f5f8f8;
+ --paper:var(--bg-page-base); --work:var(--bg-work); --about:var(--bg-about); --card:var(--surface-white);
+ --sage:var(--sage-primary); --soft-green:var(--sage-soft); --soft-blue:var(--blue-soft);
  --font-sans:"Plus Jakarta Sans","Segoe UI","Microsoft YaHei",sans-serif;
  --ease:cubic-bezier(.22,1,.36,1); --fast:220ms; --normal:320ms; --slow:600ms;
  font-family:var(--font-sans); color:var(--ink); background:var(--paper); font-synthesis:none;
@@ -21,9 +27,47 @@ h1,h2,h3{font-weight:800;letter-spacing:-.05em}
 p{line-height:1.8}
 ::selection{background:#ccdcca;color:#151714}
 [hidden]{display:none!important}
-.dark{--paper:#20251f;--ink:#f2f3e9;--muted:#b0b9ac;--sage:#acc3a8;--line:#3a4437;--work:#252d24;--about:#252e2d;--card:#2c342a;--soft-green:#35422e;--soft-blue:#303d3e;color-scheme:dark}
-.dark .brand img,.dark .loader-mark>img:first-child{filter:invert(1)}
-.dark .hero-person,.dark .work-illustration>img,.dark .notes-illustration>img,.dark .about-illustration>img,.dark .contact-illustration>img{background:#f3f5ed;border-radius:26px}
-.dark .floating-badge{filter:brightness(.85)}
-.dark .section-divider,.dark .notes-slogan,.dark .work-slogan{filter:brightness(1.8)}
+.dark {
+ --bg-page-base:#161916;
+ --bg-work:#1a1e1a; --bg-notes:#181b18; --bg-about:#1b1f1e; --bg-contact:#191c19; --bg-footer:#141714;
+ --surface-white:#212521; --surface-sage:#273027; --surface-blue:#252c2f; --surface-yellow:#2d2a22; --surface-pink:#2e2625;
+ --ink:#f1f3ee; --muted:#a7aea6; --ink-tertiary:#889088; --line:#343a34; --line-strong:#3a4039;
+ --sage-primary:#9fb59e; --sage-soft:var(--surface-sage); --sage-faint:#1e241e; --blue-soft:#252d30; --blue-faint:#1e2325;
+ --cta-primary-bg:#eceee8; --cta-primary-ink:#171a17; --illustration-backdrop:#2b2f2b;
+ color-scheme:dark;
+}
+/* Use the original wordmark's alpha shape, preserving its small sage dot. */
+.dark .brand{position:relative}
+.dark .brand img,.dark .loader-mark>img:first-child{opacity:0}
+.dark .brand::before,.dark .loader-mark::before{
+ content:"";position:absolute;top:0;left:0;width:100%;aspect-ratio:700 / 158;pointer-events:none;
+ background:linear-gradient(90deg,var(--ink) 55%,var(--sage-primary) 55%,var(--sage-primary) 61%,var(--ink) 61%);
+ mask:url('/assets/home/home-logo-wordmark.webp') center / contain no-repeat;
+}
+/* A faint, borderless local surface separates black ink from charcoal. */
+.dark .hero-person,.dark .work-illustration>img,.dark .notes-illustration>img,.dark .about-illustration>img,.dark .contact-illustration>img{
+ background:radial-gradient(ellipse at 48% 48%,var(--illustration-backdrop),transparent 68%);
+}
+/* These dark handwritten lettering assets need local contrast, never inversion. */
+.dark .section-divider,.dark .notes-slogan,.dark .work-slogan,.dark .home-scroll .scroll-letter{filter:brightness(1.8)}
+.dark .cta{background:var(--cta-primary-bg);color:var(--cta-primary-ink)}
+.dark .cta-secondary{background:var(--surface-white);border-color:var(--line-strong);color:var(--ink)}
+.dark .cta-secondary:hover{background:color-mix(in srgb,var(--surface-white) 88%,var(--line))}
+.dark .site-header nav a[aria-current]::after{background:var(--sage-primary)}
+.dark .hero-meta>div:first-child{border-left-color:var(--sage-primary)}
+.dark .small-label,.dark .hero-meta span{color:var(--ink-tertiary)}
+.dark .note-featured{background:var(--surface-white)}
+.dark .note-featured,.dark .about-bio,.dark .about-life{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--line) 65%,transparent)}
+.dark .data-state{color:var(--muted)}
+.dark .code-block{background:var(--bg-notes);color:var(--ink)}
+.dark .code-block>div{background:var(--surface-white)}
+/* Keep the old theme opaque below the circular reveal in both directions. */
+::view-transition-group(root),::view-transition-old(root),::view-transition-new(root){animation:none}
+::view-transition-image-pair(root){isolation:isolate}
+::view-transition-old(root),::view-transition-new(root){mix-blend-mode:normal;opacity:1}
+::view-transition-old(root){z-index:1}
+::view-transition-new(root){z-index:2}
+/* Only suppress existing theme-color transitions while the snapshots are captured. */
+:root.theme-transitioning .cta{transition-property:transform}
+:root.theme-transitioning .site-header,:root.theme-transitioning .note-row button,:root.theme-transitioning .lang-btn{transition-property:none}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}*,*::before,*::after{animation:none!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.reveal{opacity:1!important;transform:none!important}}

@@ -1,37 +1,5 @@
 /* Targeted Home calibration. Other section layouts stay in App.css. */
-:root {
-  --bg-page-base: #fafaf7;
-  --bg-home: #fafaf7;
-  --bg-work: #f7f9f5;
-  --bg-notes: #f9faf7;
-  --bg-about: #f5f8f8;
-  --bg-contact: #f9f9f5;
-  --bg-footer: #f7f7f3;
-  --surface-white: #ffffff;
-  --surface-sage: #e9eee5;
-  --surface-blue: #e8eef5;
-  --surface-yellow: #f6f2df;
-  --surface-pink: #f3e9e7;
-  --sage-primary: #78957c;
-  --sage-soft: #e7eee2;
-  --sage-faint: #f4f7f1;
-  --blue-soft: #e8eef5;
-  --blue-faint: #f5f8f8;
-  --paper: var(--bg-page-base);
-  --work: var(--bg-work);
-  --about: var(--bg-about);
-  --card: var(--surface-white);
-  --soft-green: var(--sage-soft);
-  --soft-blue: var(--blue-soft);
-}
-.dark {
-  --bg-page-base:#20251f; --bg-home:#20251f; --bg-work:#252d24;
-  --bg-notes:#222820; --bg-about:#252e2d; --bg-contact:#252a22; --bg-footer:#23271f;
-  --surface-white:#2c342a; --surface-sage:#35422e; --surface-blue:#303d3e;
-  --surface-yellow:#3e3d2c; --surface-pink:#403533;
-  --sage-primary:#acc3a8; --sage-soft:#35422e; --sage-faint:#252d24;
-  --blue-soft:#303d3e; --blue-faint:#252e2d;
-}
+/* Palette and legacy aliases are defined only in index.css. */
 .work-section { --section-tint:var(--bg-work); }
 .notes-section { --section-tint:var(--bg-notes); }
 .about-section { --section-tint:var(--bg-about); }
@@ -72,7 +40,6 @@
 .hero-person { width:min(50.5vw,790px);max-width:none;margin-left:auto;flex-shrink:0;margin-bottom:-140px; }
 .home-building { width:320px;left:-15px;top:-3%; }
 .home-open-source { display:block;width:320px;right:-16px;top:23%;rotate:5deg; }
-.dark .home-scroll .scroll-letter { filter:brightness(2.5); }
 .home-scroll { width:67px;right:0;bottom:12px;height:auto; }
 .home-leaves { display:block;width:190px;left:-66px;bottom:0;opacity:.42;filter:blur(3px); }
 @media(min-width:1600px) { .home-grid { min-height:800px; } }
