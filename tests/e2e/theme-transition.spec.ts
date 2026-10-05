@@ -1,4 +1,4 @@
-import { test, expect, type Page, type TestInfo } from '@playwright/test';
+import { test, expect, devices, type Page, type TestInfo } from '@playwright/test';
 import type { SupportedLanguage } from '../../src/i18n/types';
 
 type ThemeMotion = {
@@ -11,6 +11,7 @@ type ThemeMotion = {
     easing: EffectTiming['easing'];
     fill: EffectTiming['fill'];
     pseudoElement: string;
+    snapshot: { width: number; height: number; offsetX: number; offsetY: number };
   }[];
 };
 
@@ -65,12 +66,23 @@ test.beforeEach(async ({ page }) => {
       if (options && typeof options !== 'number' && options.pseudoElement === '::view-transition-new(root)') {
         const effect = animation.effect as KeyframeEffect;
         const timing = effect.getTiming();
+        const root = document.documentElement;
+        const snapshot = getComputedStyle(root, '::view-transition-group(root)');
+        const markerStyle = getComputedStyle(root, '::view-transition-group(theme-origin)');
+        const marker = document.querySelector('.theme-transition-origin')!.getBoundingClientRect();
+        const snapshotTransform = new DOMMatrixReadOnly(snapshot.transform);
+        const markerTransform = new DOMMatrixReadOnly(markerStyle.transform);
         window.__themeMotion.reveals.push({
           clipPath: effect.getKeyframes().map(frame => String(frame.clipPath)),
           duration: timing.duration,
           easing: timing.easing,
           fill: timing.fill,
           pseudoElement: options.pseudoElement,
+          snapshot: {
+            width: parseFloat(snapshot.width), height: parseFloat(snapshot.height),
+            offsetX: markerTransform.e - marker.left - snapshotTransform.e,
+            offsetY: markerTransform.f - marker.top - snapshotTransform.f,
+          },
         });
         window.__themeAnimation = animation;
         if (window.__pauseThemeReveal) { animation.pause(); animation.currentTime = 0; }
@@ -111,9 +123,10 @@ async function expectReveal(page: Page, index: number) {
   const rect = await themeButton(page).boundingBox();
   expect(rect).not.toBeNull();
   const origin = { x: rect!.x + rect!.width / 2, y: rect!.y + rect!.height / 2 };
-  const result = await page.evaluate(() => ({ motion: window.__themeMotion, width: innerWidth, height: innerHeight }));
-  const radius = Math.hypot(Math.max(origin.x, result.width - origin.x), Math.max(origin.y, result.height - origin.y)) + 2;
-  const { clipPath, ...timing } = result.motion.reveals[index];
+  const result = await page.evaluate(() => window.__themeMotion);
+  const { clipPath, snapshot, ...timing } = result.reveals[index];
+  const snapshotOrigin = { x: origin.x + snapshot.offsetX, y: origin.y + snapshot.offsetY };
+  const radius = Math.hypot(Math.max(snapshotOrigin.x, snapshot.width - snapshotOrigin.x), Math.max(snapshotOrigin.y, snapshot.height - snapshotOrigin.y)) + 2;
   expect(timing).toEqual({
     duration: 520,
     easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
@@ -125,8 +138,8 @@ async function expectReveal(page: Page, index: number) {
     expect(circle).not.toBeNull();
     // Native CSS serialization rounds subpixels; compare geometry rather than spelling.
     expect(Number(circle![1])).toBeCloseTo(frame === 0 ? 0 : radius, 2);
-    expect(Number(circle![2])).toBeCloseTo(origin.x, 2);
-    expect(Number(circle![3])).toBeCloseTo(origin.y, 2);
+    expect(Number(circle![2])).toBeCloseTo(snapshotOrigin.x, 2);
+    expect(Number(circle![3])).toBeCloseTo(snapshotOrigin.y, 2);
   }
   return { ...origin, radius };
 }
@@ -134,6 +147,7 @@ async function expectReveal(page: Page, index: number) {
 async function finishReveal(page: Page, count: number) {
   await expect.poll(() => page.evaluate(() => window.__themeMotion.finished)).toBe(count);
   expect(await page.evaluate(() => document.documentElement.classList.contains('theme-transitioning'))).toBe(false);
+  await expect(page.locator('.theme-transition-origin')).toHaveCount(0);
 }
 
 for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: 'mobile', width: 390, height: 844 }]) {
@@ -164,6 +178,96 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     }
   }
 }
+
+test.describe('mobile snapshot coordinate regression', () => {
+  const phone = devices['Pixel 5'];
+  test.use({ viewport: phone.viewport, deviceScaleFactor: phone.deviceScaleFactor, userAgent: phone.userAgent, isMobile: true, hasTouch: true });
+
+  for (const scenario of [
+    { name: 'no toolbar', top: 0, bottom: 0, scroll: false, section: '' },
+    { name: 'top toolbar', top: 56, bottom: 0, scroll: false, section: '' },
+    { name: 'bottom toolbar', top: 0, bottom: 56, scroll: false, section: '' },
+    { name: 'top and bottom toolbars', top: 56, bottom: 48, scroll: false, section: '' },
+    { name: 'partially collapsed toolbar after scrolling', top: 28, bottom: 0, scroll: true, section: '' },
+    { name: '404 top toolbar', top: 56, bottom: 0, scroll: false, section: 'theme-test-404' },
+  ]) {
+    test(`${scenario.name} aligns the circle and joins the final frame without a corner jump`, async ({ page }, info) => {
+      await openPage(page, 'zh', scenario.section);
+      if (scenario.scroll) {
+        await page.evaluate(() => { document.documentElement.style.scrollBehavior = 'auto'; scrollTo(0, 600); });
+        await expect.poll(() => page.evaluate(() => scrollY)).toBe(600);
+        await expect(page.locator('.site-header')).toHaveClass(/scrolled/);
+        await page.locator('.site-header').evaluate(header => Promise.all(header.getAnimations().map(animation => animation.finished)));
+      }
+      // Desktop emulation has no retractable address bar. Recreate its snapshot
+      // coordinate space without moving/resizing the actual rendered page image.
+      await page.addStyleTag({ content: `
+        ::view-transition { top: -${scenario.top}px; bottom: -${scenario.bottom}px; }
+        ::view-transition-group(root) { height: calc(100dvh + ${scenario.top + scenario.bottom}px) !important; }
+        ::view-transition-old(root), ::view-transition-new(root) {
+          height: 100%; object-fit: none; object-position: left ${scenario.top}px;
+        }
+        ::view-transition-group(theme-origin) { transform: translate(0, ${scenario.top}px) !important; }
+      ` });
+      const viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+      const points = [
+        { x: 3, y: 3 }, { x: viewport.width - 4, y: 3 },
+        { x: 3, y: viewport.height - 4 }, { x: viewport.width - 4, y: viewport.height - 4 },
+      ];
+      for (let y = 100; y < viewport.height - 4; y += 32) {
+        for (const x of [3, viewport.width - 4]) points.push({ x, y });
+      }
+      const distance = (a: number[], b: number[]) => Math.max(...a.map((channel, i) => Math.abs(channel - b[i])));
+      await page.evaluate(() => { window.__pauseThemeReveal = true; });
+      for (const [index, theme] of (['dark', 'light'] as const).entries()) {
+        const before = await capture(page, info, `${theme}-before`);
+        const button = await themeButton(page).boundingBox();
+        // A physical tap avoids the automation's scroll-into-view adjustment on
+        // the sticky header, so old/live frame comparisons use the same scroll.
+        await page.touchscreen.tap(button!.x + button!.width / 2, button!.y + button!.height / 2);
+        if (scenario.scroll) expect(await page.evaluate(() => scrollY)).toBe(600);
+        const origin = await expectReveal(page, index);
+        const snapshot = await page.evaluate(index => window.__themeMotion.reveals[index].snapshot, index);
+        expect(snapshot).toEqual({
+          width: viewport.width, height: viewport.height + scenario.top + scenario.bottom,
+          offsetX: 0, offsetY: scenario.top,
+        });
+        const zero = await capture(page, info, `${theme}-0ms`);
+        const progress = await page.evaluate(async () => {
+          window.__themeAnimation!.currentTime = 156;
+          await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+          return window.__themeAnimation!.effect!.getComputedTiming().progress!;
+        });
+        const middle = await capture(page, info, `${theme}-156ms`);
+        await page.evaluate(() => { window.__themeAnimation!.currentTime = 520; });
+        const end = await capture(page, info, `${theme}-520ms`);
+        await page.evaluate(() => window.__themeAnimation!.play());
+        await finishReveal(page, index + 1);
+        const settled = await capture(page, info, `${theme}-settled`);
+        const [oldPixels, zeroPixels, midPixels, endPixels, settledPixels] = await Promise.all([
+          pixelSamples(page, before, points), pixelSamples(page, zero, points),
+          pixelSamples(page, middle, points), pixelSamples(page, end, points), pixelSamples(page, settled, points),
+        ]);
+        let inside = 0, outside = 0;
+        points.forEach((point, i) => {
+          expect(distance(zeroPixels[i], oldPixels[i])).toBeLessThanOrEqual(8);
+          // Includes the bottom-left corner: ending the snapshot must not reveal
+          // a differently colored live page underneath it.
+          expect(distance(endPixels[i], settledPixels[i])).toBeLessThanOrEqual(8);
+          if (distance(oldPixels[i], settledPixels[i]) < 80) return;
+          const fromCenter = Math.hypot(point.x - origin.x, point.y - origin.y);
+          if (Math.abs(fromCenter - origin.radius * progress) < 5) return;
+          const isInside = fromCenter < origin.radius * progress;
+          expect(distance(midPixels[i], isInside ? settledPixels[i] : oldPixels[i])).toBeLessThanOrEqual(8);
+          if (isInside) inside++; else outside++;
+        });
+        expect(inside).toBeGreaterThan(1);
+        expect(outside).toBeGreaterThan(1);
+        await expectTheme(page, theme);
+      }
+    });
+  }
+});
 
 for (const viewport of [
   { name: '1920x1080', width: 1920, height: 1080 },
@@ -271,7 +375,7 @@ for (const section of ['', 'theme-test-404']) {
 }
 
 async function capture(page: Page, info: TestInfo, name: string) {
-  const buffer = await page.screenshot({ path: info.outputPath(`${name}.png`), animations: 'allow' });
+  const buffer = await page.screenshot({ path: info.outputPath(`${name}.png`), animations: 'allow', scale: 'css' });
   await info.attach(name, { body: buffer, contentType: 'image/png' });
   return buffer.toString('base64');
 }

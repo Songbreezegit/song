@@ -15,9 +15,31 @@ export function applyTheme(theme: Theme) {
 
 type ActiveTransition = {
   cancelled: boolean;
+  originMarker?: HTMLElement;
   transition?: ViewTransition;
   animation?: Animation;
 };
+
+function revealGeometry(root: HTMLElement, marker: HTMLElement, origin: ThemeTransitionOrigin) {
+  // Mobile snapshots include retractable browser chrome. A fixed, empty marker
+  // lets the browser map viewport coordinates into that snapshot coordinate space.
+  const markerRect = marker.getBoundingClientRect();
+  const markerStyle = window.getComputedStyle(root, '::view-transition-group(theme-origin)');
+  const snapshotStyle = window.getComputedStyle(root, '::view-transition-group(root)');
+  const markerTransform = new DOMMatrixReadOnly(markerStyle.transform);
+  const snapshotTransform = new DOMMatrixReadOnly(snapshotStyle.transform);
+  const width = Number.parseFloat(snapshotStyle.width);
+  const height = Number.parseFloat(snapshotStyle.height);
+  const x = origin.x + markerTransform.e - markerRect.left - snapshotTransform.e;
+  const y = origin.y + markerTransform.f - markerRect.top - snapshotTransform.f;
+  if (![x, y, width, height].every(Number.isFinite) || width <= 0 || height <= 0) {
+    throw new Error('Theme snapshot geometry is unavailable');
+  }
+  return {
+    x, y,
+    radius: Math.hypot(Math.max(x, width - x), Math.max(y, height - y)) + 2,
+  };
+}
 
 // Each provider owns one transition; requests during capture or playback are ignored.
 export function createThemeTransition() {
@@ -37,23 +59,25 @@ export function createThemeTransition() {
         return;
       }
 
-      const { x, y } = origin ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      const radius = Math.hypot(
-        Math.max(x, window.innerWidth - x),
-        Math.max(y, window.innerHeight - y),
-      ) + 2;
+      const viewportOrigin = origin ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 };
       const request: ActiveTransition = { cancelled: false };
       active = request;
       root.classList.add('theme-transitioning');
 
       const finish = () => {
         request.animation?.cancel();
+        request.originMarker?.remove();
         if (active !== request) return;
         root.classList.remove('theme-transitioning');
         active = null;
       };
 
       try {
+        const marker = document.createElement('div');
+        request.originMarker = marker;
+        marker.className = 'theme-transition-origin';
+        marker.setAttribute('aria-hidden', 'true');
+        document.body.append(marker);
         const transition = document.startViewTransition(() => {
           if (!request.cancelled) updateTheme();
         });
@@ -64,6 +88,7 @@ export function createThemeTransition() {
           // Both snapshots now have stable colors. Restore the site's hover transitions.
           root.classList.remove('theme-transitioning');
           try {
+            const { x, y, radius } = revealGeometry(root, marker, viewportOrigin);
             request.animation = root.animate({
               clipPath: [
                 `circle(0px at ${x}px ${y}px)`,
@@ -94,6 +119,7 @@ export function createThemeTransition() {
       active.cancelled = true;
       active.transition?.skipTransition();
       active.animation?.cancel();
+      active.originMarker?.remove();
       document.documentElement.classList.remove('theme-transitioning');
       active = null;
     },

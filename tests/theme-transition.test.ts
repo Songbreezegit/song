@@ -17,12 +17,18 @@ describe('theme transition', () => {
   let ready: ReturnType<typeof deferred>;
   let finished: ReturnType<typeof deferred>;
   let skip: ReturnType<typeof vi.fn>;
+  let marker: { className: string; setAttribute: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn>; getBoundingClientRect: ReturnType<typeof vi.fn> };
+  let snapshot: { width?: number; height?: number; x: number; y: number };
+  let markerOffset: { x: number; y: number };
 
   beforeEach(() => {
     classes = new Set();
     storage = new Map();
     ready = deferred();
     finished = deferred();
+    snapshot = { x: 0, y: 0 };
+    markerOffset = { x: 0, y: 0 };
+    marker = { className: '', setAttribute: vi.fn(), remove: vi.fn(), getBoundingClientRect: vi.fn(() => ({ left: 0, top: 0 })) };
     animationCancel = vi.fn();
     animate = vi.fn(() => ({ cancel: animationCancel }));
     skip = vi.fn(() => finished.resolve());
@@ -45,11 +51,25 @@ describe('theme transition', () => {
         animate,
       },
       startViewTransition: start,
+      createElement: vi.fn(() => marker),
+      body: { append: vi.fn() },
     });
     vi.stubGlobal('window', {
       innerWidth: 1440,
       innerHeight: 900,
       matchMedia: vi.fn(() => ({ matches: false })),
+      getComputedStyle: vi.fn((_root, pseudo) => pseudo === '::view-transition-group(root)' ? {
+        width: `${snapshot.width ?? window.innerWidth}px`, height: `${snapshot.height ?? window.innerHeight}px`,
+        transform: `matrix(1, 0, 0, 1, ${snapshot.x}, ${snapshot.y})`,
+      } : { transform: `matrix(1, 0, 0, 1, ${markerOffset.x}, ${markerOffset.y})` }),
+    });
+    vi.stubGlobal('DOMMatrixReadOnly', class {
+      e: number;
+      f: number;
+      constructor(transform: string) {
+        const values = transform.slice(7, -1).split(',').map(Number);
+        this.e = values[4]; this.f = values[5];
+      }
     });
     vi.stubGlobal('localStorage', {
       getItem: vi.fn((key: string) => storage.get(key) ?? null),
@@ -86,6 +106,7 @@ describe('theme transition', () => {
       finished.resolve();
       await finished.promise;
       expect(animationCancel).toHaveBeenCalledOnce();
+      expect(marker.remove).toHaveBeenCalledOnce();
     });
   }
 
@@ -128,6 +149,52 @@ describe('theme transition', () => {
     expect(animate.mock.calls[0][0].clipPath[0]).toBe('circle(0px at 720px 450px)');
   });
 
+  for (const bars of [
+    { top: 56, bottom: 0 }, { top: 0, bottom: 56 },
+    { top: 56, bottom: 48 }, { top: 28, bottom: 0 },
+  ]) {
+    it(`maps the button center and covers mobile snapshots with ${bars.top}px top / ${bars.bottom}px bottom browser UI`, async () => {
+      window.innerWidth = 390; window.innerHeight = 844;
+      const origin = { x: 280, y: 42 };
+      createThemeTransition().toggle(() => applyTheme('dark'), origin);
+      // Geometry is read after capture; browser chrome can change before ready.
+      markerOffset.y = bars.top;
+      snapshot.width = 390; snapshot.height = 844 + bars.top + bars.bottom;
+      ready.resolve();
+      await ready.promise;
+      const x = origin.x, y = origin.y + bars.top;
+      const radius = Math.hypot(Math.max(x, 390 - x), Math.max(y, snapshot.height - y)) + 2;
+      expect(animate.mock.calls[0][0].clipPath).toEqual([
+        `circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`,
+      ]);
+      for (const cornerX of [0, 390]) for (const cornerY of [0, snapshot.height]) {
+        expect(radius).toBeGreaterThan(Math.hypot(cornerX - x, cornerY - y));
+      }
+    });
+  }
+
+  it('keeps fixed-marker and snapshot translations in the same coordinate space', async () => {
+    marker.getBoundingClientRect.mockReturnValue({ left: 4, top: 8 });
+    markerOffset = { x: 20, y: 70 };
+    snapshot = { width: 1456, height: 962, x: 2, y: 3 };
+    createThemeTransition().toggle(() => applyTheme('dark'), { x: 1300, y: 42 });
+    ready.resolve();
+    await ready.promise;
+    expect(animate.mock.calls[0][0].clipPath[0]).toBe('circle(0px at 1314px 101px)');
+  });
+
+  it('skips a snapshot whose geometry cannot be measured and removes its marker', async () => {
+    snapshot.height = NaN;
+    createThemeTransition().toggle(() => applyTheme('dark'));
+    ready.resolve();
+    await ready.promise;
+    await finished.promise;
+    expect(animate).not.toHaveBeenCalled();
+    expect(skip).toHaveBeenCalledOnce();
+    expect(marker.remove).toHaveBeenCalledOnce();
+    expect(storage.get('song_theme')).toBe('dark');
+  });
+
   for (const fallback of ['unsupported', 'reduced motion', 'missing Web Animations'] as const) {
     it(`switches both ways without a snapshot for ${fallback}`, () => {
       if (fallback === 'unsupported') document.startViewTransition = undefined!;
@@ -143,6 +210,7 @@ describe('theme transition', () => {
       expect(start).not.toHaveBeenCalled();
       expect(animate).not.toHaveBeenCalled();
       expect(classes.has('theme-transitioning')).toBe(false);
+      expect(document.createElement).not.toHaveBeenCalled();
     });
   }
 
@@ -183,6 +251,7 @@ describe('theme transition', () => {
     controller.toggle(() => applyTheme('dark'));
     expect(classes.has('dark')).toBe(true);
     expect(classes.has('theme-transitioning')).toBe(false);
+    expect(marker.remove).toHaveBeenCalledOnce();
     controller.toggle(() => applyTheme('light'));
     expect(classes.has('dark')).toBe(false);
   });
@@ -233,5 +302,6 @@ describe('theme transition', () => {
     expect(animate).not.toHaveBeenCalled();
     expect(classes.has('dark')).toBe(false);
     expect(classes.has('theme-transitioning')).toBe(false);
+    expect(marker.remove).toHaveBeenCalled();
   });
 });

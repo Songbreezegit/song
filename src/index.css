@@ -63,6 +63,9 @@ p{line-height:1.8}
 .dark .code-block>div{background:var(--surface-white)}
 /* Keep the old theme opaque below the circular reveal in both directions. */
 ::view-transition-group(root),::view-transition-old(root),::view-transition-new(root){animation:none}
+/* Empty fixed marker measures the mobile snapshot offset without painting pixels. */
+.theme-transition-origin{position:fixed;left:0;top:0;width:0;height:0;opacity:0;pointer-events:none;view-transition-name:theme-origin}
+::view-transition-group(theme-origin),::view-transition-old(theme-origin),::view-transition-new(theme-origin){animation:none}
 ::view-transition-image-pair(root){isolation:isolate}
 ::view-transition-old(root),::view-transition-new(root){mix-blend-mode:normal;opacity:1}
 ::view-transition-old(root){z-index:1}
