@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, Eye, FileText, FolderGit2, Search } from 'lucide-react';
+import { ArrowUpRight, CalendarDays, Eye, FileText, FolderGit2, Search } from 'lucide-react';
 import type { AdminAnalyticsData, AnalyticsContentItem, AnalyticsDailyPoint } from '../../services/analyticsService';
 import { ContentStatusBadge } from './ContentStatusBadge';
 
@@ -9,15 +9,28 @@ type EnabledAnalytics = Extract<AdminAnalyticsData, { enabled: true }>;
 
 export function AnalyticsMetrics({ data, pending, days }: { data: EnabledAnalytics | null; pending: boolean; days: number }) {
   const value = (count: number | undefined) => pending ? '…' : count === undefined ? '—' : formatMetric(count);
-  return <div className="admin-analytics-metrics">
-    <section className="admin-analytics-hero" aria-label="网站访问量">
-      <div className="admin-analytics-hero-inset"><span className="admin-analytics-label"><Eye size={17} />网站访问量 <span>PV</span></span><strong className="admin-analytics-value" data-testid="period-views">{value(data?.periodViews)}</strong><span className="admin-analytics-period">最近 {days} 天的公开页面浏览</span></div>
-      <div className="admin-analytics-hero-footer"><div><span>今日浏览</span><strong data-testid="today-views">{value(data?.todayViews)}</strong></div><div><span>累计浏览</span><strong data-testid="total-views">{value(data?.totalViews)}</strong></div></div>
+  return <div className="admin-analytics-overview">
+    <section className="admin-card admin-analytics-metric" aria-label="网站访问量">
+      <span className="admin-analytics-label"><Eye size={17} />网站访问量 <span>PV</span></span>
+      <strong className="admin-analytics-value" data-testid="period-views">{value(data?.periodViews)}</strong>
+      <span className="admin-analytics-period">最近 {days} 天的公开页面浏览</span>
+      <span className="admin-analytics-metric-note">累计浏览 <strong data-testid="total-views">{value(data?.totalViews)}</strong></span>
     </section>
-    <div className="admin-analytics-secondary">
-      <section className="admin-analytics-mini"><span className="admin-analytics-label"><FileText size={16} />文章点击量</span><strong className="admin-analytics-value" data-testid="article-clicks">{value(data?.articleClicks)}</strong><span className="admin-analytics-period">最近 {days} 天 · 详情打开次数</span></section>
-      <section className="admin-analytics-mini"><span className="admin-analytics-label"><FolderGit2 size={16} />项目点击量</span><strong className="admin-analytics-value" data-testid="project-clicks">{value(data?.projectClicks)}</strong><span className="admin-analytics-period">最近 {days} 天 · 详情打开次数</span></section>
-    </div>
+    <section className="admin-card admin-analytics-metric" aria-label="今日浏览">
+      <span className="admin-analytics-label"><CalendarDays size={17} />今日浏览 <span>PV</span></span>
+      <strong className="admin-analytics-value" data-testid="today-views">{value(data?.todayViews)}</strong>
+      <span className="admin-analytics-period">按北京时间统计</span>
+    </section>
+    <section className="admin-card admin-analytics-metric" aria-label="文章点击量">
+      <span className="admin-analytics-label"><FileText size={17} />文章点击量</span>
+      <strong className="admin-analytics-value" data-testid="article-clicks">{value(data?.articleClicks)}</strong>
+      <span className="admin-analytics-period">最近 {days} 天 · 详情打开次数</span>
+    </section>
+    <section className="admin-card admin-analytics-metric" aria-label="项目点击量">
+      <span className="admin-analytics-label"><FolderGit2 size={17} />项目点击量</span>
+      <strong className="admin-analytics-value" data-testid="project-clicks">{value(data?.projectClicks)}</strong>
+      <span className="admin-analytics-period">最近 {days} 天 · 详情打开次数</span>
+    </section>
   </div>;
 }
 

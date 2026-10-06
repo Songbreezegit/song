@@ -52,7 +52,7 @@ export function ProjectCoverFields({ editor }: { editor: ReturnType<typeof usePr
                     href={coverUrl}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ fontSize: '12px', color: 'var(--admin-accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    style={{ fontSize: '12px', color: 'var(--admin-primary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
                     <span>查看原图</span>
                     <ExternalLink size={12} />
