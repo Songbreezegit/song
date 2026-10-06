@@ -1,6 +1,6 @@
-import { Plus, Trash2, ChevronUp, ChevronDown, Code2, Quote as QuoteIcon, HelpCircle } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, Copy, Code2, Quote as QuoteIcon, HelpCircle } from 'lucide-react';
 import { ArticleTableEditor } from '../../components/ArticleTableEditor';
-import type { ArticleSection as SectionItem } from './articleForm';
+import { cloneArticleSection, type ArticleSection as SectionItem } from './articleForm';
 
 export function ArticleSectionsEditor({ sections, onChange }: { sections: SectionItem[]; onChange: (sections: SectionItem[]) => void }) {
   // Section Operations
@@ -16,6 +16,12 @@ export function ArticleSectionsEditor({ sections, onChange }: { sections: Sectio
 
   const handleRemoveSection = (index: number) => {
     onChange(sections.filter((_, i) => i !== index));
+  };
+
+  const handleDuplicateSection = (index: number) => {
+    const section = sections[index];
+    if (!section) return;
+    onChange([...sections.slice(0, index + 1), cloneArticleSection(section), ...sections.slice(index + 1)]);
   };
 
   const handleMoveSection = (index: number, direction: 'up' | 'down') => {
@@ -40,8 +46,9 @@ export function ArticleSectionsEditor({ sections, onChange }: { sections: Sectio
   };
 
   const handleBodyChange = (index: number, text: string) => {
-    const paragraphs = text.split('\n\n').map((p) => p.trim()).filter(Boolean);
-    handleSectionFieldChange(index, 'body', paragraphs.length ? paragraphs : [text]);
+    // Keep the exact text while typing, including the second Enter and trailing
+    // spaces. Removing empty paragraphs here makes entering paragraph breaks impossible.
+    handleSectionFieldChange(index, 'body', text.split('\n\n'));
   };
 
   // Code Block toggle/update
@@ -85,9 +92,9 @@ export function ArticleSectionsEditor({ sections, onChange }: { sections: Sectio
   };
 
   return (
-        <div className="admin-card">
+        <div className="admin-card admin-editor-section" id="article-sections">
           <div className="admin-card-header">
-            <h3 className="admin-card-title">正文小节与区块 (Sections)</h3>
+            <h3 className="admin-card-title">正文小节与区块 <span className="admin-label-desc">{sections.length} 个小节</span></h3>
             <button
               type="button"
               className="admin-btn admin-btn-secondary admin-btn-sm"
@@ -106,14 +113,15 @@ export function ArticleSectionsEditor({ sections, onChange }: { sections: Sectio
             sections.map((section, idx) => (
               <div key={idx} className="admin-section-block">
                 <div className="admin-section-header">
-                  <span className="admin-section-title">小节 #{idx + 1}</span>
-                  <div style={{ display: 'flex', gap: '6px' }}>
+                  <span className="admin-section-title">小节 #{idx + 1}{section.heading ? ` · ${section.heading}` : ''}</span>
+                  <div className="admin-editor-section-actions">
                     <button
                       type="button"
                       className="admin-btn admin-btn-secondary admin-btn-sm"
                       onClick={() => handleMoveSection(idx, 'up')}
                       disabled={idx === 0}
                       title="上移"
+                      aria-label={`上移小节 ${idx + 1}`}
                     >
                       <ChevronUp size={13} />
                     </button>
@@ -123,14 +131,17 @@ export function ArticleSectionsEditor({ sections, onChange }: { sections: Sectio
                       onClick={() => handleMoveSection(idx, 'down')}
                       disabled={idx === sections.length - 1}
                       title="下移"
+                      aria-label={`下移小节 ${idx + 1}`}
                     >
                       <ChevronDown size={13} />
                     </button>
+                    <button type="button" className="admin-btn admin-btn-secondary admin-btn-sm" onClick={() => handleDuplicateSection(idx)} title="复制小节" aria-label={`复制小节 ${idx + 1}`}><Copy size={13} /></button>
                     <button
                       type="button"
                       className="admin-btn admin-btn-danger admin-btn-sm"
                       onClick={() => handleRemoveSection(idx)}
                       title="删除该小节"
+                      aria-label={`删除小节 ${idx + 1}`}
                     >
                       <Trash2 size={13} />
                     </button>
@@ -139,9 +150,10 @@ export function ArticleSectionsEditor({ sections, onChange }: { sections: Sectio
 
                 {/* Heading */}
                 <div className="admin-form-group">
-                  <label className="admin-label">小节标题 (Heading, 可选)</label>
+                  <label className="admin-label" htmlFor={`article-section-${idx}-heading`}>小节标题 (Heading, 可选)</label>
                   <input
                     type="text"
+                    id={`article-section-${idx}-heading`}
                     className="admin-input"
                     placeholder="例如：一、什么是真实的问题？"
                     value={section.heading || ''}
@@ -151,8 +163,9 @@ export function ArticleSectionsEditor({ sections, onChange }: { sections: Sectio
 
                 {/* Body Paragraphs */}
                 <div className="admin-form-group">
-                  <label className="admin-label">段落正文 (Body Paragraphs, 空行分隔)</label>
+                  <label className="admin-label" htmlFor={`article-section-${idx}-body`}>段落正文 (Body Paragraphs, 空行分隔)</label>
                   <textarea
+                    id={`article-section-${idx}-body`}
                     className="admin-textarea"
                     placeholder="输入段落文字。双次回车（空行）会自动拆分为独立的段落..."
                     value={section.body?.join('\n\n') || ''}
@@ -162,11 +175,12 @@ export function ArticleSectionsEditor({ sections, onChange }: { sections: Sectio
                 </div>
 
                 {/* Sub-blocks Toolbar */}
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                <div className="admin-editor-block-toolbar">
                   <button
                     type="button"
                     className={`admin-btn admin-btn-sm ${section.code ? 'admin-btn-primary' : 'admin-btn-secondary'}`}
                     onClick={() => handleToggleCode(idx)}
+                    aria-pressed={Boolean(section.code)}
                   >
                     <Code2 size={13} />
                     <span>{section.code ? '移除代码块' : '插入代码块'}</span>
@@ -175,6 +189,7 @@ export function ArticleSectionsEditor({ sections, onChange }: { sections: Sectio
                     type="button"
                     className={`admin-btn admin-btn-sm ${section.quote !== undefined ? 'admin-btn-primary' : 'admin-btn-secondary'}`}
                     onClick={() => handleToggleQuote(idx)}
+                    aria-pressed={section.quote !== undefined}
                   >
                     <QuoteIcon size={13} />
                     <span>{section.quote !== undefined ? '移除引述' : '插入引述 (Quote)'}</span>
@@ -183,6 +198,7 @@ export function ArticleSectionsEditor({ sections, onChange }: { sections: Sectio
                     type="button"
                     className={`admin-btn admin-btn-sm ${section.callout ? 'admin-btn-primary' : 'admin-btn-secondary'}`}
                     onClick={() => handleToggleCallout(idx)}
+                    aria-pressed={Boolean(section.callout)}
                   >
                     <HelpCircle size={13} />
                     <span>{section.callout ? '移除提示框' : '插入提示 (Callout)'}</span>
@@ -192,11 +208,12 @@ export function ArticleSectionsEditor({ sections, onChange }: { sections: Sectio
                 <ArticleTableEditor table={section.table} onChange={table => handleSectionFieldChange(idx, 'table', table)} />
                 {/* Code Block Editor */}
                 {section.code && (
-                  <div style={{ background: '#FFFFFF', padding: '12px', border: '1px solid var(--admin-border)', borderRadius: '6px', marginBottom: '12px' }}>
+                  <div className="admin-editor-subblock">
                     <div className="admin-grid-2">
                       <div className="admin-form-group">
-                        <label className="admin-label">语言 (Language)</label>
+                        <label className="admin-label" htmlFor={`article-section-${idx}-language`}>语言 (Language)</label>
                         <input
+                          id={`article-section-${idx}-language`}
                           type="text"
                           className="admin-input"
                           placeholder="typescript / css / bash"
@@ -210,8 +227,9 @@ export function ArticleSectionsEditor({ sections, onChange }: { sections: Sectio
                         />
                       </div>
                       <div className="admin-form-group">
-                        <label className="admin-label">文件名 (Filename, 可选)</label>
+                        <label className="admin-label" htmlFor={`article-section-${idx}-filename`}>文件名 (Filename, 可选)</label>
                         <input
+                          id={`article-section-${idx}-filename`}
                           type="text"
                           className="admin-input"
                           placeholder="motion.css"
@@ -226,8 +244,9 @@ export function ArticleSectionsEditor({ sections, onChange }: { sections: Sectio
                       </div>
                     </div>
                     <div className="admin-form-group" style={{ marginBottom: 0 }}>
-                      <label className="admin-label">代码内容 (Snippet)</label>
+                      <label className="admin-label" htmlFor={`article-section-${idx}-snippet`}>代码内容 (Snippet)</label>
                       <textarea
+                        id={`article-section-${idx}-snippet`}
                         className="admin-textarea"
                         style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '13px' }}
                         rows={4}
@@ -246,8 +265,9 @@ export function ArticleSectionsEditor({ sections, onChange }: { sections: Sectio
                 {/* Quote Editor */}
                 {section.quote !== undefined && (
                   <div className="admin-form-group" style={{ marginBottom: '12px' }}>
-                    <label className="admin-label">引用名言 / 金句 (Quote)</label>
+                    <label className="admin-label" htmlFor={`article-section-${idx}-quote`}>引用名言 / 金句 (Quote)</label>
                     <input
+                      id={`article-section-${idx}-quote`}
                       type="text"
                       className="admin-input"
                       placeholder="“先找到钉子，再去挑选最适合的锤子；而不是举着锤子满世界找钉子。”"
@@ -259,10 +279,11 @@ export function ArticleSectionsEditor({ sections, onChange }: { sections: Sectio
 
                 {/* Callout Editor */}
                 {section.callout && (
-                  <div style={{ background: '#FFFFFF', padding: '12px', border: '1px solid var(--admin-border)', borderRadius: '6px' }}>
+                  <div className="admin-editor-subblock">
                     <div className="admin-form-group">
-                      <label className="admin-label">提示类型</label>
+                      <label className="admin-label" htmlFor={`article-section-${idx}-callout-type`}>提示类型</label>
                       <select
+                        id={`article-section-${idx}-callout-type`}
                         className="admin-select"
                         value={section.callout.type}
                         onChange={(e) =>
@@ -278,8 +299,9 @@ export function ArticleSectionsEditor({ sections, onChange }: { sections: Sectio
                       </select>
                     </div>
                     <div className="admin-form-group" style={{ marginBottom: 0 }}>
-                      <label className="admin-label">提示文本</label>
+                      <label className="admin-label" htmlFor={`article-section-${idx}-callout-text`}>提示文本</label>
                       <input
+                        id={`article-section-${idx}-callout-text`}
                         type="text"
                         className="admin-input"
                         value={section.callout.text}

@@ -1,6 +1,7 @@
 import type { ContentStatus } from '../../types/database';
 import { useAdminAction } from './useAdminAction';
 import { useAdminQuery } from './useAdminQuery';
+import { contentStatusLabels } from '../lib/collection';
 
 interface CollectionConfig<T> {
   label: string;
@@ -14,7 +15,7 @@ export function useContentCollection<T extends { id: string }>(config: Collectio
   const action = useAdminAction(`${config.label}操作失败`);
 
   const changeStatus = (id: string, status: ContentStatus) => action.run(id, () => config.updateStatus(id, status), {
-    successMessage: `${config.label}状态已更新为：${status}`,
+    successMessage: `${config.label}状态已更新为：${contentStatusLabels[status]}`,
     onSuccess: () => query.reload(),
   });
 

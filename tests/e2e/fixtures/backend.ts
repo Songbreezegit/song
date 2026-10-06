@@ -13,7 +13,13 @@ const settings = () => ({ id: 'default', site_intro: 'Database introduction', ba
 // Controlled HTTP fixtures exercise the actual Supabase client and UI. SQL RLS is
 // independently executed in rls.test.ts; these fixtures are not a hosted backend.
 export async function fixture(page: Page, role: 'admin' | 'member' = 'admin') {
-  const state = { projects: [] as Row[], articles: [] as Row[], site_settings: [settings()] as Row[], media: [] as Row[], error: false, delay: 0, membershipError: false, membershipRequests: 0, logoutError: false, mediaError: false, requests: [] as { method: string; pathname: string; search: string }[] };
+  const state = { projects: [] as Row[], articles: [] as Row[], site_settings: [settings()] as Row[], media: [] as Row[], error: false, delay: 0, membershipError: false, membershipRequests: 0, logoutError: false, mediaError: false,
+    analytics: { enabled: true, timeZone: 'Asia/Shanghai', days: 30, startDate: '2026-09-08', endDate: '2026-10-07',
+      todayViews: 0, totalViews: 0, periodViews: 0, articleClicks: 0, projectClicks: 0, totalArticleClicks: 0, totalProjectClicks: 0,
+      daily: [], articles: [], projects: [] } as Row,
+    analyticsError: false, analyticsMissing: false, analyticsDelay: 0, trackingError: false,
+    analyticsRpcRequests: [] as { name: string; args: Row }[], analyticsEvents: [] as Row[],
+    requests: [] as { method: string; pathname: string; search: string }[] };
   const authState = { factors: [factor()] as Row[], aal: 'aal1', mfaError: false, enrollError: false, verifyError: false, authRateLimited: false, sessionId: '33333333-3333-4333-8333-333333333333' };
   const backend = Object.assign(state, authState);
   roles.set(page, role);
@@ -40,6 +46,34 @@ export async function fixture(page: Page, role: 'admin' | 'member' = 'admin') {
       if (backend.authRateLimited) return respond({ code: 'over_request_rate_limit', message: 'Rate limited' }, 429);
       if (url.searchParams.get('grant_type') === 'password') backend.aal = 'aal1';
       return respond(session());
+    }
+    if (url.pathname.includes('/rest/v1/rpc/')) {
+      const name = url.pathname.split('/').pop()!;
+      const args = request.postDataJSON() as Row;
+      state.analyticsRpcRequests.push({ name, args });
+      if (name === 'record_analytics_event') {
+        if (state.trackingError) return respond({ message: 'Analytics collection unavailable' }, 500);
+        const type = args.p_event_type;
+        const records = type === 'article_click' ? state.articles : state.projects;
+        if (!['page_view', 'article_click', 'project_click'].includes(type) ||
+          (type !== 'page_view' && !records.some(record => record.id === args.p_content_id && record.status === 'published'))) return respond(false);
+        if (!state.analyticsEvents.some(event => event.p_event_id === args.p_event_id)) state.analyticsEvents.push(args);
+        return respond(true);
+      }
+      if (name === 'get_admin_analytics') {
+        if (role !== 'admin' || backend.aal !== 'aal2') return respond({ message: 'Analytics aggregate permission denied' }, 403);
+        if (state.analyticsDelay) await new Promise(resolve => setTimeout(resolve, state.analyticsDelay));
+        if (state.analyticsMissing) return respond({ code: 'PGRST202', message: 'Could not find function public.get_admin_analytics' }, 404);
+        if (state.analyticsError) return respond({ message: 'Analytics aggregate unavailable' }, 500);
+        const endDate = state.analytics.endDate;
+        const endTime = Date.parse(endDate + 'T00:00:00Z');
+        const daily = Array.from({ length: args.p_days }, (_, index) => {
+          const date = new Date(endTime - (args.p_days - 1 - index) * 86400000).toISOString().slice(0, 10);
+          return state.analytics.daily.find((point: Row) => point.date === date) || { date, pageViews: 0, articleClicks: 0, projectClicks: 0 };
+        });
+        return respond({ ...state.analytics, days: args.p_days, startDate: daily[0].date, daily });
+      }
+      return respond({ message: 'Unknown fixture RPC' }, 404);
     }
     if (url.pathname.includes('/storage/v1/')) {
       if (url.pathname.includes('/list/')) {

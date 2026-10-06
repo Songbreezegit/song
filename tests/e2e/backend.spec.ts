@@ -67,7 +67,7 @@ for (const kind of ['projects', 'articles'] as const) {
     await page.getByLabel('Sort Order').fill('23');
     if (kind === 'articles') {
       await page.getByRole('button', { name: '添加小节 (Section)' }).click();
-      await page.getByRole('button', { name: 'Add Table' }).click();
+      await page.getByRole('button', { name: '添加表格' }).click();
       await page.getByRole('button', { name: '新增列', exact: true }).click();
       await page.getByRole('button', { name: '删除列 3', exact: true }).click();
       await page.getByRole('button', { name: '新增行', exact: true }).click();
@@ -99,8 +99,10 @@ for (const kind of ['projects', 'articles'] as const) {
     await page.getByRole('button', { name: '保存当前状态', exact: true }).click();
     await expect(page.getByText('Slug "duplicate" 已存在，请更换！')).toBeVisible();
     state[kind].pop();
-    await page.goto(`/admin/${kind}`);
+    // Discard the known conflicting edit before returning to the list; the
+    // editor now warns when a full document navigation has unsaved changes.
     page.on('dialog', dialog => dialog.accept());
+    await page.goto(`/admin/${kind}`);
     await page.getByTitle(kind === 'projects' ? '删除项目' : '删除文章').click();
     await expect(page.getByText(kind === 'projects' ? '暂无项目记录。' : '暂无文章记录。')).toBeVisible();
     await page.goto(`/zh/?${publicQuery}=test-${kind}`);

@@ -6,7 +6,7 @@ export function ProjectCoverFields({ editor }: { editor: ReturnType<typeof usePr
   const { draft, setField, uploadingCover, handleCoverUpload } = editor;
   const coverUrl = safeImageUrl(draft.cover_image);
   return (
-        <div className="admin-grid-2">
+        <div className="admin-grid-2 admin-editor-section" id="project-cover">
           <div className="admin-card">
             <div className="admin-card-header">
               <h3 className="admin-card-title">相关链接 (Links)</h3>
@@ -52,7 +52,7 @@ export function ProjectCoverFields({ editor }: { editor: ReturnType<typeof usePr
                     href={coverUrl}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ fontSize: '12px', color: 'var(--admin-accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    style={{ fontSize: '12px', color: 'var(--admin-primary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
                     <span>查看原图</span>
                     <ExternalLink size={12} />
@@ -83,11 +83,13 @@ export function ProjectCoverFields({ editor }: { editor: ReturnType<typeof usePr
             )}
 
             <div>
+              <div className="admin-form-group"><label className="admin-label" htmlFor="project-cover-url">封面图片链接</label><input id="project-cover-url" className="admin-input" type="text" inputMode="url" placeholder="https://... 或 /assets/..." value={draft.cover_image} onChange={event => setField('cover_image', event.target.value)} /><p className="admin-label-desc">可粘贴媒体库链接，或直接上传图片。</p></div>
               <label className="admin-btn admin-btn-secondary admin-btn-sm" style={{ cursor: 'pointer' }}>
                 <Upload size={14} />
                 <span>{uploadingCover ? '上传中...' : '上传新封面图片'}</span>
                 <input
                   type="file"
+                  aria-label="上传项目封面"
                   accept="image/png,image/jpeg,image/webp"
                   onChange={handleCoverUpload}
                   disabled={uploadingCover}

@@ -6,13 +6,14 @@ import { AdminErrorBoundary } from './components/AdminErrorBoundary';
 import { AdminLayout } from './components/AdminLayout';
 import { AdminLoading } from './components/AdminLoading';
 import { ADMIN_HOME, adminRoutes } from './routes';
+import { ThemeProvider } from '../context/ThemeContext';
 import './admin.css';
 
 const AdminLogin = lazy(() => import('./pages/AdminLogin').then(m => ({ default: m.AdminLogin })));
 
 export default function AdminApp() {
   return (
-    <AdminAuthProvider>
+    <ThemeProvider><div className="admin-theme-root"><AdminAuthProvider>
       <AdminErrorBoundary>
         <Suspense fallback={<AdminLoading screen />}>
           <Routes>
@@ -25,6 +26,6 @@ export default function AdminApp() {
           </Routes>
         </Suspense>
       </AdminErrorBoundary>
-    </AdminAuthProvider>
+    </AdminAuthProvider></div></ThemeProvider>
   );
 }

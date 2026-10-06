@@ -4,6 +4,10 @@ import { validateContentDraft } from '../../lib/content';
 export type ArticleDraft = Omit<ArticleRecord, 'id' | 'created_at' | 'updated_at' | 'published_at'>;
 export type ArticleSection = ArticleDraft['content']['sections'][number];
 
+export function cloneArticleSection(section: ArticleSection): ArticleSection {
+  return structuredClone(section);
+}
+
 export function createArticleDraft(): ArticleDraft {
   const now = new Date();
   return { title: '', slug: '', subtitle: '', category: '思考', category_slug: 'notes',
@@ -22,7 +26,9 @@ export function serializeArticleDraft(draft: ArticleDraft, status = draft.status
   validateContentDraft(draft, '文章');
   return { ...draft, status, title: draft.title.trim(), slug: draft.slug.trim(), subtitle: draft.subtitle.trim(),
     category: draft.category.trim(), date: draft.date.trim(), year: draft.year.trim(), read_time: draft.read_time.trim(),
-    excerpt: draft.excerpt.trim(), content: { ...draft.content, lead: draft.content.lead.trim() } };
+    excerpt: draft.excerpt.trim(), content: { ...draft.content, lead: draft.content.lead.trim(),
+      sections: draft.content.sections.map(section => ({ ...section,
+        body: section.body.map(paragraph => paragraph.trim()).filter(Boolean) })) } };
 }
 
 export const articleCategories: { value: ArticleDraft['category_slug']; label: string }[] = [

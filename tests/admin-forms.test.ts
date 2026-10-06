@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { generateContentSlug, validateContentDraft } from '../src/admin/lib/content';
 import { getErrorMessage } from '../src/admin/lib/feedback';
 import { createProjectDraft, projectToDraft, serializeProjectDraft } from '../src/admin/features/projects/projectForm';
-import { createArticleDraft, articleToDraft, serializeArticleDraft } from '../src/admin/features/articles/articleForm';
+import { cloneArticleSection, createArticleDraft, articleToDraft, serializeArticleDraft } from '../src/admin/features/articles/articleForm';
 import { createSiteSettingsDraft, serializeSiteSettingsDraft, siteSettingsToDraft } from '../src/admin/features/site/siteSettingsForm';
 import type { ArticleRecord, ProjectRecord, SiteSettingsRecord } from '../src/types/database';
 
@@ -40,6 +40,28 @@ describe('editor form boundaries', () => {
       id: 'server', created_at: 'created', updated_at: 'updated', published_at: 'published' } as ArticleRecord);
     expect(serializeArticleDraft(draft).content).toEqual({ ...content, lead: 'Lead' });
     expect(serializeArticleDraft(draft)).not.toHaveProperty('id');
+  });
+
+  it('duplicates structured sections without sharing editable nested blocks', () => {
+    const section = { heading: 'Original', body: ['Paragraph'], quote: 'Quote',
+      code: { language: 'typescript', snippet: 'original' }, table: { headers: ['Header'], rows: [['Cell']] },
+      callout: { type: 'tip' as const, text: 'Tip' } };
+    const original = structuredClone(section);
+    const copy = cloneArticleSection(section);
+    copy.body[0] = 'Changed paragraph';
+    copy.code!.snippet = 'Changed code';
+    copy.table!.rows[0]![0] = 'Changed cell';
+    copy.callout!.text = 'Changed tip';
+    expect(section).toEqual(original);
+    expect(copy).toMatchObject({ body: ['Changed paragraph'], code: { snippet: 'Changed code' },
+      table: { rows: [['Changed cell']] }, callout: { text: 'Changed tip' }, quote: 'Quote' });
+  });
+
+  it('drops blank persisted paragraphs while preserving typed content and structured blocks', () => {
+    const draft = { ...createArticleDraft(), title: 'Article', slug: 'article',
+      content: { lead: 'Lead', sections: [{ body: [' First paragraph ', '', ' Second paragraph ', '  '], quote: 'Quote' }] } };
+    expect(serializeArticleDraft(draft).content.sections[0]).toEqual({ body: ['First paragraph', 'Second paragraph'], quote: 'Quote' });
+    expect(draft.content.sections[0]!.body).toEqual([' First paragraph ', '', ' Second paragraph ', '  ']);
   });
 
   it('normalizes missing site JSON fields and preserves About arrays during save', () => {

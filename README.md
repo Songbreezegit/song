@@ -96,6 +96,10 @@ const { t } = useI18n();
 
 管理后台的模块分层、认证与编辑器流程、扩展方式和验证命令见 [管理后台架构](docs/admin-architecture.md)。
 
+新版后台的搜索筛选、编辑器分区、媒体详情与组件层级见 [后台内容工作台](docs/admin-content-workspace.md)。
+
+后台支持浅色／深色圆形切换，并提供网站访问趋势、文章与项目点击量仪表盘。统计口径、权限和启用步骤见 [访问统计](docs/admin-analytics.md)。
+
 ```bash
 # 进入项目目录
 cd d:\code\song
