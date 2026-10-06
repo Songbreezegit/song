@@ -4,6 +4,8 @@
 
 此文记录架构重构阶段。后续单管理员安全加固及上线顺序见 [后台安全实施记录](admin-security.md)。
 
+后续内容工作台、主题切换与统计组件见 [后台内容工作台](admin-content-workspace.md) 和 [访问统计](admin-analytics.md)。
+
 ## 分层与职责
 
 ```text

@@ -13,6 +13,7 @@ import { type Project, type Article } from './data/portfolioData';
 import { useProjects } from './hooks/useProjects';
 import { useArticles } from './hooks/useArticles';
 import { useSiteSettings } from './hooks/useSiteSettings';
+import { usePublicAnalytics } from './hooks/usePublicAnalytics';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { SeoHead } from './components/SeoHead';
 import { useI18n } from './i18n/useI18n';
@@ -40,6 +41,14 @@ export function App() {
   const detailItem = detailLoading || detailError ? null : isProject
     ? projects.find(p => p.slug === projectSlug) ?? null
     : articles.find(a => a.slug === noteSlug) ?? null;
+  usePublicAnalytics({
+    section: section || 'home',
+    pageReady: ready,
+    detailRequest: detailRequested ? `${isProject ? 'project' : 'article'}:${isProject ? projectSlug : noteSlug}` : null,
+    detailReady: ready && !detailLoading && !detailError,
+    contentType: detailRequested && detailItem ? isProject ? 'project' : 'article' : null,
+    contentId: detailRequested && detailItem ? detailItem.id : null,
+  });
   const onReady = useCallback(() => setReady(true), []);
   const selectDetail = (item: Project | Article) => {
     const next = new URLSearchParams(route.search);

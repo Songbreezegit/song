@@ -1,12 +1,14 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, ExternalLink, Menu, X, ChevronRight, Leaf } from 'lucide-react';
+import { LogOut, ExternalLink, Menu, X, ChevronRight } from 'lucide-react';
+import { Asset } from '../../components/Asset';
 import { useAdminAuth } from '../auth/useAdminAuth';
 import { adminRoutes, ADMIN_LOGIN, getAdminPageTitle } from '../routes';
 import { useAdminAction } from '../hooks/useAdminAction';
 import { AdminFeedback } from './AdminFeedback';
 import { AdminErrorBoundary } from './AdminErrorBoundary';
 import { AdminLoading } from './AdminLoading';
+import { AdminThemeToggle } from './AdminThemeToggle';
 
 export function AdminLayout() {
   const { user, logout, idleRemaining } = useAdminAuth();
@@ -21,6 +23,7 @@ export function AdminLayout() {
   const closeMenu = () => setMobileNavOpen(false);
   const parent = location.pathname.startsWith('/admin/projects/') ? { path: '/admin/projects', title: '项目管理' }
     : location.pathname.startsWith('/admin/articles/') ? { path: '/admin/articles', title: '文章管理' } : null;
+  const navigation = adminRoutes.filter(item => item.navigation);
 
   useEffect(() => {
     if (!mobileNavOpen) {
@@ -33,9 +36,7 @@ export function AdminLayout() {
     document.body.style.overflow = 'hidden';
     sidebar.current?.querySelector<HTMLElement>('a')?.focus();
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setMobileNavOpen(false);
-      }
+      if (event.key === 'Escape') setMobileNavOpen(false);
       if (event.key !== 'Tab') return;
       const elements = [...(sidebar.current?.querySelectorAll<HTMLElement>('a, button:not(:disabled)') || [])]
         .filter(element => element.getClientRects().length > 0);
@@ -58,55 +59,58 @@ export function AdminLayout() {
   return <div className="admin-body">
     <a className="admin-skip-link" href="#admin-content">跳到主要内容</a>
     <div className="admin-layout">
-      {mobileNavOpen && <button type="button" className="admin-sidebar-backdrop" onClick={closeMenu} aria-label="关闭导航遮罩" />}
-      <aside ref={sidebar} id="admin-sidebar" className={`admin-sidebar ${mobileNavOpen ? 'open' : ''}`}>
-        <div className="admin-sidebar-brand">
-          <NavLink to="/admin/dashboard" onClick={() => setMobileNavOpen(false)}>
-            <span className="admin-brand-symbol"><Leaf size={21} /></span>
-            <span>松屿<span className="admin-brand-caption">SONG ISLE</span></span>
-          </NavLink>
-          <button type="button" className="admin-btn admin-btn-secondary admin-btn-sm mobile-menu-toggle" onClick={closeMenu} aria-label="关闭菜单"><X size={16} /></button>
+      <header className="admin-topbar" inert={mobileNavOpen ? true : undefined}>
+        <div className="admin-topbar-left">
+          <button ref={menuButton} type="button" className="admin-btn admin-btn-secondary admin-btn-sm mobile-menu-toggle"
+            onClick={() => setMobileNavOpen(true)} aria-label="切换菜单" aria-expanded={mobileNavOpen} aria-controls="admin-sidebar"><Menu size={18} /></button>
+          <Link to="/admin/dashboard" className="admin-shell-brand" aria-label="SONG ISLE 后台主页">
+            <Asset name="home-logo-wordmark" className="admin-shell-logo" eager /><span>内容工作台</span>
+          </Link>
         </div>
-        <nav className="admin-nav" aria-label="后台导航">
-          <span className="admin-nav-caption">内容工作台</span>
-          {adminRoutes.filter(item => item.navigation).map(item => {
-            const Icon = item.navigation!.icon;
-            return <NavLink key={item.path} to={`/admin/${item.path}`}
-              className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`}
-              onClick={() => setMobileNavOpen(false)}>
-              <Icon size={18} /><span>{item.navigation!.label}</span>
-            </NavLink>;
-          })}
+        <nav className="admin-top-nav" aria-label="后台页面导航">
+          {navigation.map(item => <NavLink key={item.path} to={`/admin/${item.path}`}
+            className={({ isActive }) => `admin-top-nav-item${isActive ? ' active' : ''}`}>{item.navigation!.label}</NavLink>)}
         </nav>
-        <div className="admin-sidebar-footer">
-          <div className="admin-sidebar-note"><span className="admin-status-dot" />个人内容管理</div>
-          <a href="/" target="_blank" rel="noreferrer" className="admin-sidebar-action"><ExternalLink size={16} />查看前台网站</a>
-          <button type="button" onClick={handleLogout} disabled={Boolean(pendingKey)} className="admin-sidebar-action"><LogOut size={16} />退出登录</button>
+        <div className="admin-topbar-right">
+          <AdminThemeToggle />
+          <a href="/" target="_blank" rel="noreferrer" className="admin-header-icon" aria-label="查看前台网站" title="查看前台网站"><ExternalLink size={17} /></a>
+          <span className="admin-user-avatar" aria-label={user?.email || '管理员'} title={user?.email || '管理员'}>{(user?.email || 'S').slice(0, 1).toUpperCase()}</span>
         </div>
-      </aside>
-      <div className="admin-main" inert={mobileNavOpen ? true : undefined}>
-        <header className="admin-topbar">
-          <div className="admin-topbar-left">
-            <button ref={menuButton} type="button" className="admin-btn admin-btn-secondary admin-btn-sm mobile-menu-toggle"
-              onClick={() => setMobileNavOpen(true)} aria-label="切换菜单" aria-expanded={mobileNavOpen} aria-controls="admin-sidebar"><Menu size={18} /></button>
-            <div className="admin-breadcrumb">
-              <span className="admin-breadcrumb-root">工作台</span><ChevronRight size={13} className="admin-breadcrumb-root" />
-              {parent && <><Link to={parent.path}>{parent.title}</Link><ChevronRight size={13} /></>}
-              <span className="admin-topbar-title" aria-current="page">{getAdminPageTitle(location.pathname)}</span>
-            </div>
+      </header>
+      <div className="admin-workspace">
+        {mobileNavOpen && <button type="button" className="admin-sidebar-backdrop" onClick={closeMenu} aria-label="关闭导航遮罩" />}
+        <aside ref={sidebar} id="admin-sidebar" className={`admin-sidebar ${mobileNavOpen ? 'open' : ''}`}>
+          <div className="admin-sidebar-brand">
+            <NavLink to="/admin/dashboard" onClick={closeMenu}><Asset name="home-logo-wordmark" className="admin-shell-logo" eager /><span className="admin-brand-caption">内容工作台</span></NavLink>
+            <button type="button" className="admin-btn admin-btn-secondary admin-btn-sm mobile-menu-toggle" onClick={closeMenu} aria-label="关闭菜单"><X size={16} /></button>
           </div>
-          <div className="admin-topbar-right">
-            <span className="admin-user-avatar" aria-hidden="true">{(user?.email || 'S').slice(0, 1).toUpperCase()}</span>
-            <span className="admin-user-email">{user?.email || '管理员'}</span>
+          <nav className="admin-nav" aria-label="后台导航">
+            <span className="admin-nav-caption">内容工作台</span>
+            {navigation.map(item => {
+              const Icon = item.navigation!.icon;
+              return <NavLink key={item.path} to={`/admin/${item.path}`} title={item.navigation!.label} aria-label={item.navigation!.label}
+                className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`} onClick={closeMenu}>
+                <Icon size={19} aria-hidden="true" /><span>{item.navigation!.label}</span>
+              </NavLink>;
+            })}
+          </nav>
+          <div className="admin-sidebar-footer">
+            <a href="/" target="_blank" rel="noreferrer" className="admin-sidebar-action" title="查看前台网站" aria-label="查看前台网站"><ExternalLink size={17} /><span>查看前台网站</span></a>
+            <button type="button" onClick={handleLogout} disabled={Boolean(pendingKey)} className="admin-sidebar-action" title="退出登录" aria-label="退出登录"><LogOut size={17} /><span>退出登录</span></button>
           </div>
-        </header>
-        <main id="admin-content" className="admin-content" tabIndex={-1}>
-          {idleRemaining !== null && <div className="admin-alert admin-alert-info" role="alert">
-            将在 {Math.ceil(idleRemaining / 1000)} 秒后因闲置退出。请及时保存未提交的内容；继续操作可延长会话。
-          </div>}
-          <AdminFeedback feedback={feedback} />
-          <AdminErrorBoundary key={location.pathname}><Suspense fallback={<AdminLoading />}><Outlet /></Suspense></AdminErrorBoundary>
-        </main>
+        </aside>
+        <div className="admin-main" inert={mobileNavOpen ? true : undefined}>
+          {parent && <div className="admin-panel-breadcrumb"><div className="admin-breadcrumb">
+            <span className="admin-breadcrumb-root">工作台</span><ChevronRight size={12} className="admin-breadcrumb-root" />
+            <Link to={parent.path}>{parent.title}</Link><ChevronRight size={12} />
+            <span className="admin-topbar-title" aria-current="page">{getAdminPageTitle(location.pathname)}</span>
+          </div></div>}
+          <main id="admin-content" className="admin-content" tabIndex={-1}>
+            {idleRemaining !== null && <div className="admin-alert admin-alert-info" role="alert">将在 {Math.ceil(idleRemaining / 1000)} 秒后因闲置退出。请及时保存未提交的内容；继续操作可延长会话。</div>}
+            <AdminFeedback feedback={feedback} />
+            <AdminErrorBoundary key={location.pathname}><Suspense fallback={<AdminLoading />}><Outlet /></Suspense></AdminErrorBoundary>
+          </main>
+        </div>
       </div>
     </div>
   </div>;

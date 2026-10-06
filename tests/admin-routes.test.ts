@@ -6,12 +6,12 @@ describe('admin route metadata', () => {
     ['/admin/projects/new', '新建项目'], ['/admin/projects/some-id', '编辑项目'],
     ['/admin/articles/new', '新建文章'], ['/admin/articles/some-id', '编辑文章'],
     ['/admin/projects/', '项目管理'], ['/admin/articles', '文章管理'],
-    ['/admin/dashboard', '内容概览'], ['/admin/site', '站点设置'], ['/admin/media', '媒体库'],
+    ['/admin/dashboard', '网站仪表盘'], ['/admin/site', '站点设置'], ['/admin/media', '媒体库'],
   ])('matches %s precisely', (path, title) => expect(getAdminPageTitle(path)).toBe(title));
 
   it('keeps five sidebar entries in the same registry as their routes', () => {
     expect(adminRoutes.filter(route => route.navigation).map(route => route.path)).toEqual(['dashboard', 'projects', 'articles', 'site', 'media']);
-    expect(adminRoutes.filter(route => route.navigation).map(route => route.navigation?.label)).toEqual(['内容概览', '项目管理', '文章管理', '站点设置', '媒体库']);
+    expect(adminRoutes.filter(route => route.navigation).map(route => route.navigation?.label)).toEqual(['仪表盘', '项目管理', '文章管理', '站点设置', '媒体库']);
     expect(new Set(adminRoutes.map(route => route.path)).size).toBe(adminRoutes.length);
   });
 

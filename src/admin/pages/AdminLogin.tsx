@@ -7,6 +7,7 @@ import { useAdminAction } from '../hooks/useAdminAction';
 import { AdminLoading } from '../components/AdminLoading';
 import { AdminFeedback } from '../components/AdminFeedback';
 import { AdminMfaForm } from '../auth/AdminMfaForm';
+import { AdminThemeToggle } from '../components/AdminThemeToggle';
 
 export function AdminLogin() {
   const { login, isConfigured, isAdmin, mfaRequired, session, authError, loading: authLoading } = useAdminAuth();
@@ -37,6 +38,7 @@ export function AdminLogin() {
   return (
     <div className="admin-body">
       <div className="admin-login-wrapper">
+        <div className="admin-login-theme"><AdminThemeToggle /></div>
         <div className="admin-login-card">
           <div className="admin-login-header">
             <h1>松屿 · 后台管理</h1>

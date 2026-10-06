@@ -17,7 +17,7 @@ const ArticleEditor = lazy(() => import('./pages/AdminArticleEditor').then(m => 
 
 // This registry owns page loading, sidebar entries and header titles.
 export const adminRoutes: AdminRoute[] = [
-  { path: 'dashboard', title: '内容概览', component: lazy(() => import('./pages/AdminDashboard').then(m => ({ default: m.AdminDashboard }))), navigation: { label: '内容概览', icon: LayoutDashboard } },
+  { path: 'dashboard', title: '网站仪表盘', component: lazy(() => import('./pages/AdminDashboard').then(m => ({ default: m.AdminDashboard }))), navigation: { label: '仪表盘', icon: LayoutDashboard } },
   { path: 'projects', title: '项目管理', component: lazy(() => import('./pages/AdminProjects').then(m => ({ default: m.AdminProjects }))), navigation: { label: '项目管理', icon: FolderGit2 } },
   { path: 'projects/new', title: '新建项目', component: ProjectEditor },
   { path: 'projects/:id', title: '编辑项目', component: ProjectEditor },
