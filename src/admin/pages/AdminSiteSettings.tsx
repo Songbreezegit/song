@@ -5,24 +5,25 @@ import { useSiteSettingsEditor } from '../features/site/useSiteSettingsEditor';
 import { AdminFeedback } from '../components/AdminFeedback';
 import { AdminLoading } from '../components/AdminLoading';
 import { AdminQueryError } from '../components/AdminQueryError';
+import { AdminEditorHeader, AdminEditorNavigation } from '../components/AdminEditorChrome';
+
+const sections = [{ id: 'site-profile', label: '首页简介' }, { id: 'site-currently', label: '近况状态' }, { id: 'site-contact', label: '联系方式' }, { id: 'site-about', label: '关于我' }];
+const aboutLabels = { greeting: '开场问候', role: '身份与角色', bio: '个人介绍', location: '个人档案所在地' };
 
 export function AdminSiteSettings() {
   const { draft, setField, setCurrentlyField, setContactField, setAboutField, loading, saving, loadFailed: loadError,
-    loadError: error, reload, feedback, save } = useSiteSettingsEditor();
+    loadError: error, reload, feedback, save, isDirty, lastSavedAt } = useSiteSettingsEditor();
   const handleSubmit = (event: FormEvent) => { event.preventDefault(); void save(); };
   if (loading) return <AdminLoading message="正在加载站点配置..." />;
   if (error) return <AdminQueryError error={error} onRetry={reload} />;
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <p style={{ margin: 0, fontSize: '14px', color: 'var(--admin-text-secondary)' }}>
-          管理松屿 (SONG ISLE) 的全站状态（Now、Currently）、个人档案与社交联系方式。
-        </p>
+    <div className="admin-editor-workspace">
+      <AdminEditorHeader title="站点设置" description="维护首页近况、个人档案和联系方式，让网站内容保持新鲜。" isDirty={isDirty} saving={saving} lastSavedAt={lastSavedAt} actions={
         <button
-          type="button"
+          type="submit"
+          form="site-editor-form"
           className="admin-btn admin-btn-primary"
-          onClick={handleSubmit}
           disabled={saving || loadError}
         >
           {saving ? (
@@ -32,14 +33,16 @@ export function AdminSiteSettings() {
           )}
           <span>保存设置</span>
         </button>
-      </div>
+      } />
 
       <AdminFeedback feedback={feedback} />
 
-      <form onSubmit={handleSubmit}>
+      <AdminEditorNavigation sections={sections} />
+      <form id="site-editor-form" onSubmit={handleSubmit}>
         <fieldset className="admin-editor-fields" disabled={saving}>
+          <div className="admin-editor-layout"><div className="admin-editor-main">
           {/* Basic Profile */}
-          <div className="admin-card">
+          <div className="admin-card admin-editor-section" id="site-profile">
             <div className="admin-card-header">
               <h3 className="admin-card-title">站点简介与位置</h3>
             </div>
@@ -68,7 +71,7 @@ export function AdminSiteSettings() {
           </div>
 
           {/* Currently / Now */}
-          <div className="admin-card">
+          <div className="admin-card admin-editor-section" id="site-currently">
             <div className="admin-card-header">
               <h3 className="admin-card-title">近况状态 (Currently & Building)</h3>
             </div>
@@ -132,7 +135,7 @@ export function AdminSiteSettings() {
           </div>
 
           {/* Contact & Social Links */}
-          <div className="admin-card">
+          <div className="admin-card admin-editor-section" id="site-contact">
             <div className="admin-card-header">
               <h3 className="admin-card-title">联系方式与社交账号 (Contact & Social)</h3>
             </div>
@@ -234,11 +237,11 @@ export function AdminSiteSettings() {
             </div>
           </div>
 
-          <div className="admin-card">
-            <h3 className="admin-card-title">About</h3>
+          <div className="admin-card admin-editor-section" id="site-about">
+            <div className="admin-card-header"><h3 className="admin-card-title">关于我</h3><span className="admin-label-desc">个人档案与经历</span></div>
             {(['greeting', 'role', 'bio', 'location'] as const).map(field => (
               <div className="admin-form-group" key={field}>
-                <label className="admin-label" htmlFor={'about-' + field}>{field}</label>
+                <label className="admin-label" htmlFor={'about-' + field}>{aboutLabels[field]}</label>
                 <textarea id={'about-' + field} className="admin-textarea" value={draft.about?.[field] || ''}
                   onChange={e => setAboutField(field, e.target.value)} />
               </div>
@@ -247,8 +250,11 @@ export function AdminSiteSettings() {
               <AboutListEditor key={field} field={field} about={draft.about} onChange={about => setField('about', about)} />
             ))}
           </div>
-          {/* Submit Bar */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          </div><aside className="admin-editor-aside" aria-label="站点设置保存">
+          <section className="admin-card admin-editor-publish-panel">
+            <div className="admin-card-header"><h3 className="admin-card-title">保存与生效</h3></div>
+            <p className="admin-editor-note">这些设置共同组成公开网站。保存后，首页简介、近况、联系方式与关于我内容一起更新。</p>
+            <ul className="admin-editor-checklist"><li>首页简介 → 首页第一屏</li><li>近况状态 → Currently 区域</li><li>联系方式 → 联系区域</li><li>关于我 → 个人档案</li></ul>
             <button
               type="submit"
               className="admin-btn admin-btn-primary"
@@ -261,7 +267,7 @@ export function AdminSiteSettings() {
               )}
               <span>保存全站设置</span>
             </button>
-          </div>
+          </section></aside></div>
         </fieldset>
       </form>
     </div>

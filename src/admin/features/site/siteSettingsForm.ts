@@ -19,5 +19,7 @@ export function serializeSiteSettingsDraft(draft: SiteSettingsDraft): SiteSettin
     Object.entries(value).map(([key, item]) => [key, typeof item === 'string' ? item.trim() : item]),
   ) as T;
   return { ...draft, site_intro: draft.site_intro.trim(), based_in: draft.based_in.trim(),
-    currently: trimValues(draft.currently), contact: trimValues(draft.contact) };
+    currently: trimValues(draft.currently), contact: trimValues(draft.contact),
+    about: { ...draft.about, techStack: draft.about.techStack.map(group => ({ ...group,
+      items: group.items.map(item => item.trim()).filter(Boolean) })) } };
 }

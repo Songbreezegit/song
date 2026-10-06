@@ -7,10 +7,10 @@ export function ArticleTableEditor({ table, onChange }: {
   onChange: (table: Table | undefined) => void;
 }) {
   if (!table) return <button type="button" className="admin-btn admin-btn-secondary admin-btn-sm"
-    onClick={() => onChange({ headers: ['', ''], rows: [['', '']] })}>Add Table</button>;
+    onClick={() => onChange({ headers: ['', ''], rows: [['', '']] })}>添加表格</button>;
 
   return <fieldset className="admin-section-block">
-    <legend>Table Block</legend>
+    <legend>表格内容</legend>
     <div className="admin-table-container">
       <table className="admin-table"><thead><tr>
         {table.headers.map((header, column) => <th key={column}>
@@ -32,6 +32,6 @@ export function ArticleTableEditor({ table, onChange }: {
     </div>
     <button type="button" className="admin-btn admin-btn-secondary admin-btn-sm" onClick={() => onChange({ headers: [...table.headers, ''], rows: table.rows.map(row => [...row, '']) })}>新增列</button>
     <button type="button" className="admin-btn admin-btn-secondary admin-btn-sm" onClick={() => onChange({ ...table, rows: [...table.rows, table.headers.map(() => '')] })}>新增行</button>
-    <button type="button" className="admin-btn admin-btn-danger admin-btn-sm" onClick={() => onChange(undefined)}>Remove Table</button>
+    <button type="button" className="admin-btn admin-btn-danger admin-btn-sm" onClick={() => onChange(undefined)}>移除表格</button>
   </fieldset>;
 }

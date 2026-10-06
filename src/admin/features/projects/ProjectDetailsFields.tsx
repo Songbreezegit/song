@@ -5,7 +5,7 @@ export function ProjectDetailsFields({ editor }: { editor: ReturnType<typeof use
   const { draft, setField, newTechInput, setNewTechInput, newFeatureInput, setNewFeatureInput,
     handleAddTech, handleRemoveTech, handleAddFeature, handleRemoveFeature, handleAddChallenge, handleRemoveChallenge, handleChallengeChange } = editor;
   return (<>
-        <div className="admin-card">
+        <div className="admin-card admin-editor-section" id="project-details">
           <div className="admin-card-header">
             <h3 className="admin-card-title">详细介绍与思考</h3>
           </div>
@@ -48,13 +48,14 @@ export function ProjectDetailsFields({ editor }: { editor: ReturnType<typeof use
         </div>
 
         {/* 3. Tech Stack & Features */}
-        <div className="admin-grid-2">
+        <div className="admin-grid-2 admin-editor-section" id="project-features">
           <div className="admin-card">
             <div className="admin-card-header">
               <h3 className="admin-card-title">技术栈 (Tech Stack)</h3>
             </div>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
               <input
+                aria-label="添加技术标签"
                 type="text"
                 className="admin-input"
                 placeholder="例如：TypeScript, React 19"
@@ -82,6 +83,7 @@ export function ProjectDetailsFields({ editor }: { editor: ReturnType<typeof use
                 <span key={idx} className="admin-tag-pill">
                   {tech}
                   <button
+                    aria-label={`移除技术标签 ${tech}`}
                     type="button"
                     className="admin-tag-remove"
                     onClick={() => handleRemoveTech(idx)}
@@ -102,6 +104,7 @@ export function ProjectDetailsFields({ editor }: { editor: ReturnType<typeof use
             </div>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
               <input
+                aria-label="添加功能特性"
                 type="text"
                 className="admin-input"
                 placeholder="添加一行功能点特性..."
@@ -171,13 +174,15 @@ export function ProjectDetailsFields({ editor }: { editor: ReturnType<typeof use
                     type="button"
                     className="admin-btn admin-btn-danger admin-btn-sm"
                     onClick={() => handleRemoveChallenge(idx)}
+                    aria-label={`删除挑战与解法 ${idx + 1}`}
                   >
                     <Trash2 size={13} />
                   </button>
                 </div>
                 <div className="admin-form-group">
-                  <label className="admin-label">遇到的难点 (Challenge)</label>
+                  <label className="admin-label" htmlFor={`project-challenge-${idx}`}>遇到的难点 (Challenge)</label>
                   <input
+                    id={`project-challenge-${idx}`}
                     type="text"
                     className="admin-input"
                     placeholder="描述当时遇到的技术阻碍或架构权衡..."
@@ -186,8 +191,9 @@ export function ProjectDetailsFields({ editor }: { editor: ReturnType<typeof use
                   />
                 </div>
                 <div className="admin-form-group" style={{ marginBottom: 0 }}>
-                  <label className="admin-label">解法与实践 (Solution)</label>
+                  <label className="admin-label" htmlFor={`project-solution-${idx}`}>解法与实践 (Solution)</label>
                   <textarea
+                    id={`project-solution-${idx}`}
                     className="admin-textarea"
                     placeholder="详细记录如何解决以及最终方案..."
                     value={item.solution}

@@ -53,7 +53,7 @@ test('page lazy loading retains the sidebar and header', async ({ page }) => {
   let release!: () => void;
   const pending = new Promise<void>(resolve => { release = resolve; });
   await page.route('**/src/admin/pages/AdminProjects.tsx*', async route => { await pending; await route.continue(); });
-  await page.getByRole('navigation', { name: '后台导航' }).getByRole('link', { name: 'Projects', exact: true }).click();
+  await page.getByRole('navigation', { name: '后台导航' }).getByRole('link', { name: '项目管理', exact: true }).click();
   await expect(page.locator('.admin-content')).toContainText('正在加载管理模块');
   await expect(page.getByRole('navigation', { name: '后台导航' })).toBeVisible();
   await expect(page.locator('.admin-topbar-title')).toHaveText('项目管理');
@@ -147,7 +147,7 @@ test('finishing a save after leaving the editor never navigates back', async ({ 
   const response = page.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).pathname.endsWith('/projects'));
   await page.getByRole('button', { name: '保存当前状态', exact: true }).click();
   await request;
-  await page.getByRole('navigation', { name: '后台导航' }).getByRole('link', { name: 'Dashboard' }).click();
+  await page.getByRole('navigation', { name: '后台导航' }).getByRole('link', { name: '内容概览' }).click();
   await response;
   await expect(page).toHaveURL(/dashboard$/);
   await expect(page.locator('.admin-stat-value').first()).toHaveText('1');
@@ -204,7 +204,7 @@ test('mobile navigation remains usable on the protected console', async ({ page 
   await expect(page).toHaveURL(/dashboard$/);
   await page.getByRole('button', { name: '切换菜单', exact: true }).click();
   await expect(page.getByRole('button', { name: '切换菜单', exact: true })).toHaveAttribute('aria-expanded', 'true');
-  await page.getByRole('navigation', { name: '后台导航' }).getByRole('link', { name: 'Projects', exact: true }).click();
+  await page.getByRole('navigation', { name: '后台导航' }).getByRole('link', { name: '项目管理', exact: true }).click();
   await expect(page.getByRole('button', { name: '切换菜单', exact: true })).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('.admin-topbar-title')).toHaveText('项目管理');
   await expect(page.getByText('暂无项目记录。')).toBeVisible();
@@ -241,10 +241,10 @@ test('a failed page chunk keeps navigation usable and clears its boundary on the
   await login(page);
   await expect(page.locator('.admin-stat-value').first()).toHaveText('0');
   await page.route('**/src/admin/pages/AdminProjects.tsx*', route => route.abort());
-  await page.getByRole('navigation', { name: '后台导航' }).getByRole('link', { name: 'Projects', exact: true }).click();
+  await page.getByRole('navigation', { name: '后台导航' }).getByRole('link', { name: '项目管理', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('管理页面加载失败');
   await expect(page.getByRole('navigation', { name: '后台导航' })).toBeVisible();
-  await page.getByRole('navigation', { name: '后台导航' }).getByRole('link', { name: 'Dashboard', exact: true }).click();
+  await page.getByRole('navigation', { name: '后台导航' }).getByRole('link', { name: '内容概览', exact: true }).click();
   await expect(page.locator('.admin-stat-value').first()).toHaveText('0');
   await expect(page.getByRole('alert')).toHaveCount(0);
 });
