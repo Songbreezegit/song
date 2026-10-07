@@ -36,7 +36,7 @@ beforeAll(async () => {
     insert into projects(id, slug, title, status) values ('legacy-project', 'legacy-project', 'Legacy project', 'published'), ('draft-project', 'draft-project', 'Draft project', 'draft');
     insert into articles(id, slug, title, status) values ('legacy-article', 'legacy-article', 'Legacy article', 'published'), ('archived-article', 'archived-article', 'Archived article', 'archived'), ('zero-article', 'zero-article', 'Zero clicks article', 'published');`);
   await db.exec(readFileSync('supabase/migrations/20261004093439_enforce_admin_mfa.sql', 'utf8'));
-  await db.exec(readFileSync('supabase/migrations/20261006192850_add_private_analytics.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/20261007052225_add_private_analytics.sql', 'utf8'));
 }, 30000);
 beforeEach(async () => {
   await db.exec('truncate analytics_page_daily, analytics_content_daily, analytics_private.event_receipts;');

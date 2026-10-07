@@ -14,7 +14,7 @@
 
 ## 数据与权限
 
-新增迁移：`supabase/migrations/20261006192850_add_private_analytics.sql`。迁移由 Supabase CLI 的 `migration new` 生成，只增加统计对象，不替换现有内容、管理员和 MFA 规则。
+统计迁移：`supabase/migrations/20261007052225_add_private_analytics.sql`。2026-10-07 经用户授权，原已审阅 SQL 通过 Supabase `apply_migration` 应用到正式 `song` 项目；文件名同步为实际部署版本，SQL 内容保持不变。迁移只增加统计对象，不替换现有内容、管理员和 MFA 规则。
 
 `public.analytics_page_daily` 保存日期与 PV；`public.analytics_content_daily` 保存日期、内容类别、既有内容 id 和点击量。既有内容 id 是 `text`，允许历史非 UUID id。应用不收集或存储 IP、完整 URL/查询参数、referrer、设备指纹、用户 id 或持久访客标识，不写统计 Cookie、localStorage 或 sessionStorage。
 
@@ -40,7 +40,7 @@
 
 ## 启用与核验
 
-本次工作只生成代码、迁移和本地验证，未应用生产迁移或部署。启用由管理员在审阅后执行。
+正式站 `songisle.xyz` 已于 2026-10-07 13:22（北京时间）启用统计。前端此前已经包含收集与读取接口，本次只应用统计数据库迁移，没有重新部署前端。实际首页访问、项目详情打开、导航浏览及权限核验见 [正式启用记录](admin-analytics-rollout.md)。进入仪表盘、切换统计范围或点击刷新会读取最新数据；当前没有自动轮询。
 
 1. 核对目标项目、现有 MFA 迁移与管理员 TOTP状态，审阅新增 SQL。既有生产历史与仓库前两条旧迁移的版本号不同，不能盲目执行 `supabase db push`、重放初始 schema 或修写历史。应按项目已部署迁移历史，只应用这一条新增迁移。
 2. 保持 `analytics_private` 为未暴露 schema，检查新增函数的 EXECUTE grants、统计表的 SELECT/RLS 与无客户端写权限。
@@ -48,4 +48,4 @@
 4. 验证访客不能读取/直接写统计表，普通登录用户与 `aal1` 管理员不能读聚合，完成 MFA 的现有唯一管理员可以读取。RPC未启用与网络失败应呈现不同状态。
 5. 在真实公开页打开和有效详情打开后，用管理员后台核对今日、期间和逐篇计数；同时核对语言/主题切换、内容重请求不重复，关闭后重开详情追加一次。
 
-本地 PGlite 验证运行真实 PostgreSQL 角色、权限、RLS与函数，包括匿名提交、text id、UUID幂等、草稿/缺失目标拒绝、直接表读写拒绝、管理员/MFA边界、Shanghai日期和收据清理。它不证明生产迁移、Supabase Data API暴露配置、浏览器网络可达性或真实平台反机器人能力；这些仍需在正式启用时核验。
+本地 PGlite 验证运行真实 PostgreSQL 角色、权限、RLS与函数，包括匿名提交、text id、UUID幂等、草稿/缺失目标拒绝、直接表读写拒绝、管理员/MFA边界、Shanghai日期和收据清理。正式启用另外验证了实际迁移、Data API schema 暴露配置、真实公开页采集与数据库管理员读取边界。管理员浏览器登录后的展示未在本次重新核验，线上暂无已发布文章可验证文章详情采集；本地测试也不代表真实平台反机器人能力。
