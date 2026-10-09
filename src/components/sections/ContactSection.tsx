@@ -6,6 +6,7 @@ import { CTAButton } from '../CTAButton';
 import { ScrollReveal } from '../ScrollReveal';
 import { useI18n } from '../../i18n/useI18n';
 import { safeExternalUrl, safeMailto } from '../../lib/safeUrl';
+import { CONTACT_DATA, SOCIAL_PROFILES } from '../../data/portfolioData';
 
 export function ContactSection(props: SiteSettingsProps) {
   const { language, t } = useI18n();
@@ -15,8 +16,9 @@ export function ContactSection(props: SiteSettingsProps) {
 
   const socials: { label: string; user: string | undefined; href: string; icon: AssetName }[] = [
     { label: 'GitHub', user: contact?.githubUser || 'Songbreezegit', href: contact?.github || 'https://github.com/Songbreezegit', icon: 'contact-icon-github' },
-    { label: 'X / Twitter', user: contact?.xUser || '@song_breezed', href: contact?.x || 'https://x.com/song_breezed', icon: 'contact-icon-x' },
-    { label: 'Bilibili', user: contact?.bilibiliUser || '松屿Song', href: contact?.bilibili || 'https://space.bilibili.com/399489276', icon: 'contact-icon-bilibili' },
+    { label: 'Bilibili', user: CONTACT_DATA.bilibiliUser, href: contact?.bilibili || CONTACT_DATA.bilibili, icon: 'contact-icon-bilibili' },
+    { label: '小红书', ...SOCIAL_PROFILES.xiaohongshu, icon: 'contact-icon-xiaohongshu' },
+    { label: '抖音', ...SOCIAL_PROFILES.douyin, icon: 'contact-icon-douyin' },
   ];
 
   const [copy, setCopy] = useState('');

@@ -668,7 +668,17 @@ export const CONTACT_DATA = {
   x: 'https://x.com/song_breezed',
   xUser: '@song_breezed',
   bilibili: 'https://space.bilibili.com/399489276',
-  bilibiliUser: '松屿 (Bilibili)',
+  bilibiliUser: 'song_breeze',
   status: 'Open for freelance, interesting open-source collabs & discussions.',
 };
 
+export const SOCIAL_PROFILES = {
+  xiaohongshu: {
+    href: 'https://www.xiaohongshu.com/user/profile/643ebacf0000000010029af2',
+    user: 'song_breeze',
+  },
+  douyin: {
+    href: 'https://www.douyin.com/user/MS4wLjABAAAAcUf3j8atm9g9Fs7TbjuUqWuV_zVTar68kbiTFpadsv0Om-pHKntyNAf7xH6s1m-j',
+    user: 'song_breeze',
+  },
+};

@@ -141,11 +141,11 @@
 .email-link a{display:block;font-size:14px;overflow-wrap:anywhere;margin-top:7px}
 .email-link .small-label{font-size:10px}
 .copy-status{font-size:11px;flex-basis:100%;color:var(--sage)}
-.socials{display:flex;gap:24px;justify-content:flex-end}
+.socials{display:grid;grid-template-columns:repeat(2,max-content);gap:20px 24px;justify-content:end}
 .social-link{display:flex;align-items:center;gap:9px;transition:transform var(--normal) var(--ease)}
 .social-link>.asset{width:45px;transition:transform var(--normal)}
 .social-link strong{display:block;font-size:12px;font-weight:600}
-.social-link small{display:none}
+.social-link small{display:block;font-size:10px;color:var(--muted);margin-top:4px}
 .social-link:hover{transform:translateY(-4px)}
 .social-link:hover>.asset{transform:scale(1.04)}
 .contact-signoff{display:flex;justify-content:center;align-items:center;gap:13px;margin-top:48px}
