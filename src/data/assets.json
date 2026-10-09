@@ -59,6 +59,16 @@
     "width": 675,
     "height": 700
   },
+  "contact-icon-xiaohongshu": {
+    "src": "/assets/contact/contact-icon-xiaohongshu.svg",
+    "width": 96,
+    "height": 96
+  },
+  "contact-icon-douyin": {
+    "src": "/assets/contact/contact-icon-douyin.svg",
+    "width": 96,
+    "height": 96
+  },
   "contact-icon-github": {
     "src": "/assets/contact/contact-icon-github.webp",
     "width": 582,

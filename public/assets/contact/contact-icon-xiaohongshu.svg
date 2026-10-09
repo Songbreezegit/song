@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+  <title>小红书</title>
+  <rect x="1" y="1" width="94" height="94" rx="24" fill="#fbe3eb" stroke="#f5d4df" stroke-width="2"/>
+  <rect x="8" y="27" width="80" height="42" rx="12" fill="#e94362"/>
+  <g fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M25 35v25q0 3-5 2M18 44l-4 12M32 44l4 12"/>
+    <path d="m43 35-6 10h7l-7 10 10-2m-10 9 11-4M50 38h12M56 38v23M49 61h14"/>
+    <path d="M67 42h17v11H66M75 35v28m6-27 3 3"/>
+  </g>
+</svg>
