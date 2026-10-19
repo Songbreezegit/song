@@ -1,6 +1,16 @@
 import { ArrowUp } from 'lucide-react';
 import { useI18n } from '../i18n/useI18n';
 
+export function FooterRegistration() {
+  return (
+    <div className="container footer-registration">
+      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" lang="zh-CN">
+        渝ICP备2026025309号-1
+      </a>
+    </div>
+  );
+}
+
 export function Footer() {
   const { language, t } = useI18n();
 
@@ -22,6 +32,7 @@ export function Footer() {
           <ArrowUp size={16} />
         </a>
       </div>
+      <FooterRegistration />
     </footer>
   );
 }

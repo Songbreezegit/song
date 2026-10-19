@@ -157,6 +157,8 @@
 .footer-brand{font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--ink)}
 .footer-brand span{display:block;font-size:10px;font-weight:400;letter-spacing:0;color:var(--muted);margin-top:6px}
 .footer-inner .text-link{font-size:11px}
+.footer-registration{margin-top:16px;font-size:11px;line-height:1.8;text-align:center;color:color-mix(in srgb,var(--muted) 85%,var(--ink))}
+.footer-registration a:hover{text-decoration:underline;text-underline-offset:3px}
 .reveal{opacity:0;transform:translateY(18px);transition:opacity var(--slow) var(--ease),transform var(--slow) var(--ease)}
 .reveal.is-visible,.reveal:focus-within{opacity:1;transform:none}
 .site-loader{position:fixed;z-index:90;inset:0;background:var(--paper);display:grid;place-items:center;transition:opacity var(--normal),transform var(--normal);pointer-events:none}

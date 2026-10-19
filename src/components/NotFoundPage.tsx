@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Asset } from './Asset';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { FooterRegistration } from './Footer';
 import { useI18n } from '../i18n/useI18n';
 import { useTheme } from '../context/useTheme';
 import { Moon, Sun, ArrowLeft } from 'lucide-react';
@@ -62,6 +63,7 @@ export function NotFoundPage() {
           </Link>
           <span>© {new Date().getFullYear()} 松屿</span>
         </div>
+        <FooterRegistration />
       </footer>
     </div>
   );
