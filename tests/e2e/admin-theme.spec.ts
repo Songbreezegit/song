@@ -44,10 +44,11 @@ test.beforeEach(async ({ page }) => {
         const marker = document.querySelector('.theme-transition-origin')!.getBoundingClientRect();
         const groupTransform = new DOMMatrixReadOnly(group.transform);
         const markerTransform = new DOMMatrixReadOnly(markerStyle.transform);
+        const snapshotOrigin = groupTransform.inverse().transformPoint({ x: markerTransform.e, y: markerTransform.f });
         window.__adminThemeMotion.reveals.push({ clipPath: effect.getKeyframes().map(frame => String(frame.clipPath)),
           duration: timing.duration, easing: timing.easing, fill: timing.fill,
           width: parseFloat(group.width), height: parseFloat(group.height),
-          offsetX: markerTransform.e - marker.left - groupTransform.e, offsetY: markerTransform.f - marker.top - groupTransform.f });
+          offsetX: snapshotOrigin.x - marker.left, offsetY: snapshotOrigin.y - marker.top });
         window.__adminThemeAnimation = animation;
         if (window.__pauseAdminThemeReveal) { animation.pause(); animation.currentTime = 0; }
       }

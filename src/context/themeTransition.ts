@@ -20,18 +20,19 @@ type ActiveTransition = {
   animation?: Animation;
 };
 
-function revealGeometry(root: HTMLElement, marker: HTMLElement, origin: ThemeTransitionOrigin) {
-  // Mobile snapshots include retractable browser chrome. A fixed, empty marker
-  // lets the browser map viewport coordinates into that snapshot coordinate space.
-  const markerRect = marker.getBoundingClientRect();
+function revealGeometry(root: HTMLElement) {
+  // Capture a real, transparent pixel at the button center. Its snapshot transform
+  // maps the origin for us, including browser chrome and page/device scaling.
   const markerStyle = window.getComputedStyle(root, '::view-transition-group(theme-origin)');
   const snapshotStyle = window.getComputedStyle(root, '::view-transition-group(root)');
+  if (markerStyle.transform === 'none' || Number.parseFloat(markerStyle.width) !== 1 || Number.parseFloat(markerStyle.height) !== 1) {
+    throw new Error('Theme origin snapshot is unavailable');
+  }
   const markerTransform = new DOMMatrixReadOnly(markerStyle.transform);
   const snapshotTransform = new DOMMatrixReadOnly(snapshotStyle.transform);
   const width = Number.parseFloat(snapshotStyle.width);
   const height = Number.parseFloat(snapshotStyle.height);
-  const x = origin.x + markerTransform.e - markerRect.left - snapshotTransform.e;
-  const y = origin.y + markerTransform.f - markerRect.top - snapshotTransform.f;
+  const { x, y } = snapshotTransform.inverse().transformPoint({ x: markerTransform.e, y: markerTransform.f });
   if (![x, y, width, height].every(Number.isFinite) || width <= 0 || height <= 0) {
     throw new Error('Theme snapshot geometry is unavailable');
   }
@@ -76,6 +77,8 @@ export function createThemeTransition() {
         const marker = document.createElement('div');
         request.originMarker = marker;
         marker.className = 'theme-transition-origin';
+        marker.style.left = `${viewportOrigin.x}px`;
+        marker.style.top = `${viewportOrigin.y}px`;
         marker.setAttribute('aria-hidden', 'true');
         document.body.append(marker);
         const transition = document.startViewTransition(() => {
@@ -85,10 +88,8 @@ export function createThemeTransition() {
 
         void transition.ready.then(() => {
           if (request.cancelled) return;
-          // Both snapshots now have stable colors. Restore the site's hover transitions.
-          root.classList.remove('theme-transitioning');
           try {
-            const { x, y, radius } = revealGeometry(root, marker, viewportOrigin);
+            const { x, y, radius } = revealGeometry(root);
             request.animation = root.animate({
               clipPath: [
                 `circle(0px at ${x}px ${y}px)`,

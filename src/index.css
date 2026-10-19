@@ -63,14 +63,18 @@ p{line-height:1.8}
 .dark .code-block>div{background:var(--surface-white)}
 /* Keep the old theme opaque below the circular reveal in both directions. */
 ::view-transition-group(root),::view-transition-old(root),::view-transition-new(root){animation:none}
-/* Empty fixed marker measures the mobile snapshot offset without painting pixels. */
-.theme-transition-origin{position:fixed;left:0;top:0;width:0;height:0;opacity:0;pointer-events:none;view-transition-name:theme-origin}
+/* Matrix coordinates are measured from the snapshot's top-left, including scale. */
+::view-transition-group(root),::view-transition-group(theme-origin){transform-origin:0 0}
+/* A transparent pixel at the button center survives snapshot capture on Android. */
+.theme-transition-origin{position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;view-transition-name:theme-origin}
 ::view-transition-group(theme-origin),::view-transition-old(theme-origin),::view-transition-new(theme-origin){animation:none}
 ::view-transition-image-pair(root){isolation:isolate}
 ::view-transition-old(root),::view-transition-new(root){mix-blend-mode:normal;opacity:1}
 ::view-transition-old(root){z-index:1}
-::view-transition-new(root){z-index:2}
-/* Only suppress existing theme-color transitions while the snapshots are captured. */
+::view-transition-new(root){z-index:2;clip-path:circle(0px at 0px 0px);will-change:clip-path}
+/* Keep the live new snapshot still until playback finishes, avoiding extra raster work. */
+:root.theme-transitioning .floating-badge,:root.theme-transitioning .scroll-arrow{animation-play-state:paused}
+/* Suppress theme-color transitions through capture AND playback. */
 :root.theme-transitioning .cta{transition-property:transform}
 :root.theme-transitioning .site-header,:root.theme-transitioning .note-row button,:root.theme-transitioning .lang-btn{transition-property:none}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}*,*::before,*::after{animation:none!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.reveal{opacity:1!important;transform:none!important}}

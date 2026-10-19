@@ -17,8 +17,8 @@ describe('theme transition', () => {
   let ready: ReturnType<typeof deferred>;
   let finished: ReturnType<typeof deferred>;
   let skip: ReturnType<typeof vi.fn>;
-  let marker: { className: string; setAttribute: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn>; getBoundingClientRect: ReturnType<typeof vi.fn> };
-  let snapshot: { width?: number; height?: number; x: number; y: number };
+  let marker: { className: string; style: { left: string; top: string }; setAttribute: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn> };
+  let snapshot: { width?: number; height?: number; x: number; y: number; scale?: number };
   let markerOffset: { x: number; y: number };
 
   beforeEach(() => {
@@ -28,7 +28,7 @@ describe('theme transition', () => {
     finished = deferred();
     snapshot = { x: 0, y: 0 };
     markerOffset = { x: 0, y: 0 };
-    marker = { className: '', setAttribute: vi.fn(), remove: vi.fn(), getBoundingClientRect: vi.fn(() => ({ left: 0, top: 0 })) };
+    marker = { className: '', style: { left: '', top: '' }, setAttribute: vi.fn(), remove: vi.fn() };
     animationCancel = vi.fn();
     animate = vi.fn(() => ({ cancel: animationCancel }));
     skip = vi.fn(() => finished.resolve());
@@ -60,15 +60,24 @@ describe('theme transition', () => {
       matchMedia: vi.fn(() => ({ matches: false })),
       getComputedStyle: vi.fn((_root, pseudo) => pseudo === '::view-transition-group(root)' ? {
         width: `${snapshot.width ?? window.innerWidth}px`, height: `${snapshot.height ?? window.innerHeight}px`,
-        transform: `matrix(1, 0, 0, 1, ${snapshot.x}, ${snapshot.y})`,
-      } : { transform: `matrix(1, 0, 0, 1, ${markerOffset.x}, ${markerOffset.y})` }),
+        transform: `matrix(${snapshot.scale ?? 1}, 0, 0, ${snapshot.scale ?? 1}, ${snapshot.x}, ${snapshot.y})`,
+      } : {
+        width: '1px', height: '1px',
+        transform: `matrix(1, 0, 0, 1, ${Number.parseFloat(marker.style.left) + markerOffset.x}, ${Number.parseFloat(marker.style.top) + markerOffset.y})`,
+      }),
     });
     vi.stubGlobal('DOMMatrixReadOnly', class {
+      a: number;
+      d: number;
       e: number;
       f: number;
       constructor(transform: string) {
         const values = transform.slice(7, -1).split(',').map(Number);
+        this.a = values[0]; this.d = values[3];
         this.e = values[4]; this.f = values[5];
+      }
+      inverse() {
+        return { transformPoint: ({ x, y }: { x: number; y: number }) => ({ x: (x - this.e) / this.a, y: (y - this.f) / this.d }) };
       }
     });
     vi.stubGlobal('localStorage', {
@@ -101,10 +110,11 @@ describe('theme transition', () => {
       expect(animate).not.toHaveBeenCalled();
       ready.resolve();
       await ready.promise;
-      expect(classes.has('theme-transitioning')).toBe(false);
+      expect(classes.has('theme-transitioning')).toBe(true);
       expect(animate).toHaveBeenCalledOnce();
       finished.resolve();
       await finished.promise;
+      expect(classes.has('theme-transitioning')).toBe(false);
       expect(animationCancel).toHaveBeenCalledOnce();
       expect(marker.remove).toHaveBeenCalledOnce();
     });
@@ -173,14 +183,43 @@ describe('theme transition', () => {
     });
   }
 
-  it('keeps fixed-marker and snapshot translations in the same coordinate space', async () => {
-    marker.getBoundingClientRect.mockReturnValue({ left: 4, top: 8 });
+  it('maps the captured button anchor into the root snapshot coordinate space', async () => {
     markerOffset = { x: 20, y: 70 };
     snapshot = { width: 1456, height: 962, x: 2, y: 3 };
     createThemeTransition().toggle(() => applyTheme('dark'), { x: 1300, y: 42 });
     ready.resolve();
     await ready.promise;
-    expect(animate.mock.calls[0][0].clipPath[0]).toBe('circle(0px at 1314px 101px)');
+    expect(marker.style).toEqual({ left: '1300px', top: '42px' });
+    expect(animate.mock.calls[0][0].clipPath[0]).toBe('circle(0px at 1318px 109px)');
+  });
+
+  for (const scale of [0.5, 0.8, 1.25, 2]) {
+    it(`inverts snapshot scaling (${scale}) instead of treating it as translation`, async () => {
+      snapshot = { width: 1280 / scale, height: 800 / scale, x: 12, y: 48, scale };
+      markerOffset = { x: 12, y: 104 };
+      const origin = { x: 974.5, y: 46.5 };
+      createThemeTransition().toggle(() => applyTheme('dark'), origin);
+      ready.resolve();
+      await ready.promise;
+      const x = origin.x / scale, y = (origin.y + 56) / scale;
+      const radius = Math.hypot(Math.max(x, snapshot.width! - x), Math.max(y, snapshot.height! - y)) + 2;
+      expect(animate.mock.calls[0][0].clipPath).toEqual([
+        `circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`,
+      ]);
+    });
+  }
+
+  it('skips an uncaptured marker instead of animating from a guessed origin', async () => {
+    vi.mocked(window.getComputedStyle).mockReturnValue({ transform: 'none', width: '1280px', height: '800px' } as CSSStyleDeclaration);
+    createThemeTransition().toggle(() => applyTheme('dark'));
+    ready.resolve();
+    await ready.promise;
+    await finished.promise;
+    expect(animate).not.toHaveBeenCalled();
+    expect(skip).toHaveBeenCalledOnce();
+    expect(marker.remove).toHaveBeenCalledOnce();
+    expect(classes.has('theme-transitioning')).toBe(false);
+    expect(storage.get('song_theme')).toBe('dark');
   });
 
   it('skips a snapshot whose geometry cannot be measured and removes its marker', async () => {

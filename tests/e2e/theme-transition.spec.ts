@@ -72,6 +72,7 @@ test.beforeEach(async ({ page }) => {
         const marker = document.querySelector('.theme-transition-origin')!.getBoundingClientRect();
         const snapshotTransform = new DOMMatrixReadOnly(snapshot.transform);
         const markerTransform = new DOMMatrixReadOnly(markerStyle.transform);
+        const snapshotOrigin = snapshotTransform.inverse().transformPoint({ x: markerTransform.e, y: markerTransform.f });
         window.__themeMotion.reveals.push({
           clipPath: effect.getKeyframes().map(frame => String(frame.clipPath)),
           duration: timing.duration,
@@ -80,8 +81,8 @@ test.beforeEach(async ({ page }) => {
           pseudoElement: options.pseudoElement,
           snapshot: {
             width: parseFloat(snapshot.width), height: parseFloat(snapshot.height),
-            offsetX: markerTransform.e - marker.left - snapshotTransform.e,
-            offsetY: markerTransform.f - marker.top - snapshotTransform.f,
+            offsetX: snapshotOrigin.x - marker.left,
+            offsetY: snapshotOrigin.y - marker.top,
           },
         });
         window.__themeAnimation = animation;
@@ -201,13 +202,14 @@ test.describe('mobile snapshot coordinate regression', () => {
       }
       // Desktop emulation has no retractable address bar. Recreate its snapshot
       // coordinate space without moving/resizing the actual rendered page image.
+      const rect = (await themeButton(page).boundingBox())!;
       await page.addStyleTag({ content: `
         ::view-transition { top: -${scenario.top}px; bottom: -${scenario.bottom}px; }
         ::view-transition-group(root) { height: calc(100dvh + ${scenario.top + scenario.bottom}px) !important; }
         ::view-transition-old(root), ::view-transition-new(root) {
           height: 100%; object-fit: none; object-position: left ${scenario.top}px;
         }
-        ::view-transition-group(theme-origin) { transform: translate(0, ${scenario.top}px) !important; }
+        ::view-transition-group(theme-origin) { transform: translate(${rect.x + rect.width / 2}px, ${rect.y + rect.height / 2 + scenario.top}px) !important; }
       ` });
       const viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
       const points = [
@@ -264,6 +266,93 @@ test.describe('mobile snapshot coordinate regression', () => {
         expect(inside).toBeGreaterThan(1);
         expect(outside).toBeGreaterThan(1);
         await expectTheme(page, theme);
+      }
+    });
+  }
+});
+
+test.describe('tablet Chrome snapshot regression', () => {
+  test.use({ deviceScaleFactor: 2, isMobile: true, hasTouch: true,
+    userAgent: 'Mozilla/5.0 (Linux; Android 14; Tablet) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36' });
+
+  for (const scenario of [
+    { name: 'landscape', width: 1280, height: 698, scale: 1, top: 104, bottom: 24, section: '' },
+    { name: 'scaled landscape', width: 1280, height: 698, scale: 0.8, top: 104, bottom: 24, section: '' },
+    { name: 'portrait', width: 800, height: 1138, scale: 1.25, top: 104, bottom: 24, section: '' },
+    { name: '404 landscape', width: 1280, height: 698, scale: 0.8, top: 104, bottom: 24, section: 'theme-test-404' },
+  ]) {
+    test(`${scenario.name} keeps touch origin and all final corners aligned`, async ({ page }, info) => {
+      await page.setViewportSize({ width: scenario.width, height: scenario.height });
+      await openPage(page, 'zh', scenario.section);
+      const rect = (await themeButton(page).boundingBox())!;
+      const center = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+      // Model both the snapshot containing block's browser UI and a scaled root.
+      // Counter-size the snapshot images so the page's screen geometry stays fixed.
+      await page.addStyleTag({ content: `
+        ::view-transition { top: -${scenario.top}px; bottom: -${scenario.bottom}px; }
+        ::view-transition-group(root) {
+          width: ${scenario.width / scenario.scale}px !important;
+          height: ${(scenario.height + scenario.top + scenario.bottom) / scenario.scale}px !important;
+          transform: scale(${scenario.scale}) !important;
+        }
+        ::view-transition-old(root), ::view-transition-new(root) {
+          width: 100%; height: 100%; object-fit: contain; object-position: left ${scenario.top / scenario.scale}px;
+        }
+        ::view-transition-group(theme-origin) { transform: translate(${center.x}px, ${center.y + scenario.top}px) !important; }
+      ` });
+      await page.evaluate(() => { window.__pauseThemeReveal = true; });
+      const points = [
+        { x: 3, y: 3 }, { x: scenario.width - 4, y: 3 },
+        { x: 3, y: scenario.height - 4 }, { x: scenario.width - 4, y: scenario.height - 4 },
+      ];
+      const columns = [3, scenario.width - 4];
+      // The 404 toggle is near the center; edge-only samples miss its early circle.
+      if (scenario.section) columns.push(Math.floor(center.x - 48), Math.floor(center.x + 48));
+      for (let y = 120; y < scenario.height - 4; y += 40) {
+        for (const x of columns) points.push({ x, y });
+      }
+      const distance = (a: number[], b: number[]) => Math.max(...a.map((channel, i) => Math.abs(channel - b[i])));
+      for (const [index, theme] of (['dark', 'light'] as const).entries()) {
+        const before = await capture(page, info, `${theme}-before`);
+        await page.touchscreen.tap(center.x, center.y);
+        const origin = await expectReveal(page, index);
+        const preparation = await page.evaluate(() => ({
+          clipping: getComputedStyle(document.documentElement, '::view-transition-new(root)').willChange,
+          badge: document.querySelector('.floating-badge') ? getComputedStyle(document.querySelector('.floating-badge')!).animationPlayState : 'paused',
+          suppressingTransitions: document.documentElement.classList.contains('theme-transitioning'),
+        }));
+        expect(preparation).toEqual({ clipping: 'clip-path', badge: 'paused', suppressingTransitions: true });
+        const zero = await capture(page, info, `${theme}-0ms`);
+        const progress = await page.evaluate(async () => {
+          window.__themeAnimation!.currentTime = 156;
+          await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+          return window.__themeAnimation!.effect!.getComputedTiming().progress!;
+        });
+        const middle = await capture(page, info, `${theme}-156ms`);
+        await page.evaluate(() => { window.__themeAnimation!.currentTime = 520; });
+        const end = await capture(page, info, `${theme}-520ms`);
+        await page.evaluate(() => window.__themeAnimation!.play());
+        await finishReveal(page, index + 1);
+        const settled = await capture(page, info, `${theme}-settled`);
+        const [oldPixels, zeroPixels, midPixels, endPixels, settledPixels] = await Promise.all([
+          pixelSamples(page, before, points), pixelSamples(page, zero, points), pixelSamples(page, middle, points),
+          pixelSamples(page, end, points), pixelSamples(page, settled, points),
+        ]);
+        let inside = 0, outside = 0;
+        points.forEach((point, i) => {
+          expect(distance(zeroPixels[i], oldPixels[i])).toBeLessThanOrEqual(8);
+          expect(distance(endPixels[i], settledPixels[i])).toBeLessThanOrEqual(8);
+          if (distance(oldPixels[i], settledPixels[i]) < 80) return;
+          const fromCenter = Math.hypot(point.x - origin.x, point.y - origin.y);
+          const radius = origin.radius * scenario.scale * progress;
+          if (Math.abs(fromCenter - radius) < 5) return;
+          const covered = fromCenter < radius;
+          expect(distance(midPixels[i], covered ? settledPixels[i] : oldPixels[i])).toBeLessThanOrEqual(8);
+          if (covered) inside++; else outside++;
+        });
+        expect(inside).toBeGreaterThan(1); expect(outside).toBeGreaterThan(1);
+        await expectTheme(page, theme);
+        if (!scenario.section) expect(await page.locator('.floating-badge').first().evaluate(badge => getComputedStyle(badge).animationPlayState)).toBe('running');
       }
     });
   }
