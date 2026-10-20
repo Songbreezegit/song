@@ -209,7 +209,7 @@ export function DetailModal({
                     target="_blank"
                     rel="noreferrer"
                   >
-                    {t('work.modal.liveDemo')}
+                    {t('work.modal.projectWebsite')}
                     <ArrowUpRight size={17} />
                   </a>
                 )}

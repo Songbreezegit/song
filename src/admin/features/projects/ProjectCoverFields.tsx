@@ -23,12 +23,12 @@ export function ProjectCoverFields({ editor }: { editor: ReturnType<typeof usePr
               />
             </div>
             <div className="admin-form-group" style={{ marginBottom: 0 }}>
-              <label className="admin-label" htmlFor="live-url">在线预览 / 体验链接 (可选)</label>
+              <label className="admin-label" htmlFor="live-url">项目官网 (可选)</label>
               <input
                 id="live-url"
                 type="url"
                 className="admin-input"
-                placeholder="https://..."
+                placeholder="https://project.example.com/"
                 value={draft.live_url}
                 onChange={(e) => setField('live_url', e.target.value)}
               />
