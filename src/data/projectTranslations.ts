@@ -20,34 +20,50 @@ export const PROJECT_TRANSLATIONS: Record<string, Partial<Record<SupportedLangua
     en: {
       title: 'LizhangApp',
       subtitle: 'Gift & Cash Tracker',
-      tagline: 'A native Android app tailored for interpersonal relations and reciprocal gift tracking',
-      categoryLabel: 'Android / Compose',
-      description: 'Built with Jetpack Compose, emphasizing micro-interactions and strict offline local privacy for personal gift bookkeeping.',
-      overview: 'Traditional social reciprocity involves frequent gift exchanges. Lizhang bridges individuals and life events, ensuring clear ledger clarity.',
+      tagline: 'Keep a clear record of every thoughtful gift',
+      categoryLabel: 'Android / Kotlin',
+      description: 'Built with Jetpack Compose, Lizhang is an offline gift ledger for individuals and families, with contact import, independent reminders, Excel / CSV export and password-encrypted backups. No account required.',
+      overview: 'Keep received and given cash gifts together with contacts, dates, occasions and notes. Review exchanges through yearly summaries, a monthly calendar and search. Contacts and gift records stay on your device. The default repository version is 1.0.0-rc2 (23), for Android 8.0 or later. There is no automatic backup or cross-device sync. A .lizhangbackup file contains contacts and gift records, excluding reminders and settings; Excel / CSV exports are for viewing and organizing records.',
       features: [
-        'Bidirectional ledger: track received gifts and outgoing social expenses',
-        'Relationship genealogy: aggregate historical interactions per contact',
-        '100% Offline-first: local Room database with zero cloud dependency',
-        'Fast fuzzy search: filter by event, date, and contact',
-        'Encrypted local backup & export'
+        'Offline gift ledger: received / given gifts, linked contacts, custom occasions and notes',
+        'Contacts: manual entry, selective address-book import, duplicate checks and bulk management',
+        'History: per-contact exchanges, name / phone / note search and a monthly calendar',
+        'Statistics: yearly received, given and net totals, plus month, occasion and contact summaries',
+        'Independent reminders: once or yearly, on the day or 1 / 3 / 7 days ahead',
+        'Excel / CSV export of all gift records, with headers in the selected app language',
+        'Local .lizhangbackup files: plain or password-encrypted, validated before full restoration',
+        'Seven interface languages, light / dark themes, system font scaling and first-use guidance',
+        'No account or cloud service; backups contain contacts and gift records only'
       ],
-      developmentNotes: 'Built entirely with Kotlin and Jetpack Compose declarative UI following modern Android guidelines (MVI / Clean Architecture).'
+      developmentNotes: 'Kotlin, Jetpack Compose and Material 3 use a layered MVVM / Repository architecture. Room stores contacts and gifts, StateFlow updates the UI, and amounts are stored as integer cents in CNY. The app declares no Internet permission; contact and notification permissions are requested only when their features are used. Versioned backups support integrity checks and PBKDF2-HMAC-SHA256 / AES-256-GCM encryption. Validated data is restored in one Room transaction, and backup passwords are not saved. Lazy lists, database aggregation and month-based calendar indexes reduce work when opening pages. Haze supplies frosted floating controls with a fallback for older Android versions.',
+      challengesSolutions: [
+        { challenge: 'Keeping a long-lived personal ledger private, compatible and recoverable.', solution: 'Use a versioned .lizhangbackup format with integrity validation and optional password encryption. Check fields and relationships before confirmation, then replace contacts and gifts in one transaction. Reminders and settings are stored separately.' },
+        { challenge: 'Keeping lists, calendars and statistics responsive as records accumulate.', solution: 'Use lazy lists, database aggregation and background calculations. Read calendar data by month, reuse a date index and show the date grid before rendering records.' }
+      ]
     },
     ja: {
       title: 'LizhangApp',
       subtitle: '交際費・祝儀記録',
-      tagline: '人間関係と慶弔・ギフトのやり取りに特化したネイティブAndroidアプリ',
-      categoryLabel: 'Android / Compose',
-      description: 'Jetpack Composeで構築。丁寧なインタラクションと完全ローカル保存によるプライバシー保護を重視した家計簿アプリ。',
-      overview: '冠婚葬祭や慶弔ギフトの記録をシンプルに整理。「人と出来事」を結びつけ、誰とのやり取りかを明確に記録します。',
+      tagline: '一つひとつの心遣いを、わかりやすく記録',
+      categoryLabel: 'Android / Kotlin',
+      description: '個人や家族のためのオフライン祝儀・贈答記録アプリ。連絡先の取り込み、独立した日付リマインダー、Excel / CSV 出力、パスワード付きバックアップに対応。アカウント登録は不要です。',
+      overview: '受け取った礼金と贈った礼金を、連絡先・日付・用途・メモと一緒に記録。年間集計、月間カレンダー、検索で過去のやり取りを振り返れます。連絡先と礼金は端末内に保存されます。リポジトリの標準バージョンは 1.0.0-rc2（23）、Android 8.0 以降に対応。自動バックアップや端末間同期はありません。.lizhangbackup に含まれるのは連絡先と礼金のみで、リマインダーや設定は含まれません。Excel / CSV は閲覧・整理用です。',
       features: [
-        '双方向台帳：受け取ったお祝いとお返しの支出を明確に管理',
-        '関係性サマリー：親族や友人ごとの過去の記録を自動集計',
-        '100% オフライン優先：外部通信なし、Roomデータベースで完全ローカル保存',
-        '高速あいまい検索：日付・人物・名目でワンクリック絞り込み',
-        '暗号化ローカルバックアップとデータ復元'
+        'オフライン記録：受取・贈与、連絡先との関連付け、用途のカスタマイズとメモ',
+        '連絡先管理：手動追加、端末の連絡先から選択して取り込み、重複確認、一括管理',
+        '履歴確認：相手ごとのやり取り、名前・電話番号・メモの検索、月間カレンダー',
+        '統計：年間の受取・贈与・差額、月別・用途別・相手別の集計',
+        '独立リマインダー：1 回または毎年、当日または 1・3・7 日前に通知',
+        '全礼金記録を Excel / CSV に出力し、見出しはアプリの言語に対応',
+        '.lizhangbackup：通常形式またはパスワード暗号化、検証後に全件復元',
+        '7 種類の表示言語、ライト・ダークテーマ、システム文字サイズ、初回ガイド',
+        'アカウント・クラウド不要。バックアップ対象は連絡先と礼金のみ'
       ],
-      developmentNotes: 'KotlinとJetpack Composeを採用し、現代的なAndroid設計思想（MVI / クリーンアーキテクチャ）に基づき開発。'
+      developmentNotes: 'Kotlin、Jetpack Compose、Material 3 を使用し、MVVM と Repository により層を分離。Room と StateFlow でデータと画面を連携し、金額は人民元の最小単位「分」の整数で保存します。インターネット権限は宣言せず、連絡先・通知の権限は機能を使う際に申請します。バックアップは形式バージョン、整合性検証、PBKDF2-HMAC-SHA256 / AES-256-GCM 暗号化に対応。検証したデータを単一の Room トランザクションで復元し、パスワードは保存しません。遅延リスト、集計クエリ、月単位の日付索引で画面表示時の処理を抑えます。Haze によるすりガラス表現には旧 Android 向けの代替表示を用意しています。',
+      challengesSolutions: [
+        { challenge: '長く使う礼簿で、プライバシー・旧形式との互換性・復元の完全性を両立する。', solution: 'バージョン付き .lizhangbackup 形式に整合性検証と任意のパスワード暗号化を採用。項目と関連を検証して確認を得た後、連絡先と礼金を単一トランザクションで置き換えます。リマインダーと設定は別に保持します。' },
+        { challenge: '記録が増えても、一覧・カレンダー・統計を軽快に表示する。', solution: '遅延リスト、データベース集計、バックグラウンド計算を利用。カレンダーは月単位で読み込み、日付索引を再利用し、記録より先に日付グリッドを表示します。' }
+      ]
     }
   },
   'online-exam': {
