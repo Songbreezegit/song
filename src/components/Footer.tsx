@@ -3,7 +3,7 @@ import { useI18n } from '../i18n/useI18n';
 
 export function FooterRegistration() {
   return (
-    <div className="container footer-registration">
+    <div className="footer-registration">
       <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" lang="zh-CN">
         渝ICP备2026025309号-1
       </a>
@@ -26,13 +26,15 @@ export function Footer() {
           SONG ISLE
           <span>{t('common.brandSubtitle')}</span>
         </a>
-        <span>{t('common.copyright', { year: new Date().getFullYear() })}</span>
+        <div className="footer-meta">
+          <span>{t('common.copyright', { year: new Date().getFullYear() })}</span>
+          <FooterRegistration />
+        </div>
         <a href={`/${language}/`} onClick={handleBackToTop} className="text-link">
           {t('common.backToTop')}
           <ArrowUp size={16} />
         </a>
       </div>
-      <FooterRegistration />
     </footer>
   );
 }
