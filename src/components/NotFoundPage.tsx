@@ -61,9 +61,11 @@ export function NotFoundPage() {
           <Link to={`/${language}/`} className="footer-brand">
             SONG ISLE<span>Small things, made with care.</span>
           </Link>
-          <span>© {new Date().getFullYear()} 松屿</span>
+          <div className="footer-meta">
+            <span>© {new Date().getFullYear()} 松屿</span>
+            <FooterRegistration />
+          </div>
         </div>
-        <FooterRegistration />
       </footer>
     </div>
   );
