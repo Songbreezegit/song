@@ -1,4 +1,5 @@
 import type { SupportedLanguage } from '../i18n/types';
+import { LIZHANG_RELEASE } from './projectReleases';
 
 export interface LocalizedProjectFields {
   title?: string;
@@ -23,7 +24,7 @@ export const PROJECT_TRANSLATIONS: Record<string, Partial<Record<SupportedLangua
       tagline: 'Keep a clear record of every thoughtful gift',
       categoryLabel: 'Android / Kotlin',
       description: 'Built with Jetpack Compose, Lizhang is an offline gift ledger for individuals and families, with contact import, independent reminders, Excel / CSV export and password-encrypted backups. No account required.',
-      overview: 'Keep received and given cash gifts together with contacts, dates, occasions and notes. Review exchanges through yearly summaries, a monthly calendar and search. Contacts and gift records stay on your device. The default repository version is 1.0.0-rc2 (23), for Android 8.0 or later. There is no automatic backup or cross-device sync. A .lizhangbackup file contains contacts and gift records, excluding reminders and settings; Excel / CSV exports are for viewing and organizing records.',
+      overview: `Lizhang v${LIZHANG_RELEASE.versionName} (${LIZHANG_RELEASE.versionCode}) is now publicly available for Android ${LIZHANG_RELEASE.minAndroidVersion} or later. Keep received and given cash gifts together with contacts, dates, occasions and notes. Review exchanges through yearly summaries, a monthly calendar and search. Contacts, gift records and reminders stay on your device; no account is required. A .lizhangbackup file contains contacts and gift records, excluding reminders and settings; Excel / CSV exports are for viewing and organizing records.`,
       features: [
         'Offline gift ledger: received / given gifts, linked contacts, custom occasions and notes',
         'Contacts: manual entry, selective address-book import, duplicate checks and bulk management',
@@ -47,7 +48,7 @@ export const PROJECT_TRANSLATIONS: Record<string, Partial<Record<SupportedLangua
       tagline: '一つひとつの心遣いを、わかりやすく記録',
       categoryLabel: 'Android / Kotlin',
       description: '個人や家族のためのオフライン祝儀・贈答記録アプリ。連絡先の取り込み、独立した日付リマインダー、Excel / CSV 出力、パスワード付きバックアップに対応。アカウント登録は不要です。',
-      overview: '受け取った礼金と贈った礼金を、連絡先・日付・用途・メモと一緒に記録。年間集計、月間カレンダー、検索で過去のやり取りを振り返れます。連絡先と礼金は端末内に保存されます。リポジトリの標準バージョンは 1.0.0-rc2（23）、Android 8.0 以降に対応。自動バックアップや端末間同期はありません。.lizhangbackup に含まれるのは連絡先と礼金のみで、リマインダーや設定は含まれません。Excel / CSV は閲覧・整理用です。',
+      overview: `礼账 v${LIZHANG_RELEASE.versionName}（${LIZHANG_RELEASE.versionCode}）を正式公開しました。Android ${LIZHANG_RELEASE.minAndroidVersion} 以降に対応。受け取った礼金と贈った礼金を、連絡先・日付・用途・メモと一緒に記録し、年間集計・月間カレンダー・検索で振り返れます。連絡先・礼金・リマインダーは端末内に保存され、アカウント登録は不要です。.lizhangbackup に含まれるのは連絡先と礼金のみで、リマインダーや設定は含まれません。Excel / CSV は閲覧・整理用です。`,
       features: [
         'オフライン記録：受取・贈与、連絡先との関連付け、用途のカスタマイズとメモ',
         '連絡先管理：手動追加、端末の連絡先から選択して取り込み、重複確認、一括管理',

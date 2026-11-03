@@ -1,3 +1,5 @@
+import { LIZHANG_RELEASE } from './projectReleases';
+
 export interface Article {
   id: string;
   slug: string;
@@ -97,33 +99,34 @@ export const PROJECTS: Project[] = [
     slug: 'lizhang',
     title: 'LizhangApp',
     subtitle: '礼金记账',
-    tagline: '一款专为人情往来与礼金支出定制的 Android 原生应用',
+    tagline: '离线记录人情往来，让每一份心意都有迹可循',
     category: 'android',
     categoryLabel: 'Android / Compose',
     year: '2024',
     featured: true,
-    description: '基于 Jetpack Compose 构建的 Android 记账应用，注重交互细节与全本地离线隐私保护，杜绝人情对账糊涂账。',
-    techStack: ['Android', 'Kotlin', 'Jetpack Compose', 'Room Database', 'Material 3', 'MVI'],
+    description: `礼账 v${LIZHANG_RELEASE.versionName} 已正式公开发行。离线记录收礼与送礼，管理联系人和日期提醒，支持 Excel / CSV 导出与普通或密码加密本地备份，无需注册账号。`,
+    techStack: ['Android', 'Kotlin', 'Jetpack Compose', 'Room Database', 'Material 3', 'StateFlow'],
     githubUrl: 'https://github.com/Songbreezegit/LizhangApp.git',
-    liveUrl: '',
+    liveUrl: 'https://lizhang.songisle.xyz/',
     imageTheme: {
       bgColor: '#1E293B',
       accentColor: '#22C55E',
       type: 'mobile',
     },
-    overview: '中国传统人情往来频繁，礼金记录通常采用纸质礼簿或通用记账软件。LIZHANG 聚焦于“人”与“事”的交集，让每一笔礼尚往来清晰可溯。',
+    overview: `礼账 v${LIZHANG_RELEASE.versionName}（${LIZHANG_RELEASE.versionCode}）已正式公开发行，适用于 Android ${LIZHANG_RELEASE.minAndroidVersion} 及以上。联系人、礼金记录和提醒保存在本机，无需注册账号。可按联系人、日历、搜索和年度统计回看往来。\n\n支持 Excel / CSV 导出，以及普通或密码加密 .lizhangbackup 备份。备份只包含联系人与礼金，不包含提醒和设置；Excel / CSV 用于查阅整理。`,
     features: [
-      '人情收送双向账本：清晰记录收礼金额与送礼支出明细',
-      '人情关系谱系：自动汇总特定亲朋好友的历史往来记录',
-      '100% 离线优先：全本地 Room 数据库存储，完全不依赖外部网络',
-      '快速检索与统计：支持按事由、时间、人物一键模糊筛选与对账',
-      '本地备份与导出：支持标准加密数据包导出与恢复',
+      '离线礼金记账：收礼与送礼、联系人关联、自定义事由与备注',
+      '联系人管理：手动添加、通讯录选择导入、去重提示与批量管理',
+      '往来回看：联系人历史、搜索、月度日历与年度统计',
+      '独立日期提醒：一次或每年重复，当天或提前 1 / 3 / 7 天通知',
+      'Excel / CSV 导出，以及普通或密码加密本地备份',
+      '七种界面语言、浅深色主题与系统字号适配',
     ],
-    developmentNotes: '完全基于 Kotlin 与 Jetpack Compose 声明式 UI 体系开发，遵循现代 Android 架构指南（MVI / Clean Architecture）。',
+    developmentNotes: '采用 Kotlin、Jetpack Compose 与 Material 3，按 UI → ViewModel → Domain / Repository → Data 分层。Room 保存联系人与礼金，StateFlow 驱动页面状态。应用不声明联网权限，通讯录与通知权限按需申请。备份在恢复前校验数据及关联关系，再通过单个 Room 事务整体替换联系人和礼金。',
     challengesSolutions: [
       {
-        challenge: '人情往来关系在多人共同出资或多次往复时的数据结构扁平化难题',
-        solution: '重构数据库关联表，将事件、账目条目与关联人三元解耦，支持灵活归属。',
+        challenge: '让本地礼簿在长期使用后仍能完整恢复。',
+        solution: '使用带版本的 .lizhangbackup 格式，保留完整性校验与可选密码加密。恢复前检查字段和联系人关联，确认后在一个事务内写入。',
       },
     ],
   },

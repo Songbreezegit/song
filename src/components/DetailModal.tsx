@@ -4,6 +4,7 @@ import { X, ArrowUpRight, Copy, Check, Info } from 'lucide-react';
 import { type Article, type Project, resolveProject, resolveArticle } from '../data/portfolioData';
 import { useI18n } from '../i18n/useI18n';
 import { safeExternalUrl } from '../lib/safeUrl';
+import { getProjectRelease } from '../data/projectReleases';
 
 interface DetailModalProps {
   item: Article | Project | null;
@@ -55,6 +56,7 @@ export function DetailModal({
 
   const article = resolvedItem && 'content' in resolvedItem ? resolvedItem : null;
   const project = resolvedItem && 'features' in resolvedItem ? resolvedItem : null;
+  const release = getProjectRelease(project);
 
   const copyCode = async (snippet: string) => {
     try {
@@ -198,7 +200,13 @@ export function DetailModal({
                 ))}
               </section>
               <div className="cta-row">
-                {safeExternalUrl(project.githubUrl) && <a className="cta" href={safeExternalUrl(project.githubUrl)} target="_blank" rel="noreferrer">
+                {release && (
+                  <a className="cta" href={release.downloadUrl} target="_blank" rel="noreferrer">
+                    {t('work.modal.downloadAndroid')}
+                    <ArrowUpRight size={17} />
+                  </a>
+                )}
+                {safeExternalUrl(project.githubUrl) && <a className={release ? 'cta cta-secondary' : 'cta'} href={safeExternalUrl(project.githubUrl)} target="_blank" rel="noreferrer">
                   {t('work.modal.viewSource')}
                   <ArrowUpRight size={17} />
                 </a>}
