@@ -4,8 +4,8 @@ import { getProjectRelease } from '../src/data/projectReleases';
 import { translateKey } from '../src/i18n/utils';
 
 describe('礼账公开发行入口', () => {
-  it('后台 UUID 和本地项目使用同一下载页，其他作品不显示下载操作', () => {
-    expect(getProjectRelease({ slug: 'lizhang' })?.downloadUrl).toBe('https://lizhang.songisle.xyz/download/');
+  it('后台 UUID 和本地项目使用同一 APK 直链，其他作品不显示下载操作', () => {
+    expect(getProjectRelease({ slug: 'lizhang' })?.downloadUrl).toBe('https://github.com/Songbreezegit/LizhangApp/releases/download/v1.0.0/LiZhang-v1.0.0-25-release.apk');
     expect(getProjectRelease({ slug: 'online-exam' })).toBeUndefined();
     expect(getProjectRelease(null)).toBeUndefined();
   });
