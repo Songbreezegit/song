@@ -232,16 +232,6 @@ html{scroll-padding-top:78px}.section{scroll-margin-top:0}
 .article-fallback-banner{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;background:color-mix(in srgb,var(--sage) 12%,var(--paper));border:1px solid color-mix(in srgb,var(--sage) 35%,var(--line));border-radius:8px;font-size:13px;color:var(--ink);margin-bottom:24px;line-height:1.5}
 .article-fallback-banner svg{color:var(--sage);flex-shrink:0}
 
-
-
-/* Project detail actions stay visible while the long description scrolls. */
-.detail-body{min-height:0}
-.detail-actions{padding:16px 34px;border-top:1px solid var(--line);background:var(--paper);flex-shrink:0}
-.detail-actions .cta-row{display:flex;flex-wrap:wrap;gap:10px;margin:0}
-.detail-actions .cta{flex:1 1 0;min-width:0;min-height:46px;gap:8px;padding:10px 12px;font-size:13px;line-height:1.3;text-align:center}
-@media(max-width:600px){
-  .detail-actions{padding:12px 20px max(12px,env(safe-area-inset-bottom))}
-  .detail-actions .cta-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  .detail-actions .cta-row>.cta:first-child:nth-last-child(3),.detail-actions .cta-row>.cta:only-child{grid-column:1/-1}
-  .detail-actions .cta{font-size:12px;min-height:44px;padding:10px 8px}
-}
+/* Project links appear at the beginning of the scrollable project overview. */
+.detail-body .detail-actions{margin-bottom:24px}
+.detail-body .detail-actions .cta-row{margin-top:0}
