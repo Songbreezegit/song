@@ -178,30 +178,30 @@ export function DetailModal({
           )}
           {project && (
             <>
-            {project && (release || websiteUrl || sourceUrl) && (
-              <div className="detail-actions">
-                <div className="cta-row">
-                  {release && (
-                    <a className="cta" href={release.downloadUrl} target="_blank" rel="noreferrer">
-                      {t('work.modal.downloadAndroid')}
-                      <ArrowUpRight size={17} />
-                    </a>
-                  )}
-                  {websiteUrl && (
-                    <a className="cta cta-secondary" href={websiteUrl} target="_blank" rel="noreferrer">
-                      {t('work.modal.projectWebsite')}
-                      <ArrowUpRight size={17} />
-                    </a>
-                  )}
-                  {sourceUrl && (
-                    <a className={release || websiteUrl ? 'cta cta-secondary' : 'cta'} href={sourceUrl} target="_blank" rel="noreferrer">
-                      {t('work.modal.viewSource')}
-                      <ArrowUpRight size={17} />
-                    </a>
-                  )}
+              {(release || websiteUrl || sourceUrl) && (
+                <div className="detail-actions">
+                  <div className="cta-row">
+                    {release && (
+                      <a className="cta" href={release.downloadUrl} target="_blank" rel="noreferrer">
+                        {t('work.modal.downloadAndroid')}
+                        <ArrowUpRight size={17} />
+                      </a>
+                    )}
+                    {websiteUrl && (
+                      <a className="cta cta-secondary" href={websiteUrl} target="_blank" rel="noreferrer">
+                        {t('work.modal.projectWebsite')}
+                        <ArrowUpRight size={17} />
+                      </a>
+                    )}
+                    {sourceUrl && (
+                      <a className={release || websiteUrl ? 'cta cta-secondary' : 'cta'} href={sourceUrl} target="_blank" rel="noreferrer">
+                        {t('work.modal.viewSource')}
+                        <ArrowUpRight size={17} />
+                      </a>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
               <p className="detail-lead">{project.overview}</p>
               <section>
                 <h3>{t('work.modal.overview')}</h3>
