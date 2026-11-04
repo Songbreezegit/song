@@ -57,6 +57,8 @@ export function DetailModal({
   const article = resolvedItem && 'content' in resolvedItem ? resolvedItem : null;
   const project = resolvedItem && 'features' in resolvedItem ? resolvedItem : null;
   const release = getProjectRelease(project);
+  const sourceUrl = project ? safeExternalUrl(project.githubUrl) : null;
+  const websiteUrl = project ? safeExternalUrl(project.liveUrl) : null;
 
   const copyCode = async (snippet: string) => {
     try {
@@ -199,35 +201,36 @@ export function DetailModal({
                   </div>
                 ))}
               </section>
-              <div className="cta-row">
-                {release && (
-                  <a className="cta" href={release.downloadUrl} target="_blank" rel="noreferrer">
-                    {t('work.modal.downloadAndroid')}
-                    <ArrowUpRight size={17} />
-                  </a>
-                )}
-                {safeExternalUrl(project.githubUrl) && <a className={release ? 'cta cta-secondary' : 'cta'} href={safeExternalUrl(project.githubUrl)} target="_blank" rel="noreferrer">
-                  {t('work.modal.viewSource')}
-                  <ArrowUpRight size={17} />
-                </a>}
-                {safeExternalUrl(project.liveUrl) && (
-                  <a
-                    className="cta cta-secondary"
-                    href={safeExternalUrl(project.liveUrl)}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {t('work.modal.projectWebsite')}
-                    <ArrowUpRight size={17} />
-                  </a>
-                )}
-              </div>
             </>
           )}
           <span className="sr-only" role="status">
             {copied.startsWith('复制失败') || copied.startsWith('Could not') ? copied : ''}
           </span>
         </div>
+        {project && (release || websiteUrl || sourceUrl) && (
+          <div className="detail-actions">
+            <div className="cta-row">
+              {release && (
+                <a className="cta" href={release.downloadUrl} target="_blank" rel="noreferrer">
+                  {t('work.modal.downloadAndroid')}
+                  <ArrowUpRight size={17} />
+                </a>
+              )}
+              {websiteUrl && (
+                <a className="cta cta-secondary" href={websiteUrl} target="_blank" rel="noreferrer">
+                  {t('work.modal.projectWebsite')}
+                  <ArrowUpRight size={17} />
+                </a>
+              )}
+              {sourceUrl && (
+                <a className={release || websiteUrl ? 'cta cta-secondary' : 'cta'} href={sourceUrl} target="_blank" rel="noreferrer">
+                  {t('work.modal.viewSource')}
+                  <ArrowUpRight size={17} />
+                </a>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </dialog>
   );
