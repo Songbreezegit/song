@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { fixture } from './fixtures/backend';
 
-const downloadUrl = 'https://lizhang.songisle.xyz/download/';
+const downloadUrl = 'https://github.com/Songbreezegit/LizhangApp/releases/download/v1.0.0/LiZhang-v1.0.0-25-release.apk';
 const sourceUrl = 'https://github.com/Songbreezegit/LizhangApp.git';
 
 for (const [language, downloadLabel, sourceLabel] of [
