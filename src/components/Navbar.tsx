@@ -73,10 +73,11 @@ export function Navbar({ activeSection }: { activeSection: string }) {
           <Link
             className="nav-admin-link"
             to="/admin/login"
+            aria-label={t('nav.adminLogin')}
+            title={t('nav.adminLogin')}
             onClick={() => setOpen(false)}
           >
             <LogIn size={17} aria-hidden="true" />
-            {t('nav.adminLogin')}
           </Link>
         </nav>
 
@@ -99,7 +100,6 @@ export function Navbar({ activeSection }: { activeSection: string }) {
             title={t('nav.adminLogin')}
           >
             <LogIn size={17} aria-hidden="true" />
-            <span>{t('nav.adminLogin')}</span>
           </Link>
           <Link
             className="header-note"
