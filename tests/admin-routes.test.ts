@@ -7,11 +7,14 @@ describe('admin route metadata', () => {
     ['/admin/articles/new', '新建文章'], ['/admin/articles/some-id', '编辑文章'],
     ['/admin/projects/', '项目管理'], ['/admin/articles', '文章管理'],
     ['/admin/dashboard', '网站仪表盘'], ['/admin/site', '站点设置'], ['/admin/media', '媒体库'],
+    ['/admin/distribution', '内容分发'], ['/admin/distribution/posts', '分发内容库'], ['/admin/distribution/accounts', '矩阵账号'],
+    ['/admin/distribution/posts/new', '新建分发内容'], ['/admin/distribution/posts/some-id', '编辑分发内容'],
+    ['/admin/distribution/accounts/new', '新增矩阵账号'], ['/admin/distribution/accounts/some-id', '编辑矩阵账号'],
   ])('matches %s precisely', (path, title) => expect(getAdminPageTitle(path)).toBe(title));
 
-  it('keeps five sidebar entries in the same registry as their routes', () => {
-    expect(adminRoutes.filter(route => route.navigation).map(route => route.path)).toEqual(['dashboard', 'projects', 'articles', 'site', 'media']);
-    expect(adminRoutes.filter(route => route.navigation).map(route => route.navigation?.label)).toEqual(['仪表盘', '项目管理', '文章管理', '站点设置', '媒体库']);
+  it('keeps all six sidebar entries in the same registry as their routes', () => {
+    expect(adminRoutes.filter(route => route.navigation).map(route => route.path)).toEqual(['dashboard', 'projects', 'articles', 'distribution', 'site', 'media']);
+    expect(adminRoutes.filter(route => route.navigation).map(route => route.navigation?.label)).toEqual(['仪表盘', '项目管理', '文章管理', '内容分发', '站点设置', '媒体库']);
     expect(new Set(adminRoutes.map(route => route.path)).size).toBe(adminRoutes.length);
   });
 

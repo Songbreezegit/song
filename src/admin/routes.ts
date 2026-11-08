@@ -1,6 +1,6 @@
 import { lazy, type ComponentType } from 'react';
 import { matchPath } from 'react-router-dom';
-import { LayoutDashboard, FolderGit2, FileText, Sliders, Image, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, FolderGit2, FileText, Sliders, Image, Share2, type LucideIcon } from 'lucide-react';
 
 export const ADMIN_HOME = '/admin/dashboard';
 export const ADMIN_LOGIN = '/admin/login';
@@ -24,6 +24,13 @@ export const adminRoutes: AdminRoute[] = [
   { path: 'articles', title: '文章管理', component: lazy(() => import('./pages/AdminArticles').then(m => ({ default: m.AdminArticles }))), navigation: { label: '文章管理', icon: FileText } },
   { path: 'articles/new', title: '新建文章', component: ArticleEditor },
   { path: 'articles/:id', title: '编辑文章', component: ArticleEditor },
+  { path: 'distribution', title: '内容分发', component: lazy(() => import('./pages/AdminDistribution').then(m => ({ default: m.AdminDistribution }))), navigation: { label: '内容分发', icon: Share2 } },
+  { path: 'distribution/posts', title: '分发内容库', component: lazy(() => import('./pages/AdminDistributionPosts').then(m => ({ default: m.AdminDistributionPosts }))) },
+  { path: 'distribution/posts/new', title: '新建分发内容', component: lazy(() => import('./pages/AdminDistributionPostEditor').then(m => ({ default: m.AdminDistributionPostEditor }))) },
+  { path: 'distribution/posts/:id', title: '编辑分发内容', component: lazy(() => import('./pages/AdminDistributionPostEditor').then(m => ({ default: m.AdminDistributionPostEditor }))) },
+  { path: 'distribution/accounts', title: '矩阵账号', component: lazy(() => import('./pages/AdminDistributionAccounts').then(m => ({ default: m.AdminDistributionAccounts }))) },
+  { path: 'distribution/accounts/new', title: '新增矩阵账号', component: lazy(() => import('./pages/AdminDistributionAccountEditor').then(m => ({ default: m.AdminDistributionAccountEditor }))) },
+  { path: 'distribution/accounts/:id', title: '编辑矩阵账号', component: lazy(() => import('./pages/AdminDistributionAccountEditor').then(m => ({ default: m.AdminDistributionAccountEditor }))) },
   { path: 'site', title: '站点设置', component: lazy(() => import('./pages/AdminSiteSettings').then(m => ({ default: m.AdminSiteSettings }))), navigation: { label: '站点设置', icon: Sliders } },
   { path: 'media', title: '媒体库', component: lazy(() => import('./pages/AdminMedia').then(m => ({ default: m.AdminMedia }))), navigation: { label: '媒体库', icon: Image } },
 ];

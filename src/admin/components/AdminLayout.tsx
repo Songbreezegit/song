@@ -22,7 +22,9 @@ export function AdminLayout() {
   const handleLogout = () => run('logout', logout, { onSuccess: () => navigate(ADMIN_LOGIN, { replace: true }) });
   const closeMenu = () => setMobileNavOpen(false);
   const parent = location.pathname.startsWith('/admin/projects/') ? { path: '/admin/projects', title: '项目管理' }
-    : location.pathname.startsWith('/admin/articles/') ? { path: '/admin/articles', title: '文章管理' } : null;
+    : location.pathname.startsWith('/admin/articles/') ? { path: '/admin/articles', title: '文章管理' }
+    : location.pathname.startsWith('/admin/distribution/posts/') ? { path: '/admin/distribution/posts', title: '分发内容库' }
+    : location.pathname.startsWith('/admin/distribution/accounts/') ? { path: '/admin/distribution/accounts', title: '矩阵账号' } : null;
   const navigation = adminRoutes.filter(item => item.navigation);
 
   useEffect(() => {

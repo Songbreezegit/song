@@ -1,5 +1,6 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { fixture, login } from './fixtures/backend';
+import { distributionFixture } from './fixtures/distribution';
 
 type AdminThemeMotion = {
   calls: number; finished: number;
@@ -58,7 +59,7 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(({ page }) => { expect(errors.get(page)).toEqual([]); });
 
 async function openAdmin(page: Page, path: string) {
-  await fixture(page);
+  if (path.startsWith('distribution')) await distributionFixture(page); else await fixture(page);
   if (path !== 'login') { await login(page); await expect(page).toHaveURL(/dashboard$/); }
   await page.goto(`/admin/${path}`);
   await expect(button(page)).toBeVisible();
@@ -110,7 +111,7 @@ async function pixels(page: Page, png: string, points: { x: number; y: number }[
 }
 
 for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: 'mobile', width: 390, height: 844 }]) {
-  for (const path of ['login', 'dashboard', 'projects', 'articles', 'site', 'media', 'projects/new', 'articles/new']) {
+  for (const path of ['login', 'dashboard', 'projects', 'articles', 'site', 'media', 'projects/new', 'articles/new', 'distribution', 'distribution/posts', 'distribution/accounts', 'distribution/posts/new', 'distribution/accounts/new']) {
     test(`${viewport.name} ${path} renders actual circular theme frames from mouse and keyboard centers`, async ({ page }, info) => {
       await page.setViewportSize(viewport);
       await openAdmin(page, path);

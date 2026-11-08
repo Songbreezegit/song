@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { fixture, passwordLogin } from '../e2e/fixtures/backend';
+import { fixture, login, passwordLogin } from '../e2e/fixtures/backend';
+import { accountId, accountRecord, distributionFixture, mediaId, postId, postRecord } from '../e2e/fixtures/distribution';
 
 test('production public pages and MFA enrollment work under the candidate CSP', async ({ page }, info) => {
   const violations: string[] = [], errors: string[] = [];
@@ -49,4 +50,30 @@ test('the admin page cannot be embedded by another origin', async ({ page, baseU
   await page.goto('http://127.0.0.1:5190/embed');
   await expect.poll(() => page.frames().some(frame => frame.url().startsWith('chrome-error:'))).toBe(true);
   await expect(page.frameLocator('iframe').getByLabel('管理员邮箱')).toHaveCount(0);
+});
+
+test('distribution editor, existing media, theme and atomic save work under the production CSP', async ({ page }) => {
+  const violations: string[] = [], errors: string[] = [];
+  await page.exposeFunction('recordDistributionCspViolation', (directive: string) => violations.push(directive));
+  await page.addInitScript(() => document.addEventListener('securitypolicyviolation', event => {
+    (window as unknown as { recordDistributionCspViolation: (value: string) => void }).recordDistributionCspViolation(event.effectiveDirective);
+  }));
+  page.on('pageerror', error => errors.push(error.message));
+  const { state, backend } = await distributionFixture(page);
+  state.accounts.push(accountRecord());
+  state.posts.push(postRecord({ account_ids: [accountId], media_ids: [mediaId] }));
+  backend.media.push({ id: mediaId, path: 'uploads/security.png' });
+  await login(page); await expect(page).toHaveURL(/dashboard$/);
+  const response = await page.goto(`/admin/distribution/posts/${postId}`);
+  expect(response!.headers()['cache-control']).toBe('no-store');
+  await expect(page.getByLabel('标题 *')).toHaveValue(postRecord().title);
+  await expect(page.getByRole('button', { name: '保存内容' })).toBeEnabled();
+  await expect.poll(() => page.locator('.distribution-media-option img').evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+  await page.locator('.admin-theme-toggle').click();
+  await expect(page.locator('.theme-transition-origin')).toHaveCount(0);
+  await page.getByLabel('标题 *').fill('CSP 下的分发内容');
+  await page.getByRole('button', { name: '保存内容' }).click();
+  await expect(page.getByText('已保存。', { exact: true })).toBeVisible();
+  expect(state.posts[0].title).toBe('CSP 下的分发内容');
+  expect(violations).toEqual([]); expect(errors).toEqual([]);
 });
