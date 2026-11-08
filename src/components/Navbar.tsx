@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Menu, X, Moon, Sun } from 'lucide-react';
+import { Menu, X, Moon, Sun, LogIn } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Asset } from './Asset';
 import { useTheme } from '../context/useTheme';
@@ -70,6 +70,14 @@ export function Navbar({ activeSection }: { activeSection: string }) {
               {t(key)}
             </Link>
           ))}
+          <Link
+            className="nav-admin-link"
+            to="/admin/login"
+            onClick={() => setOpen(false)}
+          >
+            <LogIn size={17} aria-hidden="true" />
+            {t('nav.adminLogin')}
+          </Link>
         </nav>
 
         <div className="header-actions">
@@ -84,6 +92,15 @@ export function Navbar({ activeSection }: { activeSection: string }) {
           >
             {theme === 'dark' ? <Sun size={19} /> : <Moon size={19} />}
           </button>
+          <Link
+            className="header-admin-link"
+            to="/admin/login"
+            aria-label={t('nav.adminLogin')}
+            title={t('nav.adminLogin')}
+          >
+            <LogIn size={17} aria-hidden="true" />
+            <span>{t('nav.adminLogin')}</span>
+          </Link>
           <Link
             className="header-note"
             to={`/${language}/about`}

@@ -26,6 +26,9 @@
 .site-header nav a[aria-current]::after{content:"";position:absolute;width:5px;height:5px;border-radius:50%;background:var(--ink);bottom:10px;left:calc(50% - 2px)}
 .header-actions{display:flex;align-items:center;gap:16px}
 .header-note{font-size:12px;border:1px solid var(--line);border-radius:100px;padding:9px 20px;color:var(--muted)}
+.header-admin-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:40px;min-height:40px;padding:8px 14px;border:1px solid var(--line);border-radius:100px;font-size:12px;color:var(--ink);white-space:nowrap;flex-shrink:0;transition:background var(--fast),border-color var(--fast)}
+.header-admin-link:hover{background:var(--soft-green);border-color:var(--sage)}
+.site-header nav .nav-admin-link{display:none}
 .menu-toggle{display:none}
 .skip-link{position:fixed;z-index:100;top:5px;left:15px;transform:translateY(-160%);background:var(--paper);padding:12px}
 .skip-link:focus{transform:none}
@@ -218,6 +221,13 @@ html{scroll-padding-top:78px}.section{scroll-margin-top:0}
 .lang-btn:hover{color:var(--ink);background:var(--soft-green)}
 .lang-btn.is-active{color:var(--ink);font-weight:700;background:color-mix(in srgb,var(--ink) 8%,transparent)}
 .lang-sep{color:var(--line);font-size:11px;user-select:none}
+
+/* Keep the admin shortcut available without crowding the navigation. */
+@media(max-width:1280px){.site-header .header-note{display:none}}
+@media(max-width:1050px){.header-admin-link{width:40px;padding:0}.header-admin-link span{display:none}}
+@media(max-width:800px){.site-header .header-inner{grid-template-columns:minmax(0,1fr) auto;gap:16px}.header-admin-link{display:none}.menu-toggle{display:inline-flex}.site-header nav{display:none}.site-header nav.nav-open{display:flex;position:absolute;left:0;right:0;top:100%;background:var(--paper);padding:20px;flex-direction:column;align-items:stretch;gap:0;border-bottom:1px solid var(--line)}.site-header nav a{padding:13px 8px;font-size:16px}.site-header nav a[aria-current]::after{left:auto;right:10px;bottom:21px}.site-header nav .nav-admin-link{display:flex;align-items:center;gap:10px;margin-top:8px;border-top:1px solid var(--line)}}
+@media(max-width:600px){.site-header .header-inner{gap:8px}.site-header .header-actions{gap:4px}.lang-switcher-desktop,.lang-item-wrap{gap:1px}.lang-btn{padding-inline:3px}}
+@media(max-width:380px){.site-header .brand{width:100px}}
 
 /* 404 Page */
 .not-found-page{min-height:100vh;display:flex;flex-direction:column;background:var(--paper);color:var(--ink)}
