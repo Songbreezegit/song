@@ -3,6 +3,11 @@ const protectedRefs = new Set(['vfgmptjfcfgptaqblydd', 'ttbjtymyuoqkuntcqgob']);
 const organizationId = 'hzrxoowmgbfkxtechkoz';
 const managementOrigin = 'https://api.supabase.com';
 const readMethods = new Set(['GET', 'HEAD', 'OPTIONS']);
+const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+
+export function isStagingResourceUuid(value) {
+  return typeof value === 'string' && uuid.test(value);
+}
 
 export class ProbeError extends Error {
   constructor(status, step, evidence = {}, severity = undefined) {
@@ -36,6 +41,15 @@ export function dataOf(result, step) {
     throw new ProbeError(unavailable ? 'BLOCKED' : 'FAIL', step, evidence, unavailable ? undefined : 'P2');
   }
   return result.data;
+}
+
+export function stagingRunKey(runId) {
+  check(isStagingResourceUuid(runId), 'A Staging run UUID is required', {}, 'P1');
+  return {
+    name: `m1_${runId.replaceAll('-', '').slice(0, 16)}`,
+    type: 'secret',
+    description: `M1 Staging verification run ${runId}`,
+  };
 }
 
 export function createStagingTarget(ref, origin, token) {
@@ -93,24 +107,41 @@ export function createStagingTarget(ref, origin, token) {
     return key.api_key;
   }
 
-  async function createSecretKey(name) {
+  async function createSecretKey(runId) {
+    const identity = stagingRunKey(runId);
     await verifyProject();
-    const entry = await management('/api-keys?reveal=true', 'POST', {
-      name, type: 'secret', description: 'Temporary M1 integration probe',
-    });
-    return entry;
+    return management('/api-keys?reveal=true', 'POST', identity);
   }
 
-  async function revokeSecretKey(id, name) {
+  function keyMatches(entry, identity) {
+    return entry.name === identity.name && entry.type === identity.type && entry.description === identity.description;
+  }
+
+  async function findSecretKey(runId) {
+    const identity = stagingRunKey(runId);
     await verifyProject();
     const keys = await management('/api-keys?reveal=false');
-    const entry = keys.find(key => key.id === id && key.name === name && key.type === 'secret');
-    check(entry, 'Cleanup must match the key created by this run');
+    const matches = keys.filter(key => keyMatches(key, identity));
+    check(matches.length <= 1 && (!matches.length || isStagingResourceUuid(matches[0].id)), 'Run must identify at most one Secret API Key UUID', {}, 'P1');
+    return matches[0] ?? null;
+  }
+
+  async function revokeSecretKey(id, runId) {
+    const identity = stagingRunKey(runId);
+    check(isStagingResourceUuid(id), 'Secret API Key UUID required for cleanup', {}, 'P1');
+    await verifyProject();
+    const keys = await management('/api-keys?reveal=false');
+    const entry = keys.find(key => key.id === id);
+    if (!entry) {
+      check(!keys.some(key => keyMatches(key, identity)), 'Secret API Key run marker belongs to a different UUID', {}, 'P1');
+      return;
+    }
+    check(keyMatches(entry, identity), 'Cleanup must match the Secret API Key UUID and run marker', {}, 'P1');
     await verifyProject();
     await management(`/api-keys/${encodeURIComponent(id)}?reveal=false`, 'DELETE');
     const remaining = await management('/api-keys?reveal=false');
     check(!remaining.some(key => key.id === id), 'Temporary Staging API key revoked');
   }
 
-  return { ref, origin, verifyProject, guardRequest, fetchStaging, publishableKey, createSecretKey, revokeSecretKey };
+  return { ref, origin, verifyProject, guardRequest, fetchStaging, publishableKey, createSecretKey, findSecretKey, revokeSecretKey };
 }

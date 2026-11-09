@@ -4,6 +4,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { createClient } from '@supabase/supabase-js';
 import { check, createStagingTarget, dataOf, ProbeError, record } from './lib/distribution-staging-target.mjs';
 import { removeImage, runDistributionApiChecks, uploadImage } from './lib/distribution-staging-checks.mjs';
+import { withStagingResources } from './lib/distribution-staging-resources.mjs';
 
 const adminEmail = 'distribution-review@example.invalid';
 const memberEmail = 'distribution-member@example.invalid';
@@ -115,39 +116,62 @@ async function main() {
     ref: target.ref, region: project.region, project_status: project.status, database_release: project.database?.version,
   });
   const runId = randomUUID();
-  const keyName = `m1_${runId.replaceAll('-', '').slice(0, 16)}`;
   const publicKey = await target.publishableKey();
-  record('NEXT', 'Staging run manifest', { run_id: runId, secret_key_name: keyName });
-  const secret = await target.createSecretKey(keyName);
-  check(typeof secret.id === 'string' && secret.name === keyName && secret.type === 'secret'
-    && /^sb_secret_[\w-]{16,}$/.test(secret.api_key), 'Management API issues this run’s temporary secret key');
-  record('PASS', 'Temporary Staging secret key created', { key_id: secret.id });
-
-  const options = { global: { fetch: target.fetchStaging } };
-  const userSdk = () => createClient(target.origin, publicKey, { ...options, auth: authOptions });
-  const apiSdk = token => createClient(target.origin, publicKey, { ...options, accessToken: async () => token });
-  const authAdmin = createClient(target.origin, secret.api_key, { ...options, auth: authOptions }).auth.admin;
-
-  async function createTemporaryUser(email) {
-    const password = `Aa1!${randomBytes(24).toString('base64url')}`;
-    const { user } = dataOf(await authAdmin.createUser({
-      email, password, email_confirm: true, user_metadata: { distribution_staging_run_id: runId },
-    }), 'Create and confirm temporary GoTrue user via Staging Auth Admin API');
-    check(user?.email === email && user.email_confirmed_at && user.user_metadata?.distribution_staging_run_id === runId,
-      'Staging Auth Admin API created the expected confirmed fixture');
-    record('PASS', 'Temporary GoTrue user created', { user_id: user.id, fixture: email === adminEmail ? 'admin' : 'member' });
-    return { id: user.id, email, password };
-  }
 
   const input = createInterface({ input: process.stdin, terminal: false });
   const lines = input[Symbol.asyncIterator]();
+  const cancellation = new AbortController();
+  const { signal } = cancellation;
+  function interrupt() {
+    cancellation.abort(new ProbeError('BLOCKED', 'Staging verification interrupted'));
+    input.close();
+  }
+  process.on('SIGINT', interrupt);
+  process.on('SIGTERM', interrupt);
+
+  const runTarget = {
+    ...target,
+    async guardRequest(url, method) {
+      signal.throwIfAborted();
+      await target.guardRequest(url, method);
+      signal.throwIfAborted();
+    },
+    fetchStaging(request, init) {
+      signal.throwIfAborted();
+      const requestSignal = init?.signal ?? (request instanceof Request ? request.signal : null);
+      return target.fetchStaging(request, { ...init, signal: requestSignal ? AbortSignal.any([signal, requestSignal]) : signal });
+    },
+  };
+  const options = { global: { fetch: runTarget.fetchStaging } };
+  const userSdk = () => createClient(target.origin, publicKey, { ...options, auth: authOptions });
+  const apiSdk = token => createClient(target.origin, publicKey, { ...options, accessToken: async () => token });
+  const makeAuthAdmin = key => createClient(target.origin, key, {
+    global: { fetch: target.fetchStaging }, auth: authOptions,
+  }).auth.admin;
   async function waitFor(operation, info) {
+    signal.throwIfAborted();
     record('NEXT', operation, info);
     const line = await lines.next();
+    signal.throwIfAborted();
     if (line.done || line.value.trim() !== operation) throw new ProbeError('BLOCKED', `Waiting for verified Staging SQL checkpoint: ${operation}`);
   }
 
   try {
+    await withStagingResources({ target, runId, makeAuthAdmin, signal }, run);
+  } finally {
+    input.close();
+    process.off('SIGINT', interrupt);
+    process.off('SIGTERM', interrupt);
+  }
+
+  async function run(createUser) {
+    async function createTemporaryUser(email) {
+      const password = `Aa1!${randomBytes(24).toString('base64url')}`;
+      const fixture = await createUser(email, password);
+      record('PASS', 'Temporary GoTrue user created', { user_id: fixture.id, fixture: email === adminEmail ? 'admin' : 'member' });
+      return { ...fixture, password };
+    }
+
     const admin = await createTemporaryUser(adminEmail);
     const member = await createTemporaryUser(memberEmail);
     await waitFor('admin-registered', { run_id: runId, admin_id: admin.id, member_id: member.id });
@@ -169,37 +193,25 @@ async function main() {
     await checkMembership(client, admin, true);
     await checkMembership(adminAal1Client, admin, true);
     await checkMembership(memberClient, member, false);
-    await recordServiceVersions(target, publicKey, verifiedAdmin.token);
-    const fixture = await runDistributionApiChecks(target, client, [
+    await recordServiceVersions(runTarget, publicKey, verifiedAdmin.token);
+    const fixture = await runDistributionApiChecks(runTarget, client, [
       { label: 'anon', sdk: userSdk(), anon: true },
       { label: 'non-admin aal2', sdk: memberClient },
       { label: 'admin aal1', sdk: adminAal1Client },
     ], runId);
 
     const bucket = client.storage.from('media');
-    const uiImage = await uploadImage(target, bucket, fixture.folder, 'staging-ui.webp');
+    const uiImage = await uploadImage(runTarget, bucket, fixture.folder, 'staging-ui.webp');
     const { runDistributionUiChecks } = await import('./lib/distribution-staging-ui.mjs');
-    const ui = await runDistributionUiChecks(target, publicKey, { ...admin, nextCode: verifiedAdmin.nextCode }, fixture.marker, uiImage);
+    const ui = await runDistributionUiChecks(runTarget, publicKey, { ...admin, nextCode: verifiedAdmin.nextCode }, fixture.marker, uiImage);
     dataOf(await client.from('distribution_posts').delete().eq('id', ui.postId).eq('title', ui.title).eq('status', 'draft')
       .select('id').single(), 'Delete this run’s UI draft');
-    await removeImage(target, bucket, uiImage);
+    await removeImage(runTarget, bucket, uiImage);
     await waitFor('database-clean', { run_id: runId, marker: fixture.marker, account_ids: [fixture.accountId, ui.accountId] });
 
     const remainingAccounts = dataOf(await client.from('distribution_accounts').select('id')
       .in('id', [fixture.accountId, ui.accountId]), 'Check removal of this run’s archived account fixtures');
     check(remainingAccounts.length === 0, 'Scoped SQL cleanup removed both archived fixtures');
-    for (const person of [member, admin]) {
-      const { user } = dataOf(await authAdmin.getUserById(person.id), 'Verify fixture ownership before Auth deletion');
-      check(user.id === person.id && user.email === person.email && user.user_metadata?.distribution_staging_run_id === runId,
-        'Only this run’s Auth fixtures can be deleted', {}, 'P1');
-      dataOf(await authAdmin.deleteUser(person.id), 'Delete temporary user through Staging Auth Admin API');
-      const absent = await authAdmin.getUserById(person.id);
-      check(absent.error?.status === 404, 'GoTrue confirms temporary user deletion');
-    }
-    await target.revokeSecretKey(secret.id, keyName);
-    record('PASS', 'Scoped Auth fixtures and temporary API key removed', { run_id: runId });
-  } finally {
-    input.close();
   }
 }
 

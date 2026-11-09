@@ -1,8 +1,24 @@
 # 内容分发 M1 云端 Staging 验收报告
 
-基线为 `b400f0779a0eab76fcfd96d292956f30221a3a70`。抓取远程引用后，`codex/distribution-m1` 工作树干净，分支 HEAD 与基线一致。
+审查收尾以 `2470a47a5ec0ee5a8d75c5318be7378daabff820` 为基线。`feat/admin-distribution-m1` 与原分支从同一提交开始，审查迁移至面向 `main` 的草稿 PR。[PR #10](https://github.com/Songbreezegit/song/pull/10) · [历史 PR #9](https://github.com/Songbreezegit/song/pull/9)
 
-**本轮结论 BLOCKED。** 独立 Staging 已创建并完成前两条真实迁移。当前 Supabase 连接可管理项目和执行 SQL，但本地验收进程缺少仅限 Staging 的 Scoped PAT，尚未进入临时用户初始化。生产迁移前置条件因此为 **BLOCKED**。
+**云端结论 BLOCKED。** 复用已完成前两条真实迁移的 `song-staging`。Supabase 控制台支持创建仅授权该项目的 Scoped PAT，runner 尚未收到该凭据。现有 Supabase 连接能核对项目和执行 SQL，提供公开密钥，缺少 Auth Admin 凭据的签发和传递能力。真实用户初始化及后续功能验收仍待执行。
+
+## 审查修复与回归
+
+runner 在退出前独立清理临时 Auth 用户和 Secret API Key。创建用户前记录预分配的 UUID。清理时重新核对 Staging Ref、用户 UUID、邮箱及 Auth 管理端写入的 run ID。Secret API Key 以名称、类型和含完整 run ID 的说明确认归属，按核实的 UUID 撤销。创建响应丢失时，可以从已记录的用户 UUID 或唯一完整的密钥标记定位资源。
+
+清理某个资源失败会保留原始失败并继续处理其余资源。项目或资源归属无法核对时跳过对应删除并报告。进程被强制终止、服务持续不可达或凭据失效时，须按日志中的项目、run ID 和资源 UUID 核对残留。[清理与复验步骤](admin-distribution-storage-acceptance.md#云端-staging)
+
+| 检查 | 结论 | 证据 |
+| --- | --- | --- |
+| 失败清理回归 | PASS | 12 项离线测试。覆盖检查点失败、创建响应丢失、用户仅部分创建、探针中断、项目或归属不符，以及单个删除失败后继续清理 |
+| `npm run lint` | PASS | 无警告 |
+| `npm run build` | PASS | Vite 保留主包体积提示 |
+| `npm test` | PASS | 247 项，含 12 项失败清理回归 |
+| `npm run test:e2e` | PASS | 208 项，12.5 分钟 |
+| `npm run test:security` | PASS | 12 项 |
+| 云端失败清理 | BLOCKED | 等待 Staging Scoped PAT 后执行真实创建及中途退出探针 |
 
 ## 项目与预检
 
@@ -16,7 +32,7 @@
 | 生产和旧项目状态 | PASS | 创建前后分别保持 `vfgmptjfcfgptaqblydd` 为 `ACTIVE_HEALTHY`，`ttbjtymyuoqkuntcqgob` 为 `INACTIVE` |
 | 验收进程的 Staging 凭据 | BLOCKED | 等待只授权该 Ref 的 Scoped PAT。公开密钥及临时 Auth Admin 专用密钥由 runner 在运行时从该项目获取 |
 
-本轮云端写入为创建 Staging 和两条已核对 Ref 的迁移。原生产项目及暂停项目仅进行了管理面状态查询。Staging 保留供后续阶段复验。[Free 项目计费](https://supabase.com/docs/guides/platform/billing-on-supabase) · [Scoped PAT 权限](https://supabase.com/docs/guides/platform/personal-access-tokens)
+Staging 初始化以 `b400f0779a0eab76fcfd96d292956f30221a3a70` 为基线，云端写入为创建 Staging 和两条已核对 Ref 的迁移。Staging 保留供后续阶段复验。[Free 项目计费](https://supabase.com/docs/guides/platform/billing-on-supabase) · [Scoped PAT 权限](https://supabase.com/docs/guides/platform/personal-access-tokens)
 
 ## 真实服务版本
 
@@ -59,7 +75,7 @@
 
 未执行用例的 P1、P2 判定保持 BLOCKED。阻塞类型为运行时授权。最终只读查询确认 Staging 目前没有临时 Auth 用户、业务管理员或媒体测试对象。
 
-## 本轮代码回归
+## Staging 初始化时的代码回归
 
 | 命令 | 结论 | 结果 |
 | --- | --- | --- |
@@ -69,7 +85,7 @@
 | `npm run test:e2e` | PASS | 208 项，13.6 分钟 |
 | `npm run test:security` | PASS | 12 项 |
 
-云端 runner 通过语法、RFC 6238 参考向量和四项离线目标拒绝检查。上表为本轮仓库回归，云端功能状态以上一节为准。既有本地验收脚本仍保留环回地址限制。
+云端 runner 通过语法、RFC 6238 参考向量和四项离线目标拒绝检查。既有本地验收脚本仍保留环回地址限制。
 
 收到项目范围内的 Scoped PAT 后，从临时 Auth 用户初始化继续，使用已有 `uartrtcmskyuqxawjqlx` 和迁移历史。[Staging 复验步骤](admin-distribution-storage-acceptance.md#云端-staging)
 
