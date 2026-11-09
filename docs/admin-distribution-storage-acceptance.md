@@ -1,5 +1,39 @@
 # 内容分发 M1 隔离环境验收
 
+## 云端 Staging
+
+云端 runner 固定使用本轮创建的 `song-staging`。项目 Ref 为 `uartrtcmskyuqxawjqlx`，组织为 `hzrxoowmgbfkxtechkoz`，区域为 `ap-northeast-1`。启动参数必须显式传入 Ref 和完全匹配的 HTTPS origin。每次云端写入前，runner 会通过 Management API 检查项目身份和 `ACTIVE_HEALTHY`。拒绝两个保护 Ref、其他项目和跨域重定向。[本轮云端记录](admin-distribution-integration-report.md)
+
+使用只限此项目的短期 Scoped PAT，权限为 Project Settings 的 Read 和 API Keys 的 Read-write。打开新的 PowerShell 终端，在功能分支仓库根目录执行。令牌在隐藏提示输入，仅保存在当前进程环境。runner 会从已验证项目读取 publishable key，创建本轮专用的临时 secret key，并仅以它初始化和清理 Auth 用户。权限与 Storage 探针使用 GoTrue 实际签发的用户会话。[Supabase PAT 权限](https://supabase.com/docs/guides/platform/personal-access-tokens)
+
+```powershell
+$env:DISTRIBUTION_STAGING_PROJECT_REF = 'uartrtcmskyuqxawjqlx'
+$env:DISTRIBUTION_STAGING_API_URL = 'https://uartrtcmskyuqxawjqlx.supabase.co'
+$stagingPat = Read-Host 'Staging scoped PAT' -AsSecureString
+$env:DISTRIBUTION_STAGING_MANAGEMENT_TOKEN = [System.Net.NetworkCredential]::new('', $stagingPat).Password
+try {
+  node scripts/verify-distribution-staging.mjs
+  if ($LASTEXITCODE -ne 0) { throw "Staging 验收未通过，退出码 $LASTEXITCODE" }
+} finally {
+  Remove-Item Env:DISTRIBUTION_STAGING_MANAGEMENT_TOKEN
+  $stagingPat.Dispose()
+}
+```
+
+runner 在三个 SQL 检查点输出 `NEXT`。在另一个授权管理会话完成对应操作。对每个写操作重新核对目标 Ref、名称、组织、区域和状态，再在 runner 的标准输入发送该检查点名称。
+
+| 检查点 | 发送前应实际完成的操作 |
+| --- | --- |
+| `admin-registered` | 已应用前两条基础迁移。从 runner 记录中取得本次管理员 UUID 和 run ID，按 UUID、临时邮箱及 Auth 元数据的 run ID 核对该用户。仅登记管理员 A，确认 `admin_users` 恰有一行，普通用户 B 无登记。 |
+| `schema-ready` | 已通过真实 TOTP 并核对管理员因子为 verified。依序应用 MFA、analytics、distribution 迁移，已执行的迁移从管理面历史确认。检查策略、约束、invoker 和 FORCE RLS，刷新 PostgREST schema cache，执行只读 smoke。 |
+| `database-clean` | 已通过 API 和界面用例，runner 已删自己的草稿和 WebP。使用它列出的两个账号 UUID 与精确 run ID 标记核对记录归属，再删除这两条归档测试记录。确认结果包含且仅包含该两个 UUID。 |
+
+浏览器冒烟在 `127.0.0.1:5198` 启动 Vite，配置来自进程内的 Staging 地址和公开密钥。浏览器只转发来自 Staging 的实际响应，限制访问本地预览和该项目。UI 检查结束后停止 Vite。
+
+成功后 runner 删除本轮 Auth 用户并撤销本轮临时 API key。退出后用管理面查询核对临时数据归零，保留 Staging 项目和已应用的 schema。失败时按输出的 run ID 与资源清单记录残留，权限校验失败会立即停止后续写操作。保留脱敏结果并清除本地凭据缓存。
+
+## 本地隔离环境
+
 需要可用的本地 Docker Linux 引擎、Supabase CLI、PowerShell 7、仓库的 Node 依赖和 TOTP 验证器。以下步骤使用数据库容器自带的 `psql`。先确认 Docker context 指向本机，并为隔离实例保留 54321 至 54323。
 
 ```powershell

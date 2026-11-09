@@ -1,40 +1,76 @@
-# 内容分发 M1 隔离 Supabase 验收报告
+# 内容分发 M1 云端 Staging 验收报告
 
-2026-11-09 核对 GitHub `codex/distribution-m1` 与本地工作树，验收基线均为 `4776c0aada533bd5d43cdf576f6ccc039351ee42`。本轮完成环境预检、临时配置初始化和离线验证。真实 Supabase 集成因本机缺少容器运行时而未运行。
+基线为 `b400f0779a0eab76fcfd96d292956f30221a3a70`。抓取远程引用后，`codex/distribution-m1` 工作树干净，分支 HEAD 与基线一致。
 
-## 已执行
+**本轮结论 BLOCKED。** 独立 Staging 已创建并完成前两条真实迁移。当前 Supabase 连接可管理项目和执行 SQL，但本地验收进程缺少仅限 Staging 的 Scoped PAT，尚未进入临时用户初始化。生产迁移前置条件因此为 **BLOCKED**。
 
-| 检查 | 结果 |
-| --- | --- |
-| Node.js、npm、PowerShell | Node.js `24.12.0`、npm `11.6.2`、PowerShell Core `7.6.9`，Windows x64 |
-| Docker Desktop、容器引擎、WSL | 环境受阻。常用安装位置及 PATH 未找到 Docker Desktop 或 Docker 命令，本地 Docker 管道不存在。WSL 退出码为 50，报告未安装 |
-| 宿主机 `psql` | PATH 和默认安装位置未发现。复验可使用隔离 PostgreSQL 容器自带的 `psql` |
-| Supabase CLI | 官方 Windows x64 便携版 `3.0.0`，发布包 SHA-256 与 GitHub Releases 一致 |
-| 隔离工作目录 | `supabase init --workdir <临时目录>` 成功，生成独立项目配置 |
-| 脚本防护 | `node --check` 和复验手册的 PowerShell 语法检查通过。离线检查确认脚本在发起请求前拒绝非环回地址、secret 类型的 API key 和传给 aal2 参数的 aal1 声明 |
-| 代码检查 | `npm run lint` 通过。PGlite 分发 RLS 测试 25 项通过，涵盖策略、触发器和外键 |
+## 项目与预检
 
-Git HTTPS 初次抓取因 TLS 握手失败，采用 OpenSSL 和 HTTP/1.1 并保留证书校验后成功。CLI 初次查看帮助时，沙箱拒绝在用户目录写入遥测文件。将 `SUPABASE_HOME` 指向临时目录并按进程禁用遥测后，帮助查询和本地初始化成功。
+| 检查 | 结论 | 证据 |
+| --- | --- | --- |
+| Organization | PASS | `Songbreezegit's Org`，`hzrxoowmgbfkxtechkoz`，Free |
+| 新项目身份 | PASS | `song-staging`，Ref `uartrtcmskyuqxawjqlx`，`ap-northeast-1`，`ACTIVE_HEALTHY` |
+| API 地址 | PASS | `https://uartrtcmskyuqxawjqlx.supabase.co`，由管理工具返回 |
+| 创建时间 | PASS | 2026-11-09 19:24:26（北京时间） |
+| 新增费用 | PASS | 平台报价 USD 0/月，使用 Free 默认计算配置 |
+| 生产和旧项目状态 | PASS | 创建前后分别保持 `vfgmptjfcfgptaqblydd` 为 `ACTIVE_HEALTHY`，`ttbjtymyuoqkuntcqgob` 为 `INACTIVE` |
+| 验收进程的 Staging 凭据 | BLOCKED | 等待只授权该 Ref 的 Scoped PAT。公开密钥及临时 Auth Admin 专用密钥由 runner 在运行时从该项目获取 |
 
-在选择先提交环境受阻报告后，自动审批拒绝了包含设置临时 TOTP 配置和运行 `supabase start` 的命令，理由是超出本轮范围。该命令未执行。Windows 上使用该 CLI 运行完整本地栈需要可用的容器运行时。[Supabase 运行时支持](https://supabase.com/docs/guides/local-development/docker-and-native-runtimes)
+本轮云端写入为创建 Staging 和两条已核对 Ref 的迁移。原生产项目及暂停项目仅进行了管理面状态查询。Staging 保留供后续阶段复验。[Free 项目计费](https://supabase.com/docs/guides/platform/billing-on-supabase) · [Scoped PAT 权限](https://supabase.com/docs/guides/platform/personal-access-tokens)
 
-## 真实集成结果
+## 真实服务版本
 
-| 验收项 | 状态 |
-| --- | --- |
-| 按顺序应用五个仓库迁移 | 未运行 |
-| 创建临时管理员和普通用户，GoTrue 登录、TOTP 验证及 aal2 签发 | 未运行 |
-| PostgREST 匿名请求拒绝，普通用户 aal2、管理员 aal1 均无分发权限 | 未运行 |
-| PostgREST 管理员 aal2 读取、创建和保存 | 未运行 |
-| 首次归档自动停用、直接 PATCH 恢复与改名失败 | 未运行 |
-| 账号、内容与素材关联查询 | 未运行 |
-| Storage 被引用文件拒绝删除且对象 UUID、下载字节保留 | 未运行 |
-| 解除引用后成功删除对象及元数据 | 未运行 |
+| 服务 | 结论 | 版本与来源 |
+| --- | --- | --- |
+| PostgreSQL | PASS | `17.11`，数据库 `current_setting('server_version')`。管理面发布版本为 `17.11.0.018` |
+| GoTrue | PASS | `v2.197.0`，Staging `auth_logs` 版本字段 |
+| PostgREST | PASS | `14.18`，Staging `postgrest_logs` |
+| Storage | PASS | `1.89.13`，`GET /storage/v1/version` 返回 HTTP 200 和纯文本版本 |
 
-Storage、PostgreSQL、PostgREST 和 GoTrue 的真实服务版本未采集。PGlite 和脚本预检属于已执行的离线检查。
+版本检查属于服务识别。Storage 版本首次按 JSON 解析失败，按纯文本重读后确认实际版本。
 
-## 清理与复验
+## 迁移
 
-CLI 便携版下载目录已按已知绝对路径清理。复查时本次沙箱临时工作目录已不存在。本轮停在初始化配置阶段，未创建测试账号、服务容器、数据库或 Storage 对象。
+| 仓库文件 | 结论 | 云端执行证据 |
+| --- | --- | --- |
+| `20260916000000_initial_schema.sql` | PASS | Staging 迁移历史 `20261109123623 initial_schema`，实际查到 `projects`、`articles` 和 `media` |
+| `20260916044953_fix_backend_v1.sql` | PASS | Staging 迁移历史 `20261109123854 fix_backend_v1`，基础表 RLS、ACL 和 Storage 桶配置已复查 |
+| `20261004093439_enforce_admin_mfa.sql` | BLOCKED | 先完成唯一临时管理员的真实 TOTP 绑定 |
+| `20261007052225_add_private_analytics.sql` | BLOCKED | 等待前序迁移 |
+| `20261108173132_add_private_distribution_m1.sql` | BLOCKED | 等待前序迁移 |
 
-本地 Docker Linux 引擎就绪后，从新的隔离目录按顺序应用迁移并用临时用户完成 MFA。更新后的验收脚本验证会话与管理员资格，检查 `anon`、普通用户 aal2、管理员 aal1 与管理员 aal2，再执行归档和 Storage 检查。报告只记录版本、命令结果和权限状态。[复验与清理步骤](admin-distribution-storage-acceptance.md)
+前两条使用 Supabase 迁移工具逐条应用，表和策略由 SQL 实际读取。已确认 `projects`、`articles`、`site_settings`、`admin_users` 的 RLS，匿名无管理员表读取权限，登录角色无管理员表插入权限。公开 `media` 桶限制为 5 MiB，接受 JPEG、PNG、WebP。托管迁移历史使用平台记录的时间戳。
+
+## 云端功能验收
+
+| 检查 | 结论 | 当前阻塞 |
+| --- | --- | --- |
+| 真实 GoTrue 临时用户初始化、密码登录、TOTP 注册与验证、JWT 签发和身份核验 | BLOCKED | 缺少 Staging Auth Admin 初始化和项目自检所需的 Scoped PAT |
+| 四张分发表 RLS、FORCE RLS、策略、RPC invoker、FK 和触发器，以及只读 smoke | BLOCKED | M1 迁移尚未执行 |
+| `anon` 四表读写和 RPC 边界 | BLOCKED | 等待迁移及真实 HTTP 探针 |
+| 普通用户 aal2 四表读写和 RPC 边界 | BLOCKED | 等待真实用户会话 |
+| 管理员 aal1 四表读写和 RPC 边界 | BLOCKED | 等待独立真实会话 |
+| 管理员 aal2 读写、账号物理删除受限和合法保存 | BLOCKED | 等待真实管理员会话 |
+| RPC 版本冲突、关联失败回滚、归档 REST PATCH 和历史关联、PostgREST 嵌套查询 | BLOCKED | 等待真实 HTTP 探针 |
+| Storage WebP 上传、引用拒删、元数据及下载字节一致、解除引用删除和残留查询 | BLOCKED | 等待真实 Storage 与分发关联 |
+| 独立 Vite 连接 Staging 的真实界面冒烟 | BLOCKED | 等待真实账号和素材 |
+| 测试数据和凭据清理 | BLOCKED | 尚未创建测试用户、运行专用 API key 或媒体对象 |
+| 生产迁移前置条件 | BLOCKED | 真实云端权限、原子保存、Storage 一致性和界面结果均待验收 |
+
+未执行用例的 P1、P2 判定保持 BLOCKED。阻塞类型为运行时授权。最终只读查询确认 Staging 目前没有临时 Auth 用户、业务管理员或媒体测试对象。
+
+## 本轮代码回归
+
+| 命令 | 结论 | 结果 |
+| --- | --- | --- |
+| `npm run lint` | PASS | 无警告 |
+| `npm run build` | PASS | Vite 保留主包体积提示 |
+| `npm test` | PASS | 235 项 |
+| `npm run test:e2e` | PASS | 208 项，13.6 分钟 |
+| `npm run test:security` | PASS | 12 项 |
+
+云端 runner 通过语法、RFC 6238 参考向量和四项离线目标拒绝检查。上表为本轮仓库回归，云端功能状态以上一节为准。既有本地验收脚本仍保留环回地址限制。
+
+收到项目范围内的 Scoped PAT 后，从临时 Auth 用户初始化继续，使用已有 `uartrtcmskyuqxawjqlx` 和迁移历史。[Staging 复验步骤](admin-distribution-storage-acceptance.md#云端-staging)
+
+上轮本机受阻记录仍可查阅。[本机验收记录](https://github.com/Songbreezegit/song/blob/b400f0779a0eab76fcfd96d292956f30221a3a70/docs/admin-distribution-integration-report.md)
