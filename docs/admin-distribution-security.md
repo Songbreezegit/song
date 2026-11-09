@@ -49,7 +49,7 @@ and exists (
 
 `mediaService.deleteMedia` 调用 `storage.from('media').remove([path])`。在审查的上游实现中，批量端点先在数据库事务内检查权限并执行对象元数据删除，事务成功后才清理对象文件。按该实现推断，`distribution_post_media.media_id` 对 `storage.objects.id` 的 `ON DELETE RESTRICT` 应使受引用对象的删除在文件清理前失败。[批量路由](https://github.com/supabase/storage/blob/6bb2e4c360767bef715955e2ba25dfc45c0f0af7/src/http/routes/object/deleteObjects.ts) · [事务与清理顺序](https://github.com/supabase/storage/blob/6bb2e4c360767bef715955e2ba25dfc45c0f0af7/src/storage/object.ts#L633-L650)
 
-当前环境已验证 PostgreSQL 外键和 RLS。真实 Storage 删除、对象字节、部署版本兼容性和 PostgREST 嵌套关系仍待验收。隔离步骤覆盖受引用删除失败、解除引用后删除成功、数据库元数据与文件字节一致，以及使用真实 aal2 会话的绕过测试。[隔离验收步骤](admin-distribution-storage-acceptance.md)
+当前环境已验证 PostgreSQL 外键和 RLS。真实 Storage 删除、对象字节、部署版本兼容性和 PostgREST 嵌套关系仍待验收。隔离脚本覆盖四种 API 身份、归档绕过、受引用删除失败、解除引用后删除成功及元数据和文件字节的核对。[隔离验收步骤](admin-distribution-storage-acceptance.md) · [本机预检报告](admin-distribution-integration-report.md)
 
 [官方 Storage schema 说明](https://supabase.com/docs/guides/storage/schema/design) 要求通过 API 操作对象，并提示托管 schema 的维护风险；[托管表引用说明](https://supabase.com/docs/guides/auth/managing-user-data) 建议只引用主键。本次只引用对象 id，未按 bucket/path 新建托管唯一约束。
 
