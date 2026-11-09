@@ -68,8 +68,11 @@ test('account create, edit, disable and archive preserve public projects and his
   await page.getByRole('button', { name: '归档账号：礼账 · 官方账号' }).click();
   await expect(page.getByText('账号已归档。')).toBeVisible();
   expect(state.accounts[0].archived_at).toBeTruthy();
+  expect(state.accounts[0].is_enabled).toBe(false);
   await page.getByRole('link', { name: '查看', exact: true }).click();
   await expect(page.getByRole('button', { name: '保存账号' })).toBeDisabled();
+  await expect(page.getByLabel('账号名称 *')).toBeDisabled();
+  await expect(page.getByLabel('启用账号')).not.toBeChecked();
   expect(backend.projects[0].status).toBe('draft');
   expect(backend.requests.filter(request => request.pathname.endsWith('/projects') && request.method !== 'GET')).toEqual([]);
   expect(Object.keys(state.accounts[0])).not.toContain('password');
@@ -196,7 +199,12 @@ test('unsaved edits show status and protect links and browser refresh; restoring
   await distributionFixture(page); await open(page,'/posts/new');
   const title = page.getByLabel('标题 *');
   await title.fill('未保存内容'); await expect(page.getByText('有未保存的修改')).toBeVisible();
-  page.once('dialog', dialog => dialog.dismiss()); await page.getByRole('link', { name: '返回列表' }).click();
+  await page.getByRole('link', { name: '返回列表' }).click();
+  const prompt = page.getByRole('dialog', { name: '离开编辑器？' });
+  await expect(prompt).toBeVisible();
+  await expect(prompt.getByRole('button', { name: '继续编辑' })).toBeFocused();
+  await prompt.getByRole('button', { name: '继续编辑' }).click();
+  await expect(prompt).toHaveCount(0);
   await expect(page).toHaveURL(/posts\/new$/);
   let reloadWasBlocked = false;
   page.once('dialog', async dialog => { expect(dialog.type()).toBe('beforeunload'); reloadWasBlocked = true; await dialog.dismiss(); });
@@ -205,6 +213,93 @@ test('unsaved edits show status and protect links and browser refresh; restoring
   await expect(title).toHaveValue('未保存内容');
   await title.fill(''); await expect(page.getByText('有未保存的修改')).toHaveCount(0);
   await page.getByRole('link', { name: '返回列表' }).click(); await expect(page).toHaveURL(/distribution\/posts$/);
+});
+
+for (const direction of ['back', 'forward'] as const) {
+  test(`browser ${direction} can be cancelled and retried from a dirty editor`, async ({ page }) => {
+    const { state } = await distributionFixture(page);
+    await open(page, '/posts');
+    await page.getByRole('link', { name: '新建内容', exact: true }).first().click();
+    await expect(page).toHaveURL(/posts\/new$/);
+    await page.getByRole('navigation', { name: '内容分发导航' }).getByRole('link', { name: '矩阵账号' }).click();
+    await expect(page).toHaveURL(/distribution\/accounts$/);
+    await page.evaluate(() => history.back());
+
+    const title = page.getByLabel('标题 *');
+    await title.fill('浏览器历史保护');
+    const prompt = page.getByRole('dialog', { name: '离开编辑器？' });
+    await page.evaluate(action => history[action](), direction);
+    await expect(prompt).toBeVisible();
+    await expect(page).toHaveURL(/posts\/new$/);
+    await page.keyboard.press('Escape');
+    await expect(prompt).toHaveCount(0);
+    await expect(title).toHaveValue('浏览器历史保护');
+    await title.fill('取消后继续编辑');
+
+    await page.evaluate(action => history[action](), direction);
+    await expect(prompt).toBeVisible();
+    await prompt.getByRole('button', { name: '确认离开' }).click();
+    await expect(page).toHaveURL(direction === 'back' ? /distribution\/posts$/ : /distribution\/accounts$/);
+    await expect(prompt).toHaveCount(0);
+    expect(state.writes).toEqual([]);
+  });
+}
+
+test('a React Router programmatic replace respects the account editor guard', async ({ page }) => {
+  const { state } = await distributionFixture(page);
+  // Expose the live router only in this dev-server test.
+  await page.route('**/src/AppRouter.tsx', async route => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: `${await response.text()}\nexport { appRouter };` });
+  });
+  await open(page, '/accounts/new');
+  const name = page.getByLabel('账号名称');
+  await name.fill('程序性导航保护');
+  const navigate = () => page.evaluate(async () => {
+    const modulePath = '/src/AppRouter.tsx';
+    const { appRouter } = await import(modulePath);
+    await appRouter.navigate('/admin/distribution/posts', { replace: true });
+  });
+  const prompt = page.getByRole('dialog', { name: '离开编辑器？' });
+  await navigate();
+  await expect(prompt).toBeVisible();
+  await prompt.getByRole('button', { name: '继续编辑' }).click();
+  await expect(page).toHaveURL(/accounts\/new$/);
+  await expect(name).toHaveValue('程序性导航保护');
+  await name.fill('取消后继续修改账号');
+  await navigate();
+  await expect(prompt).toBeVisible();
+  await prompt.getByRole('button', { name: '确认离开' }).click();
+  await expect(page).toHaveURL(/distribution\/posts$/);
+  expect(state.writes).toEqual([]);
+});
+
+test('cancelling a tab close preserves the draft and the editor remains usable', async ({ page }) => {
+  await distributionFixture(page);
+  await open(page, '/posts/new');
+  const title = page.getByLabel('标题 *');
+  await title.fill('关闭标签前未保存');
+  const handled = page.waitForEvent('dialog');
+  await page.close({ runBeforeUnload: true });
+  const dialog = await handled;
+  expect(dialog.type()).toBe('beforeunload');
+  await dialog.dismiss();
+  expect(page.isClosed()).toBe(false);
+  await expect(title).toHaveValue('关闭标签前未保存');
+  await title.fill('关闭已取消，继续编辑');
+  await expect(title).toHaveValue('关闭已取消，继续编辑');
+});
+
+test('a dirty distribution editor does not delay an expired admin session', async ({ page }) => {
+  const { state } = await distributionFixture(page);
+  await page.clock.install();
+  await open(page, '/posts/new');
+  await page.getByLabel('标题 *').fill('会话到期前未保存');
+  await page.clock.fastForward(60 * 60 * 1000 + 1000);
+  await expect(page).toHaveURL(/\/admin\/login$/);
+  await expect(page.getByRole('dialog', { name: '离开编辑器？' })).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: '后台导航' })).toHaveCount(0);
+  expect(state.writes).toEqual([]);
 });
 
 test('editor load and reference errors can retry without creating blank or partial records', async ({ page }) => {
@@ -236,15 +331,71 @@ test('archived/disabled accounts cannot be newly selected and existing archived 
 });
 
 test('leaving during a slow save does not navigate back when the mutation completes', async ({ page }) => {
-  const { state } = await distributionFixture(page); state.writeDelay = 1000;
+  const { state } = await distributionFixture(page);
+  const releaseSave = await holdNextPostSave(page);
   await open(page,'/posts/new'); await page.getByLabel('标题 *').fill('异步保存');
-  await page.getByRole('button', { name: '保存内容' }).click();
-  await expect(page.getByLabel('标题 *')).toBeDisabled();
-  page.once('dialog', dialog => dialog.accept());
-  await page.getByRole('navigation', { name: '内容分发导航' }).getByRole('link', { name: '矩阵账号' }).click();
-  await expect(page).toHaveURL(/distribution\/accounts$/);
-  await expect.poll(() => state.posts.length).toBe(1);
-  await expect(page).toHaveURL(/distribution\/accounts$/);
+  try {
+    await page.getByRole('button', { name: '保存内容' }).click();
+    await expect(page.getByLabel('标题 *')).toBeDisabled();
+    await page.getByRole('navigation', { name: '内容分发导航' }).getByRole('link', { name: '矩阵账号' }).click();
+    const prompt = page.getByRole('dialog', { name: '离开编辑器？' });
+    await expect(prompt).toContainText('保存正在进行');
+    await prompt.getByRole('button', { name: '确认离开' }).click();
+    await expect(page).toHaveURL(/distribution\/accounts$/);
+    const response = page.waitForResponse('**/rest/v1/rpc/save_distribution_post');
+    releaseSave();
+    const result = await response;
+    expect(result.ok()).toBe(true);
+    expect(await result.finished()).toBeNull();
+    // Let the editor's response handling and React effects settle in the browser.
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await expect.poll(() => state.posts.length).toBe(1);
+    await expect(page).toHaveURL(/distribution\/accounts$/);
+    await expect(page.getByRole('heading', { name: '矩阵账号', exact: true })).toBeVisible();
+  } finally {
+    releaseSave();
+  }
+});
+
+async function holdNextPostSave(page: Page) {
+  const gate = Promise.withResolvers<void>();
+  await page.route('**/rest/v1/rpc/save_distribution_post', async route => {
+    await gate.promise;
+    await route.fallback();
+  }, { times: 1 });
+  return gate.resolve;
+}
+
+test('a completed create waits for the navigation decision, then keeps the saved record editable', async ({ page }) => {
+  const { state } = await distributionFixture(page);
+  const releaseSave = await holdNextPostSave(page);
+  await open(page, '/posts/new');
+  const title = page.getByLabel('标题 *');
+  await title.fill('保存先完成');
+  try {
+    await page.getByRole('button', { name: '保存内容' }).click();
+    await page.getByRole('navigation', { name: '内容分发导航' }).getByRole('link', { name: '矩阵账号' }).click();
+    const prompt = page.getByRole('dialog', { name: '离开编辑器？' });
+    await expect(prompt).toContainText('保存正在进行');
+    releaseSave();
+    await expect(prompt).toContainText('保存已完成');
+    await expect(page).toHaveURL(/posts\/new$/);
+    expect(state.posts).toHaveLength(1);
+    await prompt.getByRole('button', { name: '继续编辑' }).click();
+    await expect(page).toHaveURL(new RegExp(`/posts/${state.posts[0].id}$`));
+    await expect(title).toHaveValue('保存先完成');
+    await title.fill('继续修改已保存的记录');
+    await page.getByRole('button', { name: '保存内容' }).click();
+    await expect(page.getByText('已保存。', { exact: true })).toBeVisible();
+    expect(state.posts).toHaveLength(1);
+    expect(state.posts[0]).toMatchObject({ title: '继续修改已保存的记录', version: 2 });
+    expect(state.writes.map(write => write.body.p_version)).toEqual([null, 1]);
+    await page.getByRole('link', { name: '返回列表' }).click();
+    await expect(page).toHaveURL(/distribution\/posts$/);
+    await expect(prompt).toHaveCount(0);
+  } finally {
+    releaseSave();
+  }
 });
 
 test('long content fits narrow phones in both themes with tables contained inside their scroller', async ({ page }) => {

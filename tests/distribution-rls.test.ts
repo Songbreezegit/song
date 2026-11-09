@@ -1,4 +1,5 @@
 import { PGlite } from '@electric-sql/pglite';
+import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 
@@ -138,13 +139,72 @@ it('database rejects malformed values, spoofed RPC metadata and duplicate/null r
 
 it('archive disables new targeting while preserving existing associations and permits unrelated edits', async () => {
   await asAdmin(async () => {
-    expect((await db.query("update distribution_accounts set archived_at='2000-01-01',is_enabled=false where id=$1 returning archived_at > '2020-01-01' as timestamp_ok", [account])).rows).toEqual([{ timestamp_ok: true }]);
+    await db.query('update distribution_accounts set is_enabled=false where id=$1', [account]);
+    await expect(save(member, null)).rejects.toThrow('enabled, unarchived');
+    await db.query('update distribution_accounts set is_enabled=true where id=$1', [account]);
+
+    const archived = await db.query(`update distribution_accounts set archived_at='2000-01-01', is_enabled=true
+      where id=$1 returning archived_at > '2020-01-01' as timestamp_ok, is_enabled`, [account]);
+    expect(archived.rows).toEqual([{ timestamp_ok: true, is_enabled: false }]);
     expect((await save(source, 2)).rows[0].result.version).toBe(3);
     await expect(save(member, null)).rejects.toThrow('enabled, unarchived');
-    expect((await db.query('select account_id from distribution_post_targets')).rows).toHaveLength(1);
+    expect((await db.query('select account_id from distribution_post_targets')).rows).toEqual([{ account_id: account }]);
     await expect(db.query('delete from distribution_accounts where id=$1', [account])).rejects.toThrow('permission denied');
-    await db.query('update distribution_accounts set archived_at=null,is_enabled=false where id=$1', [account]);
-    await expect(save(member, null)).rejects.toThrow('enabled, unarchived');
+  });
+});
+
+it('rejects direct SQL restoration and edits of archived accounts with the same role allowed to edit active rows', async () => {
+  await asAdmin(async () => {
+    const before = await db.query('select * from distribution_accounts where id=$1', [account]);
+    expect(before.rows[0]).toMatchObject({ is_enabled: false, project_id: 'existing-project' });
+    for (const fields of [
+      'archived_at=null, is_enabled=true',
+      'archived_at=null',
+      'is_enabled=true',
+      "name='Changed', notes='Changed'",
+      "archived_at='2000-01-01'",
+      'project_id=null',
+    ]) {
+      await expect(db.query(`update distribution_accounts set ${fields} where id=$1`, [account]))
+        .rejects.toMatchObject({ code: '55000', message: 'Archived distribution account is read-only' });
+    }
+    expect((await db.query('select * from distribution_accounts where id=$1', [account])).rows).toEqual(before.rows);
+    expect((await db.query('select account_id from distribution_post_targets')).rows).toEqual([{ account_id: account }]);
+  });
+});
+
+it('a raw Supabase SDK PATCH bypassing the service receives the database rejection', async () => {
+  // The transport only maps this PATCH to PostgreSQL. The trigger and RLS make
+  // the decision. The isolated runbook exercises the real PostgREST transport.
+  const api = createClient('http://127.0.0.1:54321', 'test-public-key', {
+    accessToken: async () => 'test-aal2',
+    global: {
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+        expect(request.method).toBe('PATCH');
+        expect(request.headers.get('authorization')).toBe('Bearer test-aal2');
+        expect(url.pathname).toBe('/rest/v1/distribution_accounts');
+        expect(url.searchParams.get('id')).toBe(`eq.${account}`);
+        const patch = await request.json();
+        try {
+          const { rows } = await db.query(`update distribution_accounts set archived_at=$1, is_enabled=$2
+            where id=$3 returning *`, [patch.archived_at, patch.is_enabled, account]);
+          return Response.json(rows[0]);
+        } catch (failure) {
+          const error = failure as { code: string; message: string };
+          return Response.json({ code: error.code, message: error.message }, { status: 400 });
+        }
+      },
+    },
+  });
+  await asAdmin(async () => {
+    const result = await api.from('distribution_accounts')
+      .update({ archived_at: null, is_enabled: true })
+      .eq('id', account).select().single();
+    expect(result).toMatchObject({ data: null, error: { code: '55000' } });
+    expect((await db.query('select archived_at is not null as archived, is_enabled from distribution_accounts where id=$1', [account])).rows)
+      .toEqual([{ archived: true, is_enabled: false }]);
   });
 });
 
@@ -156,12 +216,32 @@ it('ready is never published and cannot be deleted until explicitly returned to 
   });
 });
 
+it('ready currently accepts a blank body without targets or media and uses the draft title check', async () => {
+  await asAdmin(async () => {
+    const ready = { ...payload, title: 'Title only', body: '', tags: [], project_id: null, promotion_goal: 'awareness', status: 'ready' };
+    await expect(save(member, null, { ...ready, title: '   ' }, [], [])).rejects.toMatchObject({ code: '23514' });
+    expect((await save(member, null, ready, [], [])).rows[0].result).toMatchObject({
+      status: 'ready', body: '', project_id: null, account_ids: [], media_ids: [],
+    });
+    // PostgreSQL btrim(title) trims ASCII spaces, unlike the service's trim().
+    const tabTitle = '\t';
+    expect((await save(member, 1, { ...ready, title: tabTitle }, [], [])).rows[0].result).toMatchObject({ title: tabTitle });
+    await save(member, 2, { ...ready, status: 'draft' }, [], []);
+    await db.query('delete from distribution_posts where id=$1', [member]);
+  });
+});
+
 it('project removal nulls only references; attached media cannot be deleted; source deletion cascades junctions', async () => {
   await asAdmin(async () => {
     expect((await db.query('select status from projects')).rows).toEqual([{ status: 'draft' }]);
-    await expect(db.query('delete from storage.objects where id=$1', [image])).rejects.toThrow();
+    await expect(db.query('delete from storage.objects where id=$1', [image])).rejects.toMatchObject({
+      code: '23001', constraint: 'distribution_post_media_media_id_fkey',
+    });
+    expect((await db.query('select id from storage.objects where id=$1', [image])).rows).toEqual([{ id: image }]);
     await db.exec("delete from projects where id='existing-project'");
-    expect((await db.query('select project_id from distribution_accounts')).rows).toEqual([{ project_id: null }]);
+    expect((await db.query('select project_id, archived_at is not null as archived, is_enabled from distribution_accounts')).rows)
+      .toEqual([{ project_id: null, archived: true, is_enabled: false }]);
+    expect((await db.query('select account_id from distribution_post_targets')).rows).toEqual([{ account_id: account }]);
     expect((await db.query('select project_id from distribution_posts')).rows).toEqual([{ project_id: null }]);
     expect((await db.query('delete from distribution_posts where id=$1 returning id', [source])).rows).toEqual([{ id: source }]);
     expect((await db.query('select * from distribution_post_targets')).rows).toEqual([]);
@@ -179,8 +259,23 @@ it('membership revocation immediately closes access even for an aal2 JWT', async
 });
 
 it('reviewed rollback removes only distribution objects and allows a clean reapply', async () => {
+  const media = await db.query<{ id: string }>("insert into storage.objects(bucket_id,name) values ('media','rollback.png') returning id");
+  const post = await db.query<{ id: string }>("insert into distribution_posts(title) values ('Rollback probe') returning id");
+  await db.query('insert into distribution_post_media(post_id,media_id,sort_order) values ($1,$2,0)', [post.rows[0].id, media.rows[0].id]);
+  const mediaBefore = await db.query('select * from storage.objects order by id');
   await db.exec(readFileSync('supabase/rollbacks/distribution_m1.sql', 'utf8'));
   expect((await db.query("select to_regclass('public.distribution_posts') table_name")).rows).toEqual([{ table_name: null }]);
+  expect((await db.query("select to_regnamespace('distribution_private') private_schema, to_regclass('public.distribution_accounts') accounts")).rows)
+    .toEqual([{ private_schema: null, accounts: null }]);
+  expect((await db.query('select * from storage.objects order by id')).rows).toEqual(mediaBefore.rows);
   expect((await db.query("select schemaname,tablename,policyname,permissive,roles,cmd,qual,with_check from pg_policies order by schemaname,tablename,policyname")).rows).toEqual(originalPolicies);
   await db.exec(migration);
+  await db.query('insert into admin_users(user_id) values ($1) on conflict (user_id) do nothing', [admin]);
+  await asAdmin(async () => {
+    await db.query("insert into distribution_accounts(id,platform,name) values ($1,'other','Replay probe')", [account]);
+    const { rows } = await db.query('update distribution_accounts set archived_at=now() where id=$1 returning is_enabled', [account]);
+    expect(rows).toEqual([{ is_enabled: false }]);
+    await expect(db.query('update distribution_accounts set archived_at=null,is_enabled=true where id=$1', [account]))
+      .rejects.toMatchObject({ code: '55000' });
+  });
 });

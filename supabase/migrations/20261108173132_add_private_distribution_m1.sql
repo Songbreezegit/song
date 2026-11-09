@@ -67,6 +67,18 @@ create index if not exists distribution_media_object_idx on public.distribution_
 create or replace function distribution_private.touch_record() returns trigger
 language plpgsql security invoker set search_path = '' as $$
 begin
+  if tg_table_name = 'distribution_accounts' then
+    if tg_op = 'UPDATE' and old.archived_at is not null then
+      -- The projects FK can clear its reference after the parent is deleted.
+      if pg_trigger_depth() <= 1 or old.project_id is null or new.project_id is not null
+        or (to_jsonb(new) - 'project_id') is distinct from (to_jsonb(old) - 'project_id')
+        or exists (select 1 from public.projects where id = old.project_id)
+      then raise exception 'Archived distribution account is read-only' using errcode = '55000'; end if;
+    elsif new.archived_at is not null then
+      new.archived_at := clock_timestamp();
+      new.is_enabled := false;
+    end if;
+  end if;
   if tg_op = 'INSERT' then
     new.created_at := clock_timestamp(); new.version := 1;
   else
@@ -74,13 +86,6 @@ begin
     new.created_at := old.created_at; new.version := old.version + 1;
   end if;
   new.updated_at := clock_timestamp();
-  if tg_table_name = 'distribution_accounts' then
-    if new.archived_at is not null then
-      if tg_op = 'INSERT' then new.archived_at := clock_timestamp();
-      elsif old.archived_at is null then new.archived_at := clock_timestamp();
-      else new.archived_at := old.archived_at; end if;
-    end if;
-  end if;
   if tg_table_name = 'distribution_posts' then
     if (array_ndims(new.tags) is not null and array_ndims(new.tags) <> 1)
       or exists (select 1 from unnest(new.tags) tag where tag is null or char_length(btrim(tag)) not between 1 and 50)

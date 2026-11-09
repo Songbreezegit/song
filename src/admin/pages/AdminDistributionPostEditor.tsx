@@ -10,6 +10,7 @@ import { useAdminQuery } from '../hooks/useAdminQuery';
 import { useDistributionEditor } from '../features/distribution/useDistributionEditor';
 import { contentTypeLabels, createPostEditorDraft, goalLabels, platformLabels, postStatusLabels, postToEditorDraft, serializePostEditorDraft, type DistributionPostEditorDraft } from '../features/distribution/distributionForm';
 import { DistributionField, DistributionTabs } from '../features/distribution/DistributionChrome';
+import { DistributionLeaveDialog } from '../features/distribution/DistributionLeaveDialog';
 import { DistributionMediaPicker } from '../features/distribution/DistributionMediaPicker';
 import { AdminEditorHeader } from '../components/AdminEditorChrome';
 import { AdminFeedback } from '../components/AdminFeedback';
@@ -37,6 +38,7 @@ function PostEditor({ id }: { id?: string }) {
   if (editor.loading) return <AdminLoading />;
   if (editor.error) return <><Link className="admin-btn admin-btn-secondary" to={editor.returnTo}>返回列表</Link><AdminQueryError error={editor.error} onRetry={editor.reload} /></>;
   return <div className="distribution-workspace admin-editor-workspace"><DistributionTabs />
+    {editor.blockedNavigation && <DistributionLeaveDialog {...editor.blockedNavigation} isDirty={editor.isDirty} saving={editor.saving} />}
     <AdminEditorHeader title={editor.isNew ? '新建分发内容' : '编辑分发内容'} description="先准备内容源，再选择目标账号与素材。" backTo={editor.returnTo} isDirty={editor.isDirty} saving={editor.saving} lastSavedAt={editor.lastSavedAt}
       actions={<button type="submit" form="distribution-post-form" className="admin-btn admin-btn-primary" disabled={disabled}><Save size={15} />{editor.saving ? '正在保存…' : '保存内容'}</button>} />
     <AdminFeedback feedback={editor.feedback} /><AdminQueryError error={options.error} onRetry={options.reload} />

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useBlocker, useLocation, useNavigate, type BlockerFunction } from 'react-router-dom';
 import { useAdminQuery } from '../../hooks/useAdminQuery';
 import { useAdminAction } from '../../hooks/useAdminAction';
 import { getEditorReturnPath } from '../../lib/editor';
@@ -32,22 +32,39 @@ export function useDistributionEditor<Record extends { id: string; version: numb
   const isDirty = !query.loading && !query.error && JSON.stringify(draft) !== baseline;
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const action = useAdminAction('保存失败，请重试。');
-  const dirty = useRef(isDirty);
-  useEffect(() => { dirty.current = isDirty; }, [isDirty]);
+  const saving = action.pendingKey === 'save';
+  const shouldProtect = isDirty || saving;
+  const shouldBlock = useCallback<BlockerFunction>(({ currentLocation, nextLocation }) => (
+    shouldProtect && currentLocation.pathname !== nextLocation.pathname
+  ), [shouldProtect]);
+  const blocker = useBlocker(shouldBlock);
+  const departureApproved = useRef(false);
 
   useEffect(() => {
-    const unload = (event: BeforeUnloadEvent) => { if (dirty.current) { event.preventDefault(); event.returnValue = ''; } };
-    const leaveLink = (event: MouseEvent) => {
-      const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
-      if (!dirty.current || !(link instanceof HTMLAnchorElement) || link.target === '_blank' || link.hasAttribute('download')) return;
-      const url = new URL(link.href);
-      if (url.pathname === location.pathname && url.search === location.search) return;
-      if (!window.confirm('有未保存的修改，确定离开吗？')) { event.preventDefault(); event.stopPropagation(); }
+    if (!shouldProtect) return;
+    const unload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
     };
     window.addEventListener('beforeunload', unload);
-    document.addEventListener('click', leaveLink, true);
-    return () => { window.removeEventListener('beforeunload', unload); document.removeEventListener('click', leaveLink, true); };
-  }, [location.pathname, location.search]);
+    return () => window.removeEventListener('beforeunload', unload);
+  }, [shouldProtect]);
+
+  // Wait for the clean draft and for the user's navigation decision before
+  // replacing a new editor's URL with the persisted record URL.
+  const savedId = query.data.record?.id;
+  useEffect(() => {
+    if (!isNew || !savedId || shouldProtect || blocker.state !== 'unblocked' || departureApproved.current) return;
+    void navigate(`${config.listPath}/${savedId}`, { replace: true, state: { returnTo } });
+  }, [isNew, savedId, shouldProtect, blocker.state, navigate, config.listPath, returnTo]);
+
+  const blockedNavigation = blocker.state === 'blocked' ? {
+    stay: blocker.reset,
+    leave: () => {
+      departureApproved.current = true;
+      blocker.proceed();
+    },
+  } : null;
 
   const setField = <K extends keyof Draft>(key: K, value: SetStateAction<Draft[K]>) => {
     setDraftOverride(current => { const previous = current ?? query.data.draft; return { ...previous, [key]: typeof value === 'function' ? (value as (field: Draft[K]) => Draft[K])(previous[key]) : value }; });
@@ -56,13 +73,11 @@ export function useDistributionEditor<Record extends { id: string; version: numb
     if (query.loading || query.error) return Promise.resolve(false);
     return action.run('save', () => config.save(recordId, draft, query.data.record?.version ?? null), {
       successMessage: '已保存。', onSuccess: record => {
-        dirty.current = false;
         setDraftOverride(null);
         query.setData({ record, draft: config.toDraft(record) });
         setLastSavedAt(Date.now());
-        if (isNew) navigate(`${config.listPath}/${record.id}`, { replace: true, state: { returnTo } });
       },
     });
   };
-  return { ...query, ...action, draft, setField, save, isNew, returnTo, isDirty, lastSavedAt, saving: Boolean(action.pendingKey) };
+  return { ...query, ...action, draft, setField, save, isNew, returnTo, isDirty, lastSavedAt, saving, blockedNavigation };
 }

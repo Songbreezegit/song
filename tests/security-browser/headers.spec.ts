@@ -72,6 +72,11 @@ test('distribution editor, existing media, theme and atomic save work under the 
   await page.locator('.admin-theme-toggle').click();
   await expect(page.locator('.theme-transition-origin')).toHaveCount(0);
   await page.getByLabel('标题 *').fill('CSP 下的分发内容');
+  await page.getByRole('link', { name: '返回列表' }).click();
+  const prompt = page.getByRole('dialog', { name: '离开编辑器？' });
+  await expect(prompt).toBeVisible();
+  await prompt.getByRole('button', { name: '继续编辑' }).click();
+  await expect(page.getByLabel('标题 *')).toHaveValue('CSP 下的分发内容');
   await page.getByRole('button', { name: '保存内容' }).click();
   await expect(page.getByText('已保存。', { exact: true })).toBeVisible();
   expect(state.posts[0].title).toBe('CSP 下的分发内容');

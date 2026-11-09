@@ -61,7 +61,7 @@ npm run test:security
 1. 生产迁移、正式部署和 main 合并均未执行。审查并明确批准 SQL 后，安排隔离 Supabase 集成验证，再执行批准的生产步骤。
 2. 尚未验证生产 GoTrue/PostgREST/Storage 组合。尤其需要核对 Storage 受引用文件删除、嵌套查询关系缓存、真实 MFA CRUD 和安全顾问。
 3. 现有媒体库仅支持图片。视频内容先记录文案与已有封面，视频上传/转码及平台适配留待后续。
-4. 现有 BrowserRouter 没有全局 history 阻断。新增编辑器覆盖关闭/刷新及链接离开确认；浏览器前进/后退前应主动保存。草稿不在浏览器本地持久化。
+4. 本轮审查已补齐编辑器的历史导航与程序性跳转保护。验证和保存竞争说明见 [M1 审查修复](admin-distribution-review.md)。
 5. 列表在分批完整读取后于浏览器检索，适合当前个人规模；增长后需要服务端检索及项目/媒体选择分页。
 6. 依赖锁文件与基线相同，没有新增依赖。`npm audit` 报告既有 4 项（2 high、2 moderate），`--omit=dev` 仍报告 2 high（Vite、source-map-js；现有依赖树包含构建插件的依赖/peer）。Vitest / @vitest/mocker 的公告另见完整审计。需要单独升级锁文件并回归，不能把 M1 测试通过解释为依赖无漏洞。
 

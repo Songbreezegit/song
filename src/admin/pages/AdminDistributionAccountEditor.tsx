@@ -8,6 +8,7 @@ import { useAdminQuery } from '../hooks/useAdminQuery';
 import { useDistributionEditor } from '../features/distribution/useDistributionEditor';
 import { accountToDraft, createAccountDraft, platformLabels } from '../features/distribution/distributionForm';
 import { DistributionField, DistributionTabs } from '../features/distribution/DistributionChrome';
+import { DistributionLeaveDialog } from '../features/distribution/DistributionLeaveDialog';
 import { AdminEditorHeader } from '../components/AdminEditorChrome';
 import { AdminFeedback } from '../components/AdminFeedback';
 import { AdminLoading } from '../components/AdminLoading';
@@ -29,6 +30,7 @@ function AccountEditor({ id }: { id?: string }) {
   if (editor.loading) return <AdminLoading />;
   if (editor.error) return <><Link className="admin-btn admin-btn-secondary" to={editor.returnTo}>返回列表</Link><AdminQueryError error={editor.error} onRetry={editor.reload} /></>;
   return <div className="distribution-workspace admin-editor-workspace"><DistributionTabs />
+    {editor.blockedNavigation && <DistributionLeaveDialog {...editor.blockedNavigation} isDirty={editor.isDirty} saving={editor.saving} />}
     <AdminEditorHeader title={editor.isNew ? '新增矩阵账号' : draft.name} description="记录账号资料，明确每个平台的内容方向。" backTo={editor.returnTo}
       isDirty={editor.isDirty} saving={editor.saving} lastSavedAt={editor.lastSavedAt} actions={<button className="admin-btn admin-btn-primary" type="submit" form="distribution-account-form" disabled={disabled}><Save size={15} />保存账号</button>} />
     <AdminFeedback feedback={editor.feedback} /><AdminQueryError error={projects.error} onRetry={projects.reload} />

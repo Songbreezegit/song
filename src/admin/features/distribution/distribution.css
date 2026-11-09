@@ -38,6 +38,9 @@ small.distribution-secondary { display: block; margin-top: 4px; }
 .distribution-media-option > span { display: flex; align-items: center; gap: 7px; padding: 9px; font-size: 11px; }
 .distribution-media-option > span > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .distribution-media-option input { accent-color: var(--admin-primary); flex-shrink: 0; }
+.distribution-leave-dialog { width: min(420px, calc(100% - 32px)); margin: auto; color: var(--admin-text-primary); }
+.distribution-leave-dialog::backdrop { background: var(--admin-overlay); }
+.distribution-leave-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
 @media (min-width: 901px) and (max-width: 1300px) { .admin-top-nav-item { padding-inline: 10px; } }
 @media (max-width: 1150px) { .distribution-account-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .distribution-media-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) {

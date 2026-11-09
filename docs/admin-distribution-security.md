@@ -38,6 +38,7 @@ and exists (
 - 标题 200 字、账号名称 100 字、正文 100000 字、标签最多 20 个且每个 50 字、备注 5000 字、定位 1000 字。数据库约束/触发器再次验证枚举、长度、标签及关联，RPC 拒绝未知字段、非字符串标签、重复/null 关联及超大 payload。
 - UUID 为结构化参数，项目 FK 使用现有 text id。SQL 和 PostgREST 不拼接表单值为可执行 SQL。React 按文本显示用户内容，链接和缩略图使用既有安全 URL 函数。
 - 版本及时间戳由触发器维护。UPDATE 使用预期版本，失配不会写入。一次编辑提交锁覆盖整个操作，创建重试保留 UUID，唯一键防止响应丢失后的重复创建。
+- `distribution_private.touch_record()` 在首次归档时写入数据库时间并自动停用账号。已归档行的普通 UPDATE 返回 `55000`，包括清空归档时间、重新启用和修改资料。项目删除时，外键动作仍可清空 `project_id`，触发器仅放行嵌套更新且项目已删除、其他字段值一致的情况。稿件已有目标关联继续保留。
 - `save_distribution_post` 是 **SECURITY INVOKER**，固定空 search_path，所有对象带 schema。它在入口明确验证成员资格与 aal2，并继续受所有表的 RLS 约束。
 - public RPC 默认 EXECUTE 已从 PUBLIC/anon 撤销，仅授予 authenticated。私有触发函数不向客户端授予 EXECUTE。未新增 SECURITY DEFINER、开放视图、匿名 RPC、服务密钥、外部平台请求或任务队列。
 - 素材引用有 FK 和桶检查，账号引用有启用/归档检查；关联失败回滚整个保存。删除草稿级联清理它的关联，不删除项目、账号或实际文件。
@@ -46,7 +47,9 @@ and exists (
 
 保留 `media` 桶的公开属性、上传格式/大小及既有 RLS。M1 选择的是已有图片，视频内容类型仅先整理文案和已有封面，没有扩展上传格式。
 
-引用 `storage.objects.id` 的外键会阻止删除仍被分发内容引用的媒体元数据，需先从内容中移除素材。它建立对托管主键的依赖，未更改 Storage 的列、索引、RLS 或删除服务；Storage 操作仍经原 API。上线验收需通过真实 Storage API 核对“被引用对象拒绝删除 / 解除引用后可删除”的文件与元数据行为；本地 PGlite 仅验证 PostgreSQL FK，HTTP 测试不能证明托管存储服务的文件删除顺序。还需核对当前托管版本支持该 FK、Data API 的嵌套关系缓存及现有上传返回的对象 UUID。
+`mediaService.deleteMedia` 调用 `storage.from('media').remove([path])`。在审查的上游实现中，批量端点先在数据库事务内检查权限并执行对象元数据删除，事务成功后才清理对象文件。按该实现推断，`distribution_post_media.media_id` 对 `storage.objects.id` 的 `ON DELETE RESTRICT` 应使受引用对象的删除在文件清理前失败。[批量路由](https://github.com/supabase/storage/blob/6bb2e4c360767bef715955e2ba25dfc45c0f0af7/src/http/routes/object/deleteObjects.ts) · [事务与清理顺序](https://github.com/supabase/storage/blob/6bb2e4c360767bef715955e2ba25dfc45c0f0af7/src/storage/object.ts#L633-L650)
+
+当前环境已验证 PostgreSQL 外键和 RLS。真实 Storage 删除、对象字节、部署版本兼容性和 PostgREST 嵌套关系仍待验收。隔离步骤覆盖受引用删除失败、解除引用后删除成功、数据库元数据与文件字节一致，以及使用真实 aal2 会话的绕过测试。[隔离验收步骤](admin-distribution-storage-acceptance.md)
 
 [官方 Storage schema 说明](https://supabase.com/docs/guides/storage/schema/design) 要求通过 API 操作对象，并提示托管 schema 的维护风险；[托管表引用说明](https://supabase.com/docs/guides/auth/managing-user-data) 建议只引用主键。本次只引用对象 id，未按 bucket/path 新建托管唯一约束。
 
@@ -63,12 +66,12 @@ and exists (
 
 ## 幂等与回滚
 
-正向 SQL 包含事务、`CREATE TABLE/INDEX IF NOT EXISTS`、`CREATE OR REPLACE FUNCTION` 及只删除/重建本模块策略和触发器。重复执行保留数据和原有策略。本地测试执行两次并验证保留数据，再测试回滚和重建。不把 IF NOT EXISTS 当作数据库结构漂移修复器。
+正向 SQL 包含事务、`CREATE TABLE/INDEX IF NOT EXISTS`、`CREATE OR REPLACE FUNCTION` 及只删除/重建本模块策略和触发器。重复执行保留数据和原有策略。回滚测试先创建引用媒体的稿件，确认回滚仅删除分发对象，保留原策略及 Storage 元数据，再重装迁移验证归档保护。已修复归档逻辑通过既有迁移重建同一触发函数，回滚脚本继续按原依赖顺序删除。
 
 优先回退前端，保留新增私有表及 MFA 限制。确需移除 schema 时，先导出四张分发表及引用清单，审批后执行独立回滚文件。它按依赖顺序删除本模块对象，不使用 CASCADE，不动项目、文章、auth 或 storage；存在未来外部依赖时会失败而非连带删除。**回滚 SQL 会永久删除分发数据**，不自动执行；恢复数据需使用事先验证的备份。
 
 ## 验证范围
 
-PGlite 执行真实 PostgreSQL 策略、触发器、外键和 invoker RPC，覆盖匿名、普通用户、管理员 aal1/aal2/缺 aal、资格撤销、意外 permissive 策略、非法字段/URL、版本冲突、失败事务回滚、项目删除置空、媒体删除约束与关联级联。浏览器通过实际 Supabase SDK 和受控 HTTP 响应验证界面；生产安全头测试使用本地产物模拟现有 Cloudflare 规则。
+PGlite 执行真实 PostgreSQL 策略、触发器、外键和 invoker RPC，覆盖匿名、普通用户、管理员 aal1/aal2/缺 aal、资格撤销、意外 permissive 策略、非法字段/URL、版本冲突、失败事务回滚、项目删除置空、媒体删除约束与关联级联。归档测试包括直接 SQL 和由 Supabase SDK 发送、由测试传输层转交给 PGlite 执行的 PATCH。浏览器用例使用实际 Supabase SDK 和受控 HTTP 响应，安全头用例用本地生产构建模拟现有 Cloudflare 规则。
 
 参考：[Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security)、[MFA 数据库约束](https://supabase.com/docs/guides/auth/auth-mfa)、[近期变更](https://supabase.com/changelog)。实现前已核对文档；CLI v3 的远程目标/确认变更只影响后续运维流程，本次仅使用本地 migration new。
