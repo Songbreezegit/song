@@ -1,13 +1,13 @@
 # 松屿内容分发 M1 生产发布记录
 
-**生产发布 BLOCKED。** 2026-11-10（北京时间）已完成只读预检和两条 SQL 的静态核对。当前缺少能验证恢复内容的生产数据库备份，生产 SQL、合并和正式部署均处于等待状态。
+**生产发布 BLOCKED。** 2026-11-10（北京时间）已完成只读预检、两条 SQL 的静态核对和生产备份验证。生产 SQL 等待单独批准，合并和正式部署仍未执行。
 
 | 阶段 | 状态 | 证据 |
 | --- | --- | --- |
 | P1 仓库、项目和数据库基线 | PASS | 功能分支与已验收提交一致，生产健康，未发现超出已知历史版本差异的应用 schema 漂移 |
-| P2 生产数据库备份 | BLOCKED | Free 项目没有托管备份。本机没有现成的受信任数据库连接或备份工件 |
+| P2 生产数据库备份 | PASS | 五个 schema 的逻辑归档已完整解码，关键对象与权限覆盖核对通过。两件 PNG 单独备份并校验 |
 | P3 两条 SQL 静态核对 | PASS | 从验收提交提取原始 Git blob 计算 SHA-256，生产无同名残留 |
-| P0 生产写入确认 | BLOCKED | 需先验证备份，再取得对下列两条 SQL 的操作确认 |
+| P0 生产写入确认 | BLOCKED | 备份验证已通过，仍需取得对下列两条 SQL 的明确操作确认 |
 | P4–P6 执行迁移、数据库安全验收 | BLOCKED | 尚未执行 SQL A 或 SQL B，PT409 与新策略的生产结果待验 |
 | P7–P9 上线检查、合并和 Cloudflare 部署 | BLOCKED | 草稿 PR #10 保持开放，正式部署仍为原版本 |
 | P10 正式环境冒烟 | BLOCKED | 只记录了旧版公共 HTTP 基线，正式管理员登录和 M1 冒烟待发布后执行 |
@@ -46,11 +46,38 @@
 
 ## 备份和恢复边界
 
-生产 Supabase 的 Backups 页面显示 Free 套餐没有托管备份。当前 PowerShell 环境没有 `pg_dump`、`pg_restore`、`psql` 或 Supabase CLI，未发现已有的 libpq 连接配置。数据库 SSL 强制开关关闭，当前不满足 Supabase 临时数据库访问的前提。生产连接和认证设置保持原样。[Supabase 备份说明](https://supabase.com/docs/guides/platform/backups) · [临时访问前提](https://supabase.com/docs/guides/platform/temporary-access)
+**P2 PASS。** 2026-11-10（北京时间）通过生产 `song`（`vfgmptjfcfgptaqblydd`）的 Direct 连接导出。客户端使用 Dashboard 提供的 CA 并以 `verify-full` 校验证书和主机名。只读预检核对了 PostgreSQL `17.6`、五个目标 schema、四条现有生产迁移，以及 M1 对象未创建。Free 项目没有托管备份，本次使用 PostgreSQL 原生逻辑归档。[Supabase 备份说明](https://supabase.com/docs/guides/platform/backups) · [PostgreSQL 导出说明](https://www.postgresql.org/docs/17/app-pgdump.html)
 
-生产数据库逻辑备份的文件路径、大小、SHA-256、导出命令、退出码和可读性均为 **BLOCKED**。待所有者使用现有受信任连接将备份保存在 Git 仓库外的受保护目录。备份需包含 `public` 和统计结构及数据、可恢复的 Auth 管理数据、策略与授权、迁移历史和 Storage 元数据。收到工件后只在本机检查文件和归档清单，记录哈希及验证结果。数据库归档的 Storage 部分只能恢复元数据，实际图片恢复依赖单独的对象副本或独立存储备份。
+| 项目 | 结果 |
+| --- | --- |
+| 数据库归档 | `D:\Backups\Songisle\prod-pre-m1-20261110-015921-899ab5a9\song-pre-m1.dump`，310,092 字节 |
+| 数据库归档 SHA-256 | `3da09357c45db240827198ef968c0d5c0a56ae59869a499498cf14c7f5e45fff` |
+| 导出和验证时间 | 2026-11-10 01:59:47 开始导出，2026-11-10 02:00:14 完成验证（北京时间） |
+| 客户端与退出状态 | `psql`、`pg_dump`、`pg_restore` 均为 PostgreSQL `17.11`。只读预检、导出、`pg_restore --list`、离线全量解码的退出码均为 `0` |
+| 归档覆盖 | 495 个目录项。与生产目录核对了五个 schema、46 张表、36 个表数据段、31 个函数及其他例程、11 个触发器、25 条策略、34 个 RLS 项及 70 个 ACL 项，无缺失 |
+| Storage 文件 ZIP | `%LOCALAPPDATA%\SongIsle\ProductionBackups\M1-20261110-012551\media-objects.zip`，3,477,364 字节。2 件 PNG 的实际文件共 3,476,452 字节，已重新打开 ZIP 逐件核对长度及 SHA-256 |
+| Storage ZIP SHA-256 | `987ab74972824c3ba4a9a98f5fe602a18f7f41a327268acac94d32bbba8735a6` |
 
-对象复制为 **BLOCKED**。自动审批拒绝把上述两件生产 PNG 下载到拟用的本机备份目录，理由是复制批次与具体目的地尚未获明确授权。只读取得的对象数量及大小是清单证据，文件副本未生成。
+实际导出命令如下。密码由所有者在本机 PowerShell 隐藏提示输入，仅传给运行中的客户端进程，未写入命令、文件或日志。以下 `--file` 为同目录临时归档名，通过验证后改为最终文件名。
+
+```powershell
+pg_dump --format=custom --strict-names --no-password --lock-wait-timeout=10s `
+  --schema=public --schema=analytics_private --schema=auth `
+  --schema=supabase_migrations --schema=storage `
+  --exclude-table-data=auth.sessions --exclude-table-data=auth.refresh_tokens `
+  --exclude-table-data=auth.mfa_amr_claims --exclude-table-data=auth.mfa_challenges `
+  --exclude-table-data=auth.flow_state --exclude-table-data=auth.saml_relay_states `
+  --exclude-table-data=auth.one_time_tokens --exclude-table-data=auth.oauth_authorizations `
+  --exclude-table-data=auth.oauth_client_states --exclude-table-data=auth.webauthn_challenges `
+  -h db.vfgmptjfcfgptaqblydd.supabase.co -p 5432 -U postgres -d postgres `
+  --file='D:\Backups\Songisle\prod-pre-m1-20261110-015921-899ab5a9\song-pre-m1.dump.partial'
+```
+
+归档包含 `public` 和 `analytics_private` 业务及统计数据、`auth.users`、`auth.identities`、`auth.mfa_factors` 等可恢复的 Auth 数据、迁移历史，以及 Storage 桶与对象元数据。保留 RLS、策略、对象权限和所有者定义。命令中列出的十张 Auth 表只保留定义，恢复后需要重新登录。完整恢复仍需兼容的 Supabase 版本、托管角色、扩展和 Auth 配置。归档已完整解码到本机空流，未执行数据库恢复。[Supabase 恢复说明](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore)
+
+数据库里的 Storage 元数据不能恢复图片字节。独立 ZIP 中的清单记录对象路径、UUID、长度和散列。若需恢复图片，应通过受支持的 Storage API 在隔离环境验证上传、内容类型、对象映射和哈希。未执行对象恢复。两个归档均复算了最终 SHA-256，NTFS 访问规则仅授予当前 Windows 用户和 SYSTEM。归档与详细回执留在本机，临时凭据和运行脚本已清理。
+
+首次导出和归档清单检查通过，离线读取因遗漏 `--file` 参数失败，临时归档未保留。修正后以 `pg_restore --file=- --exit-on-error` 完整读取复跑归档并校验通过。两次均无生产写入。
 
 ## 待确认的 SQL 与预计影响
 
