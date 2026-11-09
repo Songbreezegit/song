@@ -24,7 +24,7 @@ type User = {
 function setup() {
   vi.spyOn(console, 'log').mockImplementation(() => {});
   const project = { ref, organization_id: 'hzrxoowmgbfkxtechkoz', name: 'song-staging', region: 'ap-northeast-1', status: 'ACTIVE_HEALTHY' };
-  const switches = { loseKeyResponse: false, loseUserResponse: false, omitSecret: false, rejectUserDeletion: false };
+  const switches = { loseKeyResponse: false, loseUserResponse: false, omitSecret: false, rejectUserDeletion: false, rateLimitKeyDelete: false };
   const otherKey = { ...stagingRunKey(otherRunId), id: otherKeyId };
   const otherUser = {
     id: otherUserId, email: 'existing@example.invalid', email_confirmed_at: 'confirmed',
@@ -52,6 +52,10 @@ function setup() {
       }
     }
     if (url.pathname === `${keyRoot}/api-keys/${keyId}` && init.method === 'DELETE') {
+      if (switches.rateLimitKeyDelete) {
+        switches.rateLimitKeyDelete = false;
+        return new Response(null, { status: 429, headers: { 'retry-after': '2' } });
+      }
       deletions.push(keyId);
       keys.delete(keyId);
       return new Response(null, { status: 204 });
@@ -86,6 +90,7 @@ function setup() {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -101,6 +106,21 @@ describe('Staging credential cleanup', () => {
     expect(result).toBe('complete');
     expect(s.deletions).toEqual([...s.createdUsers, keyId]);
     expect([...s.users.values()]).toEqual([s.otherUser]);
+    expect([...s.keys.values()]).toEqual([s.otherKey]);
+  });
+
+  it('honors a rate limit before retrying cleanup of the exact run key', async () => {
+    const s = setup();
+    s.switches.rateLimitKeyDelete = true;
+    vi.useFakeTimers();
+    const result = withStagingResources(s.options, async () => 'complete');
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(s.switches.rateLimitKeyDelete).toBe(false);
+    expect(s.deletions).toEqual([]);
+    expect(s.keys.has(keyId)).toBe(true);
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(result).resolves.toBe('complete');
+    expect(s.deletions).toEqual([keyId]);
     expect([...s.keys.values()]).toEqual([s.otherKey]);
   });
 

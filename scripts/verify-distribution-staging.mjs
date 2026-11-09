@@ -136,10 +136,22 @@ async function main() {
       await target.guardRequest(url, method);
       signal.throwIfAborted();
     },
-    fetchStaging(request, init) {
+    async fetchStaging(request, init) {
       signal.throwIfAborted();
       const requestSignal = init?.signal ?? (request instanceof Request ? request.signal : null);
-      return target.fetchStaging(request, { ...init, signal: requestSignal ? AbortSignal.any([signal, requestSignal]) : signal });
+      try {
+        return await target.fetchStaging(request, { ...init, signal: requestSignal ? AbortSignal.any([signal, requestSignal]) : signal });
+      } catch (error) {
+        if (error instanceof ProbeError) {
+          record(error.status, error.message, { severity: error.severity, ...error.evidence });
+        } else {
+          const code = error.cause?.code;
+          record('BLOCKED', 'Staging HTTP request had no response', {
+            error_type: error.name, code: typeof code === 'string' && /^[A-Z0-9_]{1,64}$/.test(code) ? code : undefined,
+          });
+        }
+        throw error;
+      }
     },
   };
   const options = { global: { fetch: runTarget.fetchStaging } };

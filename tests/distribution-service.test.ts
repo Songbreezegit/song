@@ -91,7 +91,7 @@ it('validates before touching the database and maps conflict, relation and MFA f
   await expect(saveDistributionAccount(id, { ...createAccountDraft(), name: 'x', profile_url: 'javascript:alert(1)' }, null)).rejects.toThrow('HTTP');
   await expect(saveDistributionPost(id, { ...createPostDraft(), title: 'x', status: 'published' as 'draft' }, 1)).rejects.toThrow('状态');
   expect(backend.state.calls).toEqual([]);
-  for (const [code, message] of [['40001','已发生变化'],['23503','关联项目'],['42501','MFA']]) {
+  for (const [code, message] of [['PT409','已发生变化'],['40001','已发生变化'],['23503','关联项目'],['42501','MFA']]) {
     backend.state.respond = () => ({ data: null, error: { code } });
     await expect(saveDistributionPost(id, { ...createPostDraft(), title: 'x' }, 1)).rejects.toThrow(message);
   }

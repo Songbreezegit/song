@@ -50,7 +50,14 @@ export async function withStagingResources({ target, runId, makeAuthAdmin, signa
   } finally {
     async function cleanup(step, evidence, operation) {
       try {
-        await operation();
+        await operation().catch(async error => {
+          if (!(error instanceof ProbeError) || error.evidence.http !== 429) throw error;
+          const seconds = error.evidence.retry_after_seconds ?? 60;
+          if (seconds > 60) throw error;
+          record('NEXT', 'Retry scoped credential cleanup after rate limit', { ...scope, ...evidence, retry_after_seconds: seconds });
+          await new Promise(resolve => setTimeout(resolve, (seconds + 1) * 1000));
+          await operation();
+        });
         record('PASS', step, { ...scope, ...evidence });
       } catch (error) {
         cleanupErrors++;

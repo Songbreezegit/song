@@ -3,6 +3,7 @@
 提交供审查的文件：
 
 - 正向迁移：`supabase/migrations/20261108173132_add_private_distribution_m1.sql`
+- 版本冲突后续迁移：`supabase/migrations/20261109161000_report_distribution_version_conflicts.sql`
 - 回滚方案：`supabase/rollbacks/distribution_m1.sql`
 - 迁移后只读检查：`supabase/tests/distribution_security_smoke.sql`
 - 实际 PostgreSQL 验证：`tests/distribution-rls.test.ts`
@@ -38,6 +39,7 @@ and exists (
 - 标题 200 字、账号名称 100 字、正文 100000 字、标签最多 20 个且每个 50 字、备注 5000 字、定位 1000 字。数据库约束/触发器再次验证枚举、长度、标签及关联，RPC 拒绝未知字段、非字符串标签、重复/null 关联及超大 payload。
 - UUID 为结构化参数，项目 FK 使用现有 text id。SQL 和 PostgREST 不拼接表单值为可执行 SQL。React 按文本显示用户内容，链接和缩略图使用既有安全 URL 函数。
 - 版本及时间戳由触发器维护。UPDATE 使用预期版本，失配不会写入。一次编辑提交锁覆盖整个操作，创建重试保留 UUID，唯一键防止响应丢失后的重复创建。
+- 过期版本由保存 RPC 返回 `PT409`，PostgREST 映射为 HTTP 409。Staging 上原有的 `40001` 被 PostgREST 14 当作可重试事务错误，导致业务冲突请求超时。后续迁移保留函数签名、调用者权限、授权和策略，只替换该业务错误码。客户端兼容旧 `40001` 和新 `PT409`。[Supabase 关于 40001 重试的说明](https://supabase.com/kb/troubleshooting/high-cpu-and-infinite-transaction-retries-when-using-custom-error-codes-in-rpc-functions-77326b)
 - `distribution_private.touch_record()` 在首次归档时写入数据库时间并自动停用账号。已归档行的普通 UPDATE 返回 `55000`，包括清空归档时间、重新启用和修改资料。项目删除时，外键动作仍可清空 `project_id`，触发器仅放行嵌套更新且项目已删除、其他字段值一致的情况。稿件已有目标关联继续保留。
 - `save_distribution_post` 是 **SECURITY INVOKER**，固定空 search_path，所有对象带 schema。它在入口明确验证成员资格与 aal2，并继续受所有表的 RLS 约束。
 - public RPC 默认 EXECUTE 已从 PUBLIC/anon 撤销，仅授予 authenticated。私有触发函数不向客户端授予 EXECUTE。未新增 SECURITY DEFINER、开放视图、匿名 RPC、服务密钥、外部平台请求或任务队列。
@@ -56,9 +58,9 @@ and exists (
 ## 迁移审查与启用顺序
 
 1. 审查本次独立 SQL、权限矩阵、PostgreSQL 测试和回滚文件，核对生产表/策略与基线迁移是否一致。若有漂移先审查差异。
-2. 在隔离的兼容 Supabase 环境应用本次单个迁移，检查实际 GoTrue aal2、PostgREST 关联查询/RPC、Storage 删除行为和安全顾问。
+2. 在隔离的兼容 Supabase 环境按顺序应用 M1 迁移及版本冲突后续迁移，检查实际 GoTrue aal2、PostgREST 关联查询/RPC、Storage 删除行为和安全顾问。先从迁移历史核对已执行版本。
 3. 备份分发 schema/数据和相关媒体清单，确定恢复路径。首次安装没有分发业务数据，但仍需核对原表/策略快照。
-4. **由所有者明确批准生产迁移后**再执行已审查的单个 SQL，并记录实际迁移版本。不要直接对当前项目执行整个历史 `db push`：仓库安全文档已记录线上历史迁移版本号差异。
+4. **由所有者明确批准生产迁移后**再按版本执行已审查的 SQL，并记录实际迁移版本。仓库安全文档记录了线上历史迁移版本号差异，需按目标核对历史。
 5. 执行只读 smoke（五种身份上下文、真实 restrictive 表达式、权限及 RLS 标志）；它只查询，既不创建账号，也不插入测试业务记录。
 6. 所有者使用真实管理员 MFA 和批准的验收数据完成 CRUD、媒体关联及权限核验，再按单独批准的发布安排部署前端。
 
@@ -66,7 +68,7 @@ and exists (
 
 ## 幂等与回滚
 
-正向 SQL 包含事务、`CREATE TABLE/INDEX IF NOT EXISTS`、`CREATE OR REPLACE FUNCTION` 及只删除/重建本模块策略和触发器。重复执行保留数据和原有策略。回滚测试先创建引用媒体的稿件，确认回滚仅删除分发对象，保留原策略及 Storage 元数据，再重装迁移验证归档保护。已修复归档逻辑通过既有迁移重建同一触发函数，回滚脚本继续按原依赖顺序删除。
+正向 SQL 包含事务、`CREATE TABLE/INDEX IF NOT EXISTS`、`CREATE OR REPLACE FUNCTION` 及只删除/重建本模块策略和触发器。后续迁移在事务内替换同一 RPC，保留所有数据和策略。回滚测试先创建引用媒体的稿件，确认回滚仅删除分发对象，保留原策略及 Storage 元数据，再依序重装两条迁移验证归档保护。后续迁移未增加回滚对象。
 
 优先回退前端，保留新增私有表及 MFA 限制。确需移除 schema 时，先导出四张分发表及引用清单，审批后执行独立回滚文件。它按依赖顺序删除本模块对象，不使用 CASCADE，不动项目、文章、auth 或 storage；存在未来外部依赖时会失败而非连带删除。**回滚 SQL 会永久删除分发数据**，不自动执行；恢复数据需使用事先验证的备份。
 

@@ -9,7 +9,7 @@ function configured() {
 function check(error: Failure | null) {
   if (!error) return;
   if (['42P01', 'PGRST205', 'PGRST202', '42883'].includes(error.code || '')) throw new Error('内容分发尚未启用。请先审查并批准数据库迁移，再由管理员执行。');
-  if (['PGRST116', '40001', '23505'].includes(error.code || '')) throw new Error('记录已发生变化，或刚才的保存已经成功。请返回列表重新打开后再编辑。');
+  if (['PGRST116', 'PT409', '40001', '23505'].includes(error.code || '')) throw new Error('记录已发生变化，或刚才的保存已经成功。请返回列表重新打开后再编辑。');
   if (error.code === '23503') throw new Error('关联项目、账号或媒体已变化，请重新加载并确认选择。');
   if (error.code === '42501') throw new Error('当前会话无权访问分发数据，请确认管理员资格并完成 MFA。');
   throw new Error(error.message || '分发数据操作失败，请重试。');

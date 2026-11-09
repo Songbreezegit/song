@@ -20,17 +20,19 @@ try {
 }
 ```
 
-runner 在三个 SQL 检查点输出 `NEXT`。在另一个授权管理会话完成对应操作。对每个写操作重新核对目标 Ref、名称、组织、区域和状态，再在 runner 的标准输入发送该检查点名称。
+runner 在三个需要人工核对的检查点输出 `NEXT`。在另一个授权的 Staging 管理会话完成对应操作。对每个写操作重新核对目标 Ref、名称、组织、区域和状态，再在 runner 的标准输入发送该检查点名称。
 
 | 检查点 | 发送前应实际完成的操作 |
 | --- | --- |
 | `admin-registered` | 已应用前两条基础迁移。从 runner 记录中取得本次管理员 UUID 和 run ID，按 UUID、临时邮箱及 `auth.users.raw_app_meta_data` 中的 `distribution_staging_run_id` 核对该用户。仅登记管理员 A，确认 `admin_users` 恰有一行，普通用户 B 无登记。 |
-| `schema-ready` | 已通过真实 TOTP 并核对管理员因子为 verified。依序应用 MFA、analytics、distribution 迁移，已执行的迁移从管理面历史确认。检查策略、约束、invoker 和 FORCE RLS，刷新 PostgREST schema cache，执行只读 smoke。 |
+| `schema-ready` | 已通过真实 TOTP 并核对管理员因子为 verified。依序核对 MFA、analytics、distribution 和版本冲突后续迁移，只应用迁移历史中缺少的文件。检查策略、约束、invoker 和 FORCE RLS，首次安装后刷新 PostgREST schema cache，执行只读 smoke。 |
 | `database-clean` | 已通过 API 和界面用例，runner 已删自己的草稿和 WebP。使用它列出的两个账号 UUID 与精确 run ID 标记核对记录归属，再删除这两条归档测试记录。确认结果包含且仅包含该两个 UUID。 |
 
 浏览器冒烟在 `127.0.0.1:5198` 启动 Vite，配置来自进程内的 Staging 地址和公开密钥。浏览器只转发来自 Staging 的实际响应，限制访问本地预览和该项目。UI 检查结束后停止 Vite。
 
-runner 在正常完成、探针失败或收到可处理的中断信号后尝试清理本轮凭据。它先按 UUID、临时邮箱和 Auth 管理端写入的 run ID 删除用户，再按 UUID 和含完整 run ID 的密钥说明撤销临时 Secret API Key。每次删除前重新核对项目身份。创建响应丢失时，以预先记录的用户 UUID 或唯一完整的密钥标记找回资源。
+保存冲突探针需要已安装 `20261109161000_report_distribution_version_conflicts.sql`。它要求过期版本实际收到 HTTP 409 和 `PT409`，并回读稿件及两类关联确认未变。普通用户 aal2 和管理员 aal1 的关联 INSERT 也可能由 `BEFORE` 触发器先拒绝。此时探针仅接受该表对应的 `409/23503` 和精确触发器消息，并回读两份稿件的关联。
+
+runner 在正常完成、探针失败或收到可处理的中断信号后尝试清理本轮凭据。它先按 UUID、临时邮箱和 Auth 管理端写入的 run ID 删除用户，再按 UUID 和含完整 run ID 的密钥说明撤销临时 Secret API Key。每次删除前重新核对项目身份。创建响应丢失时，以预先记录的用户 UUID 或唯一完整的密钥标记找回资源。遇到 HTTP 429 时，runner 会等待限流窗口并重试一次，重试会重新核对归属。等待上限为 61 秒，超出范围或持续失败会记录残留。
 
 失败后停止后续探针。若进程被强制终止、服务不可达或资源归属无法确认，按日志中的 Project Ref、run ID 和资源 UUID 记录残留。人工清理前应核对同样的归属字段。退出后用管理面查询核对临时数据，保留 Staging 项目、已应用的 schema 和脱敏结果，清除本地凭据缓存。
 
@@ -113,6 +115,7 @@ npm run dev -- --host 127.0.0.1 --port 5176 --strictPort
 Invoke-DistributionLocalMigration 'supabase/migrations/20261004093439_enforce_admin_mfa.sql'
 Invoke-DistributionLocalMigration 'supabase/migrations/20261007052225_add_private_analytics.sql'
 Invoke-DistributionLocalMigration 'supabase/migrations/20261108173132_add_private_distribution_m1.sql'
+Invoke-DistributionLocalMigration 'supabase/migrations/20261109161000_report_distribution_version_conflicts.sql'
 docker exec $distributionDb psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -c "notify pgrst, 'reload schema'"
 ```
 

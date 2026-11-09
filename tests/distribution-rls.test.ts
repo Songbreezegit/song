@@ -11,6 +11,7 @@ const source = 'bbbbbbbb-1111-4111-8111-111111111111';
 const image = 'cccccccc-1111-4111-8111-111111111111';
 const otherImage = 'dddddddd-1111-4111-8111-111111111111';
 const migration = readFileSync('supabase/migrations/20261108173132_add_private_distribution_m1.sql', 'utf8');
+const versionConflictMigration = readFileSync('supabase/migrations/20261109161000_report_distribution_version_conflicts.sql', 'utf8');
 const payload = { title: 'Source', body: 'Text', tags: ['开发'], content_type: 'image_text', project_id: 'existing-project', promotion_goal: 'download', status: 'draft' };
 let originalPolicies: unknown[];
 
@@ -44,13 +45,16 @@ beforeAll(async () => {
   await db.exec(readFileSync('supabase/migrations/20261004093439_enforce_admin_mfa.sql', 'utf8'));
   originalPolicies = (await db.query("select schemaname,tablename,policyname,permissive,roles,cmd,qual,with_check from pg_policies order by schemaname,tablename,policyname")).rows;
   await db.exec(migration);
+  await db.exec(versionConflictMigration);
   await db.exec(`insert into distribution_accounts(id,platform,name,project_id) values ('${account}','xiaohongshu','Account','existing-project');`);
   await asAdmin(async () => { await save(); });
 }, 30000);
 afterAll(async () => { await db.close(); });
 
-it('reapplying the migration is idempotent, preserves rows and every preexisting policy', async () => {
+it('reapplying the migrations is idempotent, preserves rows and every preexisting policy', async () => {
   await db.exec(migration);
+  await db.exec(versionConflictMigration);
+  await db.exec(versionConflictMigration);
   expect((await db.query('select id from distribution_posts')).rows).toEqual([{ id: source }]);
   expect((await db.query("select schemaname,tablename,policyname,permissive,roles,cmd,qual,with_check from pg_policies where tablename not like 'distribution_%' order by schemaname,tablename,policyname")).rows).toEqual(originalPolicies);
 });
@@ -102,7 +106,10 @@ it('MFA admin performs source CRUD atomically, with optimistic versions and immu
   await asAdmin(async () => {
     const result = (await save(source, 1, { ...payload, title: 'Updated' })).rows[0].result;
     expect(result).toMatchObject({ id: source, version: 2, account_ids: [account], media_ids: [image] });
-    await expect(save(source, 1)).rejects.toThrow('Post changed');
+    await expect(save(source, 1, payload, [], [])).rejects.toMatchObject({ code: 'PT409', message: expect.stringContaining('Post changed') });
+    expect((await db.query('select title, version from distribution_posts where id=$1', [source])).rows).toEqual([{ title: 'Updated', version: 2 }]);
+    expect((await db.query('select account_id from distribution_post_targets where post_id=$1', [source])).rows).toEqual([{ account_id: account }]);
+    expect((await db.query('select media_id from distribution_post_media where post_id=$1', [source])).rows).toEqual([{ media_id: image }]);
     await expect(save()).rejects.toThrow('duplicate key');
     expect((await db.query('select count(*)::int count from distribution_posts')).rows).toEqual([{ count: 1 }]);
     expect((await db.query("update distribution_accounts set name='Updated',version=999,created_at='2000-01-01' where id=$1 returning version,created_at > '2020-01-01' as timestamp_ok", [account])).rows).toEqual([{ version: 2, timestamp_ok: true }]);
@@ -270,6 +277,7 @@ it('reviewed rollback removes only distribution objects and allows a clean reapp
   expect((await db.query('select * from storage.objects order by id')).rows).toEqual(mediaBefore.rows);
   expect((await db.query("select schemaname,tablename,policyname,permissive,roles,cmd,qual,with_check from pg_policies order by schemaname,tablename,policyname")).rows).toEqual(originalPolicies);
   await db.exec(migration);
+  await db.exec(versionConflictMigration);
   await db.query('insert into admin_users(user_id) values ($1) on conflict (user_id) do nothing', [admin]);
   await asAdmin(async () => {
     await db.query("insert into distribution_accounts(id,platform,name) values ($1,'other','Replay probe')", [account]);

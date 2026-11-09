@@ -8,13 +8,16 @@ const accountColumns = 'id,name,is_enabled,archived_at,version';
 const nestedColumns = 'id,title,version,distribution_post_targets(account_id),distribution_post_media(media_id,sort_order)';
 const uuidPattern = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 
-export function requireDenied(result, step, { anon = false, filter = false } = {}) {
+export function requireDenied(result, step, { anon = false, filter = false, relationMessage } = {}) {
   const { http, code } = apiEvidence(result);
   if (!http || http === 429 || http >= 500) throw new ProbeError('BLOCKED', step, { http, code });
   const rejected = (anon ? [401, 403] : [403]).includes(http) && code === '42501';
   const hidden = filter && !result.error && http === 200 && Array.isArray(result.data) && result.data.length === 0;
-  check(rejected || hidden, step, { http, code }, result.error ? 'P2' : 'P1');
-  return { step, http, code, ...(hidden ? { rows: 0 } : {}) };
+  // A BEFORE trigger can reject a link to a row hidden by RLS before WITH CHECK.
+  const triggerDenied = !anon && relationMessage && http === 409 && code === '23503'
+    && result.error?.message === relationMessage;
+  check(rejected || hidden || triggerDenied, step, { http, code }, result.error ? 'P2' : 'P1');
+  return { step, http, code, ...(hidden ? { rows: 0 } : {}), ...(triggerDenied ? { before_trigger: true } : {}) };
 }
 
 export async function findImage(bucket, folder, name) {
@@ -74,13 +77,21 @@ async function checkNegativeActor({ label, sdk, anon }, fixture) {
   const surfaces = [
     { table: 'distribution_accounts', key: 'id', value: accountId, insert: { id: probeId, platform: 'other', name: marker }, patch: { name: `${marker} denied` } },
     { table: 'distribution_posts', key: 'id', value: postId, insert: { id: probeId, ...payload(marker) }, patch: { title: `${marker} denied` } },
-    { table: 'distribution_post_targets', key: 'post_id', value: postId, insert: { post_id: otherPostId, account_id: accountId }, patch: { account_id: accountId } },
-    { table: 'distribution_post_media', key: 'post_id', value: postId, insert: { post_id: otherPostId, media_id: mediaId, sort_order: 0 }, patch: { sort_order: 1 } },
+    {
+      table: 'distribution_post_targets', key: 'post_id', value: postId,
+      insert: { post_id: otherPostId, account_id: accountId }, patch: { account_id: accountId },
+      relationMessage: 'Choose an enabled, unarchived account',
+    },
+    {
+      table: 'distribution_post_media', key: 'post_id', value: postId,
+      insert: { post_id: otherPostId, media_id: mediaId, sort_order: 0 }, patch: { sort_order: 1 },
+      relationMessage: 'Choose an existing media object from the media bucket',
+    },
   ];
   const evidence = [];
-  for (const { table, key, value, insert, patch } of surfaces) {
+  for (const { table, key, value, insert, patch, relationMessage } of surfaces) {
     evidence.push(requireDenied(await sdk.from(table).select(key).eq(key, value), `${table} SELECT`, { anon, filter: !anon }));
-    evidence.push(requireDenied(await sdk.from(table).insert(insert), `${table} INSERT`, { anon }));
+    evidence.push(requireDenied(await sdk.from(table).insert(insert), `${table} INSERT`, { anon, relationMessage }));
     evidence.push(requireDenied(await sdk.from(table).update(patch).eq(key, value).select(key), `${table} PATCH`, { anon, filter: !anon }));
     evidence.push(requireDenied(await sdk.from(table).delete().eq(key, value).select(key), `${table} DELETE`, { anon, filter: !anon }));
   }
@@ -110,17 +121,23 @@ export async function runDistributionApiChecks(target, client, negativeActors, r
   const source = dataOf(await save(client, postId, null, original, [accountId], [image.id]), 'Admin aal2 saves linked source');
   const other = payload(`${marker} secondary`);
   const secondary = dataOf(await save(client, otherPostId, null, other, [], []), 'Admin aal2 saves secondary draft');
-  const readSource = async () => dataOf(await posts().select(nestedColumns).eq('id', postId).single(), 'Read nested source');
+  const readPost = async id => dataOf(await posts().select(nestedColumns).eq('id', id).single(), 'Read nested post');
+  const readSource = () => readPost(postId);
   const snapshot = await readSource();
+  const secondarySnapshot = await readPost(otherPostId);
   check(snapshot.version === source.version
     && isDeepStrictEqual(snapshot.distribution_post_targets, [{ account_id: accountId }])
     && isDeepStrictEqual(snapshot.distribution_post_media, [{ media_id: image.id, sort_order: 0 }]), 'PostgREST resolves both embedded links');
+  check(secondarySnapshot.version === secondary.version
+    && secondarySnapshot.distribution_post_targets.length === 0 && secondarySnapshot.distribution_post_media.length === 0,
+    'Secondary draft starts without associations');
   const initial = dataOf(await accounts().select(accountColumns).eq('id', accountId).single(), 'Read active account');
   check(isDeepStrictEqual(initial, account), 'Admin aal2 reads account');
   record('PASS', 'Admin aal2 reads and writes sources, accounts and embedded links');
 
   for (const actor of negativeActors) await checkNegativeActor(actor, { accountId, postId, otherPostId, mediaId: image.id, marker });
   check(isDeepStrictEqual(await readSource(), snapshot), 'Negative API probes leave existing source untouched', {}, 'P1');
+  check(isDeepStrictEqual(await readPost(otherPostId), secondarySnapshot), 'Negative API probes leave the secondary draft and its associations untouched', {}, 'P1');
   const accountAfterNegative = dataOf(await accounts().select(accountColumns).eq('id', accountId).single(), 'Read account after negative probes');
   check(isDeepStrictEqual(accountAfterNegative, account), 'Negative API probes leave existing account untouched', {}, 'P1');
 
@@ -145,8 +162,10 @@ export async function runDistributionApiChecks(target, client, negativeActors, r
   check(updated.version === source.version + 1, 'Successful RPC advances version');
   const beforeFailure = await readSource();
   const conflict = await save(client, postId, source.version, original, [], []);
-  check(conflict.error?.code === '40001', 'Stale version returns a conflict', apiEvidence(conflict), 'P1');
   check(isDeepStrictEqual(await readSource(), beforeFailure), 'Version conflict leaves current row and links untouched', {}, 'P1');
+  const conflictEvidence = apiEvidence(conflict);
+  if (!conflictEvidence.http) throw new ProbeError('BLOCKED', 'No HTTP response from the stale-version probe');
+  check(conflictEvidence.http === 409 && conflictEvidence.code === 'PT409', 'Stale version returns HTTP 409', conflictEvidence, 'P1');
   const rollback = await save(client, postId, updated.version, original, [], [randomUUID()]);
   check(rollback.error?.code === '23503', 'Invalid media association rejected', apiEvidence(rollback));
   check(isDeepStrictEqual(await readSource(), beforeFailure), 'Invalid association rolls back source, version and both links', {}, 'P1');

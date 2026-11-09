@@ -69,7 +69,13 @@ export function createStagingTarget(ref, origin, token) {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined,
     }).catch(() => { throw new ProbeError('BLOCKED', 'Management API connection failed'); });
-    if (!response.ok) throw new ProbeError('BLOCKED', 'Management API request rejected', { method, endpoint: path || 'project', http: response.status });
+    if (!response.ok) {
+      const retry = response.headers.get('retry-after') ?? response.headers.get('x-ratelimit-reset');
+      const retryAfterSeconds = response.status === 429 && /^\d{1,5}$/.test(retry ?? '') ? Number(retry) : undefined;
+      throw new ProbeError('BLOCKED', 'Management API request rejected', {
+        method, endpoint: path || 'project', http: response.status, retry_after_seconds: retryAfterSeconds,
+      });
+    }
     const content = await response.text();
     return content ? JSON.parse(content) : null;
   }

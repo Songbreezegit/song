@@ -40,7 +40,7 @@ export async function distributionFixture(page: Page, role: 'admin' | 'member' =
       if (table === 'save_distribution_post') {
         const existing = state.posts.find(post => post.id === body.p_id);
         if (body.p_version === null && existing) return failure('23505','Duplicate id');
-        if (body.p_version !== null && (!existing || existing.version !== body.p_version)) return failure('40001','Version conflict');
+        if (body.p_version !== null && (!existing || existing.version !== body.p_version)) return failure('PT409','Version conflict',409);
         if (body.p_account_ids.some((id: string) => !state.accounts.some(account => account.id === id)) || body.p_media_ids.some((id: string) => !backend.media.some(item => item.id === id))) return failure('23503','Missing relation');
         const row = { id: body.p_id, ...body.p_post, account_ids: body.p_account_ids, media_ids: body.p_media_ids, version: (existing?.version || 0) + 1, created_at: existing?.created_at || now, updated_at: now };
         if (existing) Object.assign(existing,row); else state.posts.push(row);
