@@ -66,7 +66,7 @@ function VariantWorkspace({ postId }: { postId: string }) {
             <div className="variant-target-info">
               <div className="variant-meta"><span className="distribution-platform">{platformLabels[platform]}</span>{variant && <DistributionStatus status={variant.status} />}{reason && <span className="variant-badge">历史 / 只读</span>}</div>
               <h3>{name}</h3>
-              <p>{variant ? <>{variant.title} · 稿件 v{variant.version}{variant.source_version < workspace.source.version && <span className="variant-stale"> · 源内容已更新</span>}</> : '尚未生成平台稿'}</p>
+              <p>{variant ? <>{variant.title} · 稿件 v{variant.version}{variant.source_version < workspace.source.version && <span className="variant-stale"> · 源版本待查看</span>}</> : '尚未生成平台稿'}</p>
               {reason && <p>{reason}</p>}
             </div>
             {variant ? <Link className="admin-btn admin-btn-secondary" to={`${base}/${variant.id}`} aria-label={`${reason ? '查看平台稿' : '编辑平台稿'}：${name}`}>{reason ? '查看稿件' : '编辑稿件'}</Link>

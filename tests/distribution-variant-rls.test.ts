@@ -40,6 +40,8 @@ const save = (id: string, version: number, media: ReturnType<typeof link>[] = [l
   variantRpc('select public.save_distribution_variant($1,$2,$3::jsonb,$4::jsonb) result', [id, version, JSON.stringify(payload), JSON.stringify(media)]);
 const sync = (id: string, version: number, sourceVersion: number, fields: string[]) =>
   variantRpc('select public.sync_distribution_variant($1,$2,$3,$4::text[]) result', [id, version, sourceVersion, fields]);
+const retain = (id: string, version: number, sourceVersion: number, fields: string[]) =>
+  variantRpc('select public.retain_distribution_variant_source($1,$2,$3,$4::text[]) result', [id, version, sourceVersion, fields]);
 
 async function fixtures(platform = 'xiaohongshu', media = [image, cover]) {
   const source = randomUUID(), account = randomUUID(), other = randomUUID();
@@ -50,6 +52,8 @@ async function fixtures(platform = 'xiaohongshu', media = [image, cover]) {
 
 let oldSchema: unknown[];
 let oldRows: unknown[];
+let beforeReviewUpgrade: DistributionVariantRecord;
+let afterReviewUpgrade: DistributionVariantRecord;
 const schemaBefore = () => db.query(`select schemaname,tablename,policyname,permissive,roles,cmd,qual,with_check
  from pg_policies where tablename not in ('distribution_variants','distribution_variant_media')
  order by schemaname,tablename,policyname`);
@@ -93,6 +97,18 @@ beforeAll(async () => {
   oldSchema = (await schemaBefore()).rows;
   oldRows = (await existingRows()).rows;
   await db.exec(migration('20261110100401_add_distribution_platform_variants'));
+  const preexisting = await asAdmin(async () => {
+    const { source, account } = await fixtures();
+    const draft = await create(randomUUID(), source, account);
+    const saved = await save(draft.id, draft.version, [link(cover, true)]);
+    return { source, account, saved };
+  });
+  beforeReviewUpgrade = preexisting.saved;
+  await db.exec(migration('20261110114036_review_distribution_source_fields'));
+  await asAdmin(async () => {
+    afterReviewUpgrade = await create(preexisting.saved.id, preexisting.source, preexisting.account);
+    await db.query('delete from distribution_posts where id=$1', [preexisting.source]);
+  });
 }, 30000);
 afterAll(async () => { await db.close(); });
 
@@ -100,6 +116,10 @@ it('keeps every old policy and source row without generating variants', async ()
   expect((await schemaBefore()).rows).toEqual(oldSchema);
   expect((await existingRows()).rows).toEqual(oldRows);
   expect((await db.query('select id from distribution_variants')).rows).toEqual([]);
+});
+
+it('upgrades a populated M2 without rewriting the saved draft or its source baseline', () => {
+  expect(afterReviewUpgrade).toEqual({ ...beforeReviewUpgrade, source_retained_fields: {} });
 });
 
 it('runs the M2 read-only smoke across five policy contexts', async () => {
@@ -121,6 +141,7 @@ it.each([{ role: 'anon', user: '', aal: '' }, { role: 'authenticated', user: mem
     await expect(create(randomUUID(), legacyPost, legacyAccount)).rejects.toMatchObject({ code: '42501' });
     await expect(save(draft.id, draft.version)).rejects.toMatchObject({ code: '42501' });
     await expect(sync(draft.id, draft.version, 2, ['body'])).rejects.toMatchObject({ code: '42501' });
+    await expect(retain(draft.id, draft.version, 2, [])).rejects.toMatchObject({ code: '42501' });
   });
 });
 
@@ -133,8 +154,8 @@ it('blocks an accidental permissive policy without MFA and keeps RPCs invoker-on
     });
   } finally { await db.exec('drop policy accidentally_open on distribution_variants'); }
   const { rows } = await db.query(`select proname, prosecdef, proconfig, has_function_privilege('anon',oid,'execute') anon
-    from pg_proc where proname in ('create_distribution_variant','save_distribution_variant','sync_distribution_variant')`);
-  expect(rows).toHaveLength(3);
+    from pg_proc where proname in ('create_distribution_variant','save_distribution_variant','sync_distribution_variant','retain_distribution_variant_source')`);
+  expect(rows).toHaveLength(4);
   for (const row of rows) expect(row).toMatchObject({ prosecdef: false, anon: false, proconfig: ['search_path=""'] });
 });
 
@@ -174,17 +195,92 @@ it('keeps authored fields after source edits and syncs selected changes using bo
   await asAdmin(async () => {
     const { source, account, other } = await fixtures();
     const a = await create(randomUUID(), source, account);
-    const edited = await save(a.id, a.version, [link(image, true), link(cover)]);
+    const annotated = { ...link(image, true), aspect_ratio_hint: '3:4', processing_notes: 'Keep the center' };
+    const edited = await save(a.id, a.version, [annotated, link(cover)]);
     const next = await savePost(source, [account, other], [cover, image], 1, { ...postPayload, title: 'Source v2', body: 'New source body' });
     expect(await create(a.id, source, account)).toEqual(edited);
     await expect(sync(a.id, edited.version, 1, ['body'])).rejects.toMatchObject({ code: 'PT409' });
     await expect(sync(a.id, edited.version, next.version, [])).rejects.toMatchObject({ code: '22023' });
     await expect(sync(a.id, edited.version, next.version, ['tags'])).rejects.toMatchObject({ code: '22023' });
+    await expect(retain(a.id, edited.version, next.version, [])).rejects.toMatchObject({ code: '22023' });
+    await expect(db.query('update distribution_variants set source_version=$2 where id=$1', [a.id, next.version]))
+      .rejects.toMatchObject({ code: '22023' });
     const synced = await sync(a.id, edited.version, next.version, ['body', 'media_ids']);
-    expect(synced).toMatchObject({ title: variantPayload.title, body: 'New source body', source_version: 2, version: 3, status: 'draft' });
-    expect(synced.media).toEqual([link(cover), link(image, true)]);
-    expect(synced.source_snapshot.title).toBe('Source v2');
+    expect(synced).toMatchObject({ title: variantPayload.title, body: 'New source body', source_version: 1, version: 3, status: 'draft' });
+    expect(synced.media).toEqual([link(cover), annotated]);
+    expect(synced.source_snapshot).toMatchObject({ title: 'Source', body: 'New source body', media_ids: [cover, image] });
     await expect(sync(a.id, edited.version, next.version, ['body'])).rejects.toMatchObject({ code: 'PT409' });
+    const completed = await sync(a.id, synced.version, next.version, ['title']);
+    expect(completed).toMatchObject({ title: 'Source v2', body: 'New source body', source_version: 2, version: 4,
+      source_snapshot: { title: 'Source v2', body: 'New source body' }, media: synced.media });
+  });
+});
+
+it('acknowledges only a changed source version without changing saved platform fields or readiness', async () => {
+  await asAdmin(async () => {
+    const { source, account, other } = await fixtures();
+    const a = await create(randomUUID(), source, account);
+    const ready = await save(a.id, a.version, [link(image, true)], { ...variantPayload, status: 'ready' });
+    const next = await savePost(source, [account, other], [image, cover], 1, { ...postPayload, promotion_goal: 'download' });
+    const confirmed = await retain(a.id, ready.version, next.version, []);
+    expect(confirmed).toEqual({ ...ready, version: ready.version + 1, source_version: next.version,
+      updated_at: confirmed.updated_at });
+    await expect(retain(a.id, confirmed.version, next.version, [])).rejects.toMatchObject({ code: 'PT409' });
+  });
+});
+
+it('tracks partially reviewed and explicitly retained fields across successive source versions', async () => {
+  await asAdmin(async () => {
+    const { source, account, other } = await fixtures();
+    const a = await create(randomUUID(), source, account);
+    const edited = await save(a.id, a.version);
+    const sourceV2 = { ...postPayload, title: 'Source v2', body: 'Body v2' };
+    await savePost(source, [account, other], [image, cover], 1, sourceV2);
+    const partial = await sync(a.id, edited.version, 2, ['body']);
+    const sourceV3 = { ...sourceV2, title: 'Source v3', body: 'Body v3' };
+    await savePost(source, [account, other], [image, cover], 2, sourceV3);
+    await expect(retain(a.id, partial.version, 2, ['title'])).rejects.toMatchObject({ code: 'PT409' });
+    const kept = await retain(a.id, partial.version, 3, ['title']);
+    expect(kept).toMatchObject({ title: variantPayload.title, body: 'Body v2', source_version: 1,
+      source_snapshot: { title: 'Source v3', body: 'Body v2' }, source_retained_fields: { title: 3 } });
+    const complete = await sync(a.id, kept.version, 3, ['body']);
+    expect(complete).toMatchObject({ title: variantPayload.title, body: 'Body v3', source_version: 3, source_retained_fields: { title: 3 } });
+    await savePost(source, [account, other], [image, cover], 3, { ...sourceV3, title: 'Source v4' });
+    expect(await sync(a.id, complete.version, 4, ['title'])).toMatchObject({
+      title: 'Source v4', body: 'Body v3', source_version: 4, source_retained_fields: {},
+    });
+  });
+});
+
+it('rejects concurrent source and platform revisions without losing either saved aggregate', async () => {
+  const { source, account, other, a } = await asAdmin(async () => {
+    const target = await fixtures();
+    const a = await create(randomUUID(), target.source, target.account);
+    await savePost(target.source, [target.account, target.other], [image, cover], 1, { ...postPayload, body: 'Source v2' });
+    return { ...target, a };
+  });
+  await asAdmin(() => savePost(source, [account, other], [image, cover], 2, { ...postPayload, body: 'Source v3' }));
+  await asAdmin(async () => {
+    await expect(sync(a.id, a.version, 2, ['body'])).rejects.toMatchObject({ code: 'PT409' });
+    expect(await create(a.id, source, account)).toEqual(a);
+  });
+  const edited = await asAdmin(() => save(a.id, a.version));
+  await asAdmin(async () => {
+    await expect(sync(a.id, a.version, 3, ['body'])).rejects.toMatchObject({ code: 'PT409' });
+    await expect(retain(a.id, a.version, 3, ['body'])).rejects.toMatchObject({ code: 'PT409' });
+    expect(await create(a.id, source, account)).toEqual(edited);
+    expect(await sync(a.id, edited.version, 3, ['body'])).toMatchObject({ title: variantPayload.title, body: 'Source v3' });
+  });
+});
+
+it('rolls back source review metadata and changed media if the resulting ready draft is invalid', async () => {
+  await asAdmin(async () => {
+    const { source, account, other } = await fixtures();
+    const draft = await create(randomUUID(), source, account);
+    const ready = await save(draft.id, draft.version, [link(image, true)], { ...variantPayload, status: 'ready' });
+    await savePost(source, [account, other], [], 1, { ...postPayload, body: 'New body' });
+    await expect(sync(draft.id, ready.version, 2, ['body', 'media_ids'])).rejects.toMatchObject({ code: '22023' });
+    expect(await create(draft.id, source, account)).toEqual(ready);
   });
 });
 

@@ -1,9 +1,9 @@
 import { useCallback, useMemo, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { RefreshCw, Save } from 'lucide-react';
-import { getDistributionVariant, saveDistributionVariant, syncDistributionVariant } from '../../services/distributionVariantService';
+import { getDistributionVariant, reviewDistributionVariantSource, saveDistributionVariant } from '../../services/distributionVariantService';
 import { listMedia } from '../../services/mediaService';
-import type { DistributionVariantField, DistributionVariantInput } from '../../types/distribution';
+import type { DistributionSourceReviewAction, DistributionVariantField, DistributionVariantInput } from '../../types/distribution';
 import { AdminEditorHeader } from '../components/AdminEditorChrome';
 import { AdminFeedback } from '../components/AdminFeedback';
 import { AdminLoading } from '../components/AdminLoading';
@@ -71,9 +71,11 @@ function VariantEditor({ postId, variantId }: { postId: string; variantId: strin
     if (error) editor.setFeedback({ type: 'error', message: error.message });
     else void editor.save();
   };
-  const sync = (fields: DistributionVariantField[]) => {
+  const reviewSource = (action: DistributionSourceReviewAction, fields: DistributionVariantField[]) => {
     if (disabled || editor.isDirty) return Promise.resolve(false);
-    return editor.commit('sync', () => syncDistributionVariant(record.id, record.version, data.source.version, fields), '已同步选中的源内容。');
+    const message = action === 'sync' ? '已同步选中的源内容。'
+      : fields.length ? '已保留选中字段的平台稿内容。' : '已确认源版本，平台稿内容未变。';
+    return editor.commit('sync', () => reviewDistributionVariantSource(action, record.id, record.version, data.source.version, fields), message);
   };
   const copy = async (part: VariantCopyPart) => {
     try {
@@ -120,7 +122,7 @@ function VariantEditor({ postId, variantId }: { postId: string; variantId: strin
     {options.loading && <AdminLoading message="正在重新读取内容源和媒体…" />}
     {readOnly && <p className="variant-context" role="status">{readOnly}</p>}
     <VariantSyncReview key={`${record.source_version}/${data.source.version}`} changes={changes} sourceVersion={data.source.version}
-      savedVersion={record.source_version} items={data.media} disabled={disabled} dirty={editor.isDirty} onSync={sync} />
+      savedVersion={record.source_version} items={data.media} disabled={disabled} dirty={editor.isDirty} onReview={reviewSource} />
     <div className="variant-editor-grid">
       <form id="distribution-variant-form" onSubmit={submit}><fieldset className="admin-editor-fields" disabled={disabled}>
         <section className="admin-card">

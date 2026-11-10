@@ -20,7 +20,7 @@ const variant = (): DistributionVariantRecord => ({
   id: variantId, post_id: postId, account_id: accountId, platform: 'xiaohongshu', title: '独立标题',
   body: '<script>文本原样</script>\n第二行', tags: ['🌿,标签', '带空格的 标签'], content_type: 'image_text',
   source_version: 1, source_snapshot: { title: '源标题', body: '源正文', tags: [...source().tags], content_type: 'image_text', media_ids: [image] },
-  status: 'draft', media: [newVariantMedia(image)], version: 3,
+  source_retained_fields: {}, status: 'draft', media: [newVariantMedia(image)], version: 3,
   created_at: '2026-11-10T00:00:00Z', updated_at: '2026-11-10T00:00:00Z',
 });
 const account = (): DistributionAccountRecord => ({
@@ -50,6 +50,7 @@ describe('M2 draft contracts', () => {
   it('only allows explicit, unique sync fields', () => {
     expect(validateVariantSyncFields(['title', 'media_ids'])).toEqual(['title', 'media_ids']);
     expect(() => validateVariantSyncFields([])).toThrow('至少');
+    expect(validateVariantSyncFields([], true)).toEqual([]);
     expect(() => validateVariantSyncFields(['tags', 'tags'])).toThrow('重复');
     expect(() => validateVariantSyncFields(['status'])).toThrow('无效');
   });
@@ -57,12 +58,25 @@ describe('M2 draft contracts', () => {
   it('compares stored source snapshots without replacing manually written text', () => {
     const draft = variant();
     const updated = { ...source(), version: 2, title: '新版源', media_ids: [other, image] };
-    expect(compareVariantSource(source(), draft)).toEqual({ stale: false, fields: [] });
+    expect(compareVariantSource(source(), draft)).toEqual({ stale: false, fields: [], retained: [] });
     expect(compareVariantSource(updated, draft)).toMatchObject({ stale: true, fields: [
       { field: 'title', before: '源标题', current: '新版源', variant: '独立标题', customized: true },
       { field: 'media_ids', before: [image], current: [other, image], variant: [image], customized: false },
     ] });
     expect(draft.title).toBe('独立标题');
+  });
+
+  it('keeps unresolved differences, version-only changes and retained decisions distinct', () => {
+    const draft = variant();
+    const updated = { ...source(), version: 2, title: '新版源', body: '新版正文' };
+    draft.source_snapshot.body = updated.body;
+    expect(compareVariantSource(updated, draft)).toMatchObject({ stale: true, fields: [{ field: 'title' }], retained: [] });
+    draft.source_snapshot.title = updated.title;
+    draft.source_retained_fields.title = 2;
+    draft.source_version = 2;
+    expect(compareVariantSource({ ...updated, version: 3, promotion_goal: 'download' }, draft)).toEqual({
+      stale: true, fields: [], retained: [{ field: 'title', sourceVersion: 2 }],
+    });
   });
 
   it('classifies archived, disabled, detached and platform-changed drafts', () => {

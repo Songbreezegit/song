@@ -65,7 +65,82 @@ test('shows source changes and syncs selected fields while keeping manual conten
   await expect(body(page)).toHaveValue('新版源正文');
   await expect(title(page)).toHaveValue('平台稿保留这个标题');
   expect(fixture.variantState.writes.at(-1)?.input.p_fields).toEqual(['body']);
+  expect(fixture.variantState.variants[0].source_version).toBe(1);
+  await expect(page.getByRole('checkbox', { name: '同步正文', exact: true })).toHaveCount(0);
+  await page.getByRole('checkbox', { name: '同步标题', exact: true }).check();
+  await page.getByRole('button', { name: '同步选中内容' }).click();
+  await expect(title(page)).toHaveValue('新版源标题');
+  await expect(body(page)).toHaveValue('新版源正文');
+  expect(fixture.variantState.writes.at(-1)?.input.p_fields).toEqual(['title']);
   expect(fixture.variantState.variants[0].source_version).toBe(2);
+  await expect(page.getByRole('heading', { name: '源内容已更新' })).toHaveCount(0);
+});
+
+test('confirms a metadata-only source revision without editing the saved variant', async ({ page }) => {
+  const fixture = await distributionVariantsFixture(page);
+  const saved = { ...fixture.variantState.variants[0], status: 'ready' as const };
+  fixture.variantState.variants[0].status = 'ready';
+  fixture.source.promotion_goal = 'download';
+  fixture.source.version = 2;
+  await open(page, first);
+  await expect(page.getByRole('heading', { name: '仅源版本变化' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '源内容已更新' })).toHaveCount(0);
+  await page.getByRole('button', { name: '确认版本变化' }).click();
+  await expect(page.getByText('已确认源版本，平台稿内容未变。')).toBeVisible();
+  expect(fixture.variantState.writes).toEqual([{ name: 'retain_distribution_variant_source',
+    input: { p_id: firstVariant, p_version: 1, p_source_version: 2, p_fields: [] } }]);
+  expect(fixture.variantState.variants[0]).toEqual({ ...saved, source_version: 2, version: 2 });
+  await page.reload();
+  await expect(page.getByRole('heading', { name: '仅源版本变化' })).toHaveCount(0);
+  await expect(page.getByText('已核对至内容源 v2。')).toBeVisible();
+});
+
+test('retains a selected manual field and reviews it again only after the source changes', async ({ page }) => {
+  const fixture = await distributionVariantsFixture(page);
+  fixture.variantState.variants[0].title = '精修标题';
+  fixture.source.title = '来源标题 v2';
+  fixture.source.version = 2;
+  await open(page, first);
+  await page.getByText('查看变化并选择同步', { exact: true }).click();
+  await page.getByRole('checkbox', { name: '同步标题', exact: true }).check();
+  await page.getByRole('button', { name: '保留选中字段的平台稿内容' }).click();
+  await expect(page.getByText(/已选择保留平台稿内容 标题（源 v2）/)).toBeVisible();
+  await page.reload();
+  await expect(title(page)).toHaveValue('精修标题');
+  await expect(page.getByText(/已选择保留平台稿内容 标题（源 v2）/)).toBeVisible();
+  fixture.source.title = '来源标题 v3';
+  fixture.source.version = 3;
+  await page.getByRole('button', { name: '刷新内容源', exact: true }).click();
+  await page.getByText('查看变化并选择同步', { exact: true }).click();
+  await expect(page.getByText('来源标题 v3', { exact: true })).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: '同步标题', exact: true })).not.toBeChecked();
+  await expect(title(page)).toHaveValue('精修标题');
+});
+
+for (const competing of ['source', 'variant'] as const) test(`retains editor values and selections after a concurrent ${competing} change`, async ({ page }) => {
+  const fixture = await distributionVariantsFixture(page);
+  const initial = fixture.variantState.variants[0].title;
+  fixture.source.title = '来源标题 v2';
+  fixture.source.version = 2;
+  fixture.variantState.writeDelay = 900;
+  await open(page, first);
+  await page.getByText('查看变化并选择同步', { exact: true }).click();
+  const field = page.getByRole('checkbox', { name: '同步标题', exact: true });
+  await field.check();
+  await page.getByRole('button', { name: '同步选中内容' }).click();
+  await expect.poll(() => fixture.variantState.writes.length).toBe(1);
+  if (competing === 'source') {
+    fixture.source.version++;
+    fixture.source.title = '另一个会话的源标题';
+  } else {
+    fixture.variantState.variants[0].version++;
+    fixture.variantState.variants[0].title = '另一个会话的平台稿';
+  }
+  await expect(page.getByRole('alert')).toContainText('平台稿、目标账号或内容源已有变化');
+  await expect(title(page)).toHaveValue(initial);
+  await expect(field).toBeChecked();
+  await expect(page.getByText('来源标题 v2', { exact: true })).toBeVisible();
+  expect(fixture.variantState.variants[0].source_version).toBe(1);
 });
 
 test('reuses the UUID when a create succeeded but its response was lost', async ({ page }) => {

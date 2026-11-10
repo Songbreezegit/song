@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowDown, ArrowUp, Copy, Download, Plus, X } from 'lucide-react';
 import { safeImageUrl } from '../../../lib/safeUrl';
 import type { MediaItem } from '../../../services/mediaService';
-import { distributionAspectRatios, type DistributionMediaKind, type DistributionRuleIssue, type DistributionVariantField, type DistributionVariantInput, type DistributionVariantMedia, type DistributionVariantRecord } from '../../../types/distribution';
+import { distributionAspectRatios, type DistributionMediaKind, type DistributionRuleIssue, type DistributionSourceReviewAction, type DistributionVariantField, type DistributionVariantInput, type DistributionVariantMedia, type DistributionVariantRecord } from '../../../types/distribution';
 import { DistributionMediaPicker } from './DistributionMediaPicker';
 import { contentTypeLabels } from './distributionForm';
 import type { DistributionPlatformProfile } from './platforms/registry';
@@ -155,9 +155,9 @@ export function VariantPreview({ saved, draft, profile, accountName, items, disa
   </section>;
 }
 
-export function VariantSyncReview({ changes, sourceVersion, savedVersion, items, disabled, dirty, onSync }: {
+export function VariantSyncReview({ changes, sourceVersion, savedVersion, items, disabled, dirty, onReview }: {
   changes: ReturnType<typeof compareVariantSource>; sourceVersion: number; savedVersion: number; items: MediaItem[];
-  disabled: boolean; dirty: boolean; onSync: (fields: DistributionVariantField[]) => Promise<boolean>;
+  disabled: boolean; dirty: boolean; onReview: (action: DistributionSourceReviewAction, fields: DistributionVariantField[]) => Promise<boolean>;
 }) {
   const [selection, setSelection] = useState<DistributionVariantField[]>([]);
   const format = (field: DistributionVariantField, value: string | string[]) => {
@@ -166,14 +166,21 @@ export function VariantSyncReview({ changes, sourceVersion, savedVersion, items,
     if (Array.isArray(value)) return value.join(' · ') || '无标签';
     return value || '空';
   };
-  if (!changes.stale) return <p className="variant-source-version">基于内容源 v{savedVersion}。</p>;
-  const sync = async () => { if (await onSync(selection)) setSelection([]); };
+  const retained = changes.retained.length > 0 && <p className="variant-source-version">
+    已选择保留平台稿内容 {changes.retained.map(({ field, sourceVersion }) => `${variantFieldLabels[field]}（源 v${sourceVersion}）`).join('、')}
+  </p>;
+  if (!changes.stale) return <><p className="variant-source-version">已核对至内容源 v{savedVersion}。</p>{retained}</>;
+  const hasChanges = changes.fields.length > 0;
+  const review = async (action: DistributionSourceReviewAction) => {
+    if (await onReview(action, selection)) setSelection([]);
+  };
   return <section className="admin-card variant-sync-card">
-    <div className="admin-card-header"><h2 className="admin-card-title">源内容已更新</h2><span className="variant-badge">v{savedVersion} → v{sourceVersion}</span></div>
-    {changes.fields.length ? <details className="variant-details">
+    <div className="admin-card-header"><h2 className="admin-card-title">{hasChanges ? '源内容已更新' : '仅源版本变化'}</h2><span className="variant-badge">v{savedVersion} → v{sourceVersion}</span></div>
+    {retained}
+    {dirty && <p className="admin-label-desc">请先保存或放弃当前编辑，再处理源版本。</p>}
+    {hasChanges ? <details className="variant-details">
       <summary>查看变化并选择同步</summary>
-      <p className="admin-label-desc">只同步选中的字段。其余平台稿内容保留。同步素材时保留仍引用的封面和说明，同步后的状态为草稿。</p>
-      {dirty && <p className="admin-label-desc">请先保存或放弃当前编辑，再同步源内容。</p>}
+      <p className="admin-label-desc">可同步选中字段，也可确认保留平台稿中的值。未选中的差异会留在这里。同步媒体时保留仍被引用的封面和处理说明。</p>
       <fieldset className="admin-editor-fields" disabled={disabled || dirty}>
         {changes.fields.map(({ field, before, current, variant, customized }) => <div className="variant-diff" key={field}>
           <label className="distribution-checkbox">
@@ -182,13 +189,20 @@ export function VariantSyncReview({ changes, sourceVersion, savedVersion, items,
             <strong>{variantFieldLabels[field]}</strong>{customized && <span className="variant-badge">包含人工修改</span>}
           </label>
           <div className="variant-diff-values">
-            <div><small>上次同步时的源</small><p>{format(field, before)}</p></div>
+            <div><small>上次核对的源值</small><p>{format(field, before)}</p></div>
             <div><small>当前源</small><p>{format(field, current)}</p></div>
             <div><small>已保存平台稿</small><p>{format(field, variant)}</p></div>
           </div>
         </div>)}
-        <button type="button" className="admin-btn admin-btn-primary" disabled={!selection.length} onClick={() => void sync()}>同步选中内容</button>
+        <div className="variant-inline">
+          <button type="button" className="admin-btn admin-btn-primary" disabled={!selection.length} onClick={() => void review('sync')}>同步选中内容</button>
+          <button type="button" className="admin-btn admin-btn-secondary" disabled={!selection.length} onClick={() => void review('retain')}>保留选中字段的平台稿内容</button>
+        </div>
       </fieldset>
-    </details> : <p className="admin-label-desc">源版本发生变化，标题、正文、标签、类型和素材顺序均与上次记录一致。</p>}
+    </details> : <>
+      <p className="admin-label-desc">标题、正文、标签、内容类型和素材顺序均无待处理差异。确认仅更新源版本记录。</p>
+      <button type="button" className="admin-btn admin-btn-secondary" disabled={disabled || dirty}
+        onClick={() => void onReview('retain', [])}>确认版本变化</button>
+    </>}
   </section>;
 }

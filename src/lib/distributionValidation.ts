@@ -116,8 +116,8 @@ export function validateDistributionVariant(value: unknown): DistributionVariant
   };
 }
 
-export function validateVariantSyncFields(value: unknown): DistributionVariantField[] {
-  if (!Array.isArray(value) || !value.length || value.length > distributionVariantFields.length) return fail('请至少选择一项源内容变化。');
+export function validateVariantSyncFields(value: unknown, allowEmpty = false): DistributionVariantField[] {
+  if (!Array.isArray(value) || (!allowEmpty && !value.length) || value.length > distributionVariantFields.length) return fail('请至少选择一项源内容变化。');
   const fields = value.map(field => choice(field, distributionVariantFields, '同步字段'));
   if (new Set(fields).size !== fields.length) return fail('同步字段不能重复。');
   return fields;

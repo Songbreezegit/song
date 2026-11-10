@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { newVariantMedia } from '../../../src/admin/features/distribution/variantModel';
-import type { DistributionPostRecord, DistributionSourceSnapshot, DistributionVariantField, DistributionVariantRecord } from '../../../src/types/distribution';
+import { distributionVariantFields, type DistributionPostRecord, type DistributionSourceSnapshot, type DistributionVariantField, type DistributionVariantRecord } from '../../../src/types/distribution';
 import { accountId, accountRecord, distributionFixture, mediaId, postId, postRecord } from './distribution';
 
 export const secondAccount = 'abababab-1111-4111-8111-111111111111';
@@ -19,7 +19,7 @@ function snapshot(source: DistributionPostRecord): DistributionSourceSnapshot {
 export function variantRecord(source: DistributionPostRecord, fields: Partial<DistributionVariantRecord> = {}): DistributionVariantRecord {
   const { media_ids, ...content } = snapshot(source);
   return { ...content, id: firstVariant, post_id: source.id, account_id: accountId, platform: 'xiaohongshu',
-    status: 'draft', source_version: source.version, version: 1, source_snapshot: snapshot(source),
+    status: 'draft', source_version: source.version, version: 1, source_snapshot: snapshot(source), source_retained_fields: {},
     media: media_ids.map(newVariantMedia), created_at: now, updated_at: now, ...fields };
 }
 
@@ -51,7 +51,7 @@ export async function distributionVariantsFixture(page: Page, seed = true) {
     const request = route.request();
     const url = new URL(request.url());
     const name = url.pathname.split('/').at(-1) ?? '';
-    if (!['distribution_variants','create_distribution_variant','save_distribution_variant','sync_distribution_variant'].includes(name)) return route.fallback();
+    if (!['distribution_variants','create_distribution_variant','save_distribution_variant','sync_distribution_variant','retain_distribution_variant_source'].includes(name)) return route.fallback();
     const fail = (code: string, status: number) => route.fulfill({ status, json: { code, message: 'Test transport response' } });
     if (m1.backend.aal !== 'aal2') return fail('42501', 403);
     if (request.method() === 'GET') {
@@ -86,11 +86,22 @@ export async function distributionVariantsFixture(page: Page, seed = true) {
       Object.assign(variant, input.p_variant, { media: input.p_media });
     } else {
       if (selected.version !== input.p_source_version || selected.version <= variant.source_version) return fail('PT409', 409);
-      for (const field of input.p_fields as DistributionVariantField[]) {
-        if (field === 'media_ids') variant.media = selected.media_ids.map(id => variant.media.find(item => item.media_id === id) ?? newVariantMedia(id));
-        else Object.assign(variant, { [field]: selected[field] });
+      const retain = name === 'retain_distribution_variant_source';
+      const fields = input.p_fields as DistributionVariantField[];
+      const latest = snapshot(selected);
+      const pending = distributionVariantFields.filter(field => JSON.stringify(latest[field]) !== JSON.stringify(variant.source_snapshot[field]));
+      if (fields.some(field => !pending.includes(field)) || (!fields.length && (!retain || pending.length))) return fail('22023', 400);
+      for (const field of fields) {
+        Object.assign(variant.source_snapshot, { [field]: latest[field] });
+        if (retain) {
+          variant.source_retained_fields[field] = selected.version;
+        } else {
+          delete variant.source_retained_fields[field];
+          if (field === 'media_ids') variant.media = selected.media_ids.map(id => variant.media.find(item => item.media_id === id) ?? newVariantMedia(id));
+          else Object.assign(variant, { [field]: latest[field] });
+        }
       }
-      Object.assign(variant, { source_version: selected.version, source_snapshot: snapshot(selected), status: 'draft' });
+      if (fields.length === pending.length) variant.source_version = selected.version;
     }
     variant.version++;
     return route.fulfill({ json: variant });

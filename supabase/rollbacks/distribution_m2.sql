@@ -13,6 +13,8 @@ end $$;
 drop function public.create_distribution_variant(uuid,uuid,uuid);
 drop function public.save_distribution_variant(uuid,integer,jsonb,jsonb);
 drop function public.sync_distribution_variant(uuid,integer,integer,text[]);
+drop function if exists public.retain_distribution_variant_source(uuid,integer,integer,text[]);
+drop function if exists distribution_private.review_variant_source(uuid,integer,integer,text[],boolean);
 drop function distribution_private.lock_variant_revision(uuid,integer);
 drop function distribution_private.replace_variant_media(uuid,jsonb);
 drop function distribution_private.variant_with_media(uuid);

@@ -19,9 +19,9 @@ begin
     where n.nspname='public' and c.relname in ('distribution_variants','distribution_variant_media')
       and c.relrowsecurity and c.relforcerowsecurity) <> 2 then raise exception 'Expected both M2 tables to force RLS'; end if;
   if (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-    where n.nspname='public' and p.proname in ('create_distribution_variant','save_distribution_variant','sync_distribution_variant')
+    where n.nspname='public' and p.proname in ('create_distribution_variant','save_distribution_variant','sync_distribution_variant','retain_distribution_variant_source')
       and not p.prosecdef and p.proconfig = array['search_path=""'] and not has_function_privilege('anon',p.oid,'EXECUTE')
-      and has_function_privilege('authenticated',p.oid,'EXECUTE')) <> 3 then raise exception 'M2 RPC boundary invalid'; end if;
+      and has_function_privilege('authenticated',p.oid,'EXECUTE')) <> 4 then raise exception 'M2 RPC boundary invalid'; end if;
   if not exists (select 1 from pg_constraint where conrelid='public.distribution_variant_media'::regclass
     and confrelid='storage.objects'::regclass and confdeltype='r') then raise exception 'Expected Storage FK RESTRICT'; end if;
   foreach scenario in array array['anon','member-aal2','admin-aal1','admin-no-aal','admin-aal2'] loop

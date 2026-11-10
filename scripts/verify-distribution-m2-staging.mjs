@@ -4,12 +4,13 @@ import { createInterface } from 'node:readline';
 import { isDeepStrictEqual as same } from 'node:util';
 import { createClient } from '@supabase/supabase-js';
 import { elevate, recordServiceVersions, signIn } from './verify-distribution-staging.mjs';
-import { apiEvidence, check, createStagingTarget, dataOf, ProbeError, record } from './lib/distribution-staging-target.mjs';
+import { apiEvidence, check, createStagingTarget, dataOf, isStagingResourceUuid, ProbeError, record } from './lib/distribution-staging-target.mjs';
 import { withStagingResources } from './lib/distribution-staging-resources.mjs';
 import { runVariantUiChecks } from './lib/distribution-m2-staging-ui.mjs';
 
 const authOptions = { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false };
 const link = (media_id, cover = false) => ({ media_id, is_cover: cover, aspect_ratio_hint: '', processing_notes: '' });
+const isConflict = result => result.status === 409 && result.error?.code === 'PT409';
 const sourceFields = source => ({
   title: source.title, body: source.body, tags: source.tags, content_type: source.content_type, status: 'draft',
   project_id: null, promotion_goal: 'awareness',
@@ -64,6 +65,8 @@ async function main() {
       const adminRow = dataOf(await client.from('admin_users').select('user_id').eq('user_id', admin.id), 'Verify this run’s Staging membership');
       const memberRows = dataOf(await api(verifiedMember.token).from('admin_users').select('user_id').eq('user_id', member.id), 'Verify temporary non-admin');
       check(adminRow.length === 1 && memberRows.length === 0, 'Exact temporary membership and non-admin separation', {}, 'P1');
+      dataOf(await client.from('distribution_variants').select('source_retained_fields', { head: true }).eq('id', randomUUID()),
+        'Verify the final M2 source review schema is available before writing fixtures');
       await probe(client, { ...admin, nextCode: verifiedAdmin.nextCode }, [
         { label: 'anon', client: sdk(), anonymous: true },
         { label: 'member aal2', client: api(verifiedMember.token) },
@@ -97,16 +100,19 @@ async function main() {
       check(matching.length <= 1, 'One Storage object per scoped path', {}, 'P1');
       return matching[0];
     }
-    const saveSource = (title, body, version, ids) => client.rpc('save_distribution_post', {
-      p_id: source, p_version: version, p_post: sourceFields({ title, body, tags: ['M2'], content_type: 'image_text' }),
+    const saveSource = (title, body, version, ids, promotionGoal = 'awareness') => client.rpc('save_distribution_post', {
+      p_id: source, p_version: version, p_post: { ...sourceFields({ title, body, tags: ['M2'], content_type: 'image_text' }), promotion_goal: promotionGoal },
       p_account_ids: accounts.map(account => account.id), p_media_ids: ids,
     });
     const create = (actor, account, id) => actor.rpc('create_distribution_variant', { p_id: id, p_post_id: source, p_account_id: account });
     const save = (variant, fields, media) => client.rpc('save_distribution_variant', {
       p_id: variant.id, p_version: variant.version, p_variant: fields, p_media: media,
     });
+    const review = (actor, rpc, variant, sourceVersion, fields) => actor.rpc(rpc, {
+      p_id: variant.id, p_version: variant.version, p_source_version: sourceVersion, p_fields: fields,
+    });
     const getVariant = async id => {
-      const row = dataOf(await client.from('distribution_variants').select('id,post_id,account_id,title,body,status,source_version,version,distribution_variant_media(media_id,sort_order,is_cover)')
+      const row = dataOf(await client.from('distribution_variants').select('id,post_id,account_id,title,body,tags,content_type,status,source_version,source_snapshot,source_retained_fields,version,distribution_variant_media(media_id,sort_order,is_cover,aspect_ratio_hint,processing_notes)')
         .eq('post_id', source).eq('id', id).single(), 'Read the exact saved platform variant');
       return { ...row, distribution_variant_media: row.distribution_variant_media.sort((a, b) => a.sort_order - b.sort_order) };
     };
@@ -117,9 +123,12 @@ async function main() {
         signal.throwIfAborted();
         check(!await storedObject(name), 'The run-scoped upload path must be unused', {}, 'P1');
         attemptedUploads.set(name, null);
-        dataOf(await bucket.upload(folder + '/' + name, mediaBytes, { contentType: 'image/webp', upsert: false }), 'Upload the run-scoped WebP');
+        const upload = await bucket.upload(folder + '/' + name, mediaBytes, { contentType: 'image/webp', upsert: false });
+        const rejection = apiEvidence(upload).http;
+        if (rejection >= 400 && rejection < 500 && rejection !== 408) attemptedUploads.delete(name);
+        dataOf(upload, 'Upload the run-scoped WebP');
         const stored = await storedObject(name);
-        check(stored?.id, 'Storage returned the run-scoped object UUID');
+        check(isStagingResourceUuid(stored?.id), 'Storage returned the run-scoped object UUID');
         attemptedUploads.set(name, stored.id);
       }
       const initial = await storedObject(names[0]), independent = await storedObject(names[1]);
@@ -144,6 +153,10 @@ async function main() {
         }
         const result = await create(actor.client, accounts[0].id, aId);
         check(result.error?.code === '42501', 'Forbidden actor cannot invoke M2 create', { actor: actor.label, ...apiEvidence(result) }, 'P1');
+        for (const rpc of ['sync_distribution_variant', 'retain_distribution_variant_source']) {
+          const denied = await review(actor.client, rpc, a, created.version, ['body']);
+          check(denied.error?.code === '42501', 'Forbidden actor cannot review M2 source fields', { actor: actor.label, rpc, ...apiEvidence(denied) }, 'P1');
+        }
       }
       record('PASS', 'Real anonymous, non-admin aal2 and admin aal1 access boundaries');
 
@@ -155,17 +168,37 @@ async function main() {
 
       const editedSource = dataOf(await saveSource(sourceTitleV2, 'source v2', created.version, [initial.id]), 'Edit the canonical source');
       check((await getVariant(a.id)).title === saved.title, 'Source update does not overwrite independent text');
-      const synchronized = dataOf(await client.rpc('sync_distribution_variant', {
-        p_id: a.id, p_version: saved.version, p_source_version: editedSource.version, p_fields: ['body'],
-      }), 'Synchronize selected field from the exact source version');
-      check(synchronized.source_version === editedSource.version && synchronized.title === saved.title
-        && synchronized.body === 'source v2' && same(synchronized.media, saved.media), 'Explicit sync copies the selected body and preserves title and media');
-      record('PASS', 'Source revision changed, independent snapshot preserved, selected field synced');
+      const staleSource = await review(client, 'sync_distribution_variant', saved, created.version, ['body']);
+      check(isConflict(staleSource), 'Stale source revision returns HTTP 409 PT409', apiEvidence(staleSource));
+      const partial = dataOf(await review(client, 'sync_distribution_variant', saved, editedSource.version, ['body']),
+        'Synchronize the selected body without consuming the title change');
+      check(partial.source_version === created.version && partial.title === saved.title && partial.body === 'source v2'
+        && partial.source_snapshot.title === sourceTitle && partial.source_snapshot.body === 'source v2'
+        && same(partial.media, saved.media), 'Partial review preserves authored title, pending source difference and media');
+      const staleVariant = await review(client, 'sync_distribution_variant', saved, editedSource.version, ['title']);
+      check(isConflict(staleVariant), 'Stale platform draft revision returns HTTP 409 PT409', apiEvidence(staleVariant));
+      const synchronized = dataOf(await review(client, 'sync_distribution_variant', partial, editedSource.version, ['title']),
+        'Synchronize the remaining title from the same source revision');
+      check(synchronized.source_version === editedSource.version && synchronized.title === sourceTitleV2
+        && synchronized.body === partial.body && same(synchronized.media, partial.media), 'Second selection completes the same source revision');
+      record('PASS', 'Real partial field sync, later title adoption and both HTTP 409 PT409 boundaries');
+
+      const metadata = dataOf(await saveSource(sourceTitleV2, 'source v2', editedSource.version, [initial.id], 'download'), 'Update only the source promotion goal');
+      const confirmed = dataOf(await review(client, 'retain_distribution_variant_source', synchronized, metadata.version, []),
+        'Confirm a source revision with identical content fields');
+      check(same(confirmed, { ...synchronized, source_version: metadata.version, version: synchronized.version + 1, updated_at: confirmed.updated_at }),
+        'Version acknowledgement does not change content, media or status');
+      const nextSource = dataOf(await saveSource(sourceTitleV2, 'source v4', metadata.version, [initial.id], 'download'), 'Create a subsequent source change');
+      const kept = dataOf(await review(client, 'retain_distribution_variant_source', confirmed, nextSource.version, ['body']),
+        'Explicitly retain the saved body after the next source revision');
+      check(kept.source_version === nextSource.version && kept.body === confirmed.body && kept.source_snapshot.body === 'source v4'
+        && kept.source_retained_fields.body === nextSource.version && same(kept.media, confirmed.media), 'Retained choice persists without overwriting the draft');
+      record('PASS', 'Real metadata-only confirmation and explicit keep on a later source revision');
 
       const race = await Promise.all(['A concurrent 1', 'A concurrent 2'].map(title =>
-        save(synchronized, { ...variantFields(synchronized), title }, synchronized.media)));
+        save(kept, { ...variantFields(kept), title }, kept.media)));
       check(race.filter(result => !result.error).length === 1
-        && race.filter(result => result.status === 409 && result.error?.code === 'PT409').length === 1,
+        && race.filter(isConflict).length === 1,
       'Exactly one simultaneous RPC save commits, the other returns HTTP 409 PT409');
       const winner = race.find(result => !result.error).data;
       const before = await getVariant(a.id);

@@ -53,6 +53,7 @@ export interface DistributionOverview {
 
 export const distributionVariantFields = ['title', 'body', 'tags', 'content_type', 'media_ids'] as const;
 export type DistributionVariantField = typeof distributionVariantFields[number];
+export type DistributionSourceReviewAction = 'sync' | 'retain';
 export const distributionAspectRatios = ['', '1:1', '3:4', '4:3', '9:16', '16:9'] as const;
 export type DistributionAspectRatio = typeof distributionAspectRatios[number];
 
@@ -78,6 +79,7 @@ export interface DistributionVariantRecord extends DistributionVariantInput {
   platform: DistributionPlatform;
   source_version: number;
   source_snapshot: DistributionSourceSnapshot;
+  source_retained_fields: Partial<Record<DistributionVariantField, number>>;
   version: number;
   created_at: string;
   updated_at: string;

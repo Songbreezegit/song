@@ -29,7 +29,11 @@ export function compareVariantSource(source: DistributionPostRecord, variant: Di
     .filter(field => !equal(variant.source_snapshot[field], current[field]))
     .map(field => ({ field, before: variant.source_snapshot[field], current: current[field], variant: draft[field],
       customized: !equal(variant.source_snapshot[field], draft[field]) })) : [];
-  return { stale, fields };
+  const retained = distributionVariantFields.flatMap(field => {
+    const sourceVersion = variant.source_retained_fields[field];
+    return sourceVersion === undefined ? [] : [{ field, sourceVersion }];
+  });
+  return { stale, fields, retained };
 }
 
 export function variantReadOnlyReason(source: DistributionPostRecord, account: DistributionAccountRecord | undefined, variant?: DistributionVariantSummary): string | null {

@@ -1,11 +1,11 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { distributionId, distributionVersion, validateDistributionVariant, validateVariantSyncFields } from '../lib/distributionValidation';
-import type { DistributionVariantField, DistributionVariantInput, DistributionVariantRecord, DistributionVariantSummary } from '../types/distribution';
+import type { DistributionSourceReviewAction, DistributionVariantField, DistributionVariantInput, DistributionVariantRecord, DistributionVariantSummary } from '../types/distribution';
 
 interface Failure { code?: string; message?: string }
 export function distributionVariantError(error: Failure): Error {
   switch (error.code) {
-    case '42P01': case 'PGRST205': case 'PGRST202': case '42883':
+    case '42P01': case '42703': case 'PGRST205': case 'PGRST202': case '42883':
       return new Error('平台版本尚未在此环境启用。');
     case 'PT409': case '40001': case '23505':
       return new Error('平台稿、目标账号或内容源已有变化。请保留需要的本地文案，再打开最新版本。');
@@ -28,7 +28,7 @@ function check(error: Failure | null) {
 }
 
 const summaryFields = 'id, post_id, account_id, platform, title, status, version, source_version';
-const variantFields = `${summaryFields}, body, tags, content_type, source_snapshot, created_at, updated_at`;
+const variantFields = `${summaryFields}, body, tags, content_type, source_snapshot, source_retained_fields, created_at, updated_at`;
 type MediaRow = DistributionVariantRecord['media'][number] & { sort_order: number };
 type VariantRow = Omit<DistributionVariantRecord, 'media'> & { distribution_variant_media: MediaRow[] };
 
@@ -85,11 +85,12 @@ export async function saveDistributionVariant(id: string, version: number, input
   return variantResult(data);
 }
 
-export async function syncDistributionVariant(id: string, version: number, sourceVersion: number, fields: DistributionVariantField[]) {
+export async function reviewDistributionVariantSource(action: DistributionSourceReviewAction, id: string, version: number, sourceVersion: number, fields: DistributionVariantField[]) {
   requireConnection();
-  const { data, error } = await supabase.rpc('sync_distribution_variant', {
+  const retaining = action === 'retain';
+  const { data, error } = await supabase.rpc(retaining ? 'retain_distribution_variant_source' : 'sync_distribution_variant', {
     p_id: distributionId(id), p_version: distributionVersion(version), p_source_version: distributionVersion(sourceVersion),
-    p_fields: validateVariantSyncFields(fields),
+    p_fields: validateVariantSyncFields(fields, retaining),
   });
   check(error);
   return variantResult(data);
