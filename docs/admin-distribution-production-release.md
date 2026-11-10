@@ -1,14 +1,14 @@
 # 松屿内容分发 M1 生产发布记录
 
-**生产发布 BLOCKED。** 2026-11-10（北京时间）已完成只读预检、两条 SQL 的静态核对和生产备份验证。生产 SQL 等待单独批准，合并和正式部署仍未执行。
+**生产数据库验收 PASS。** 2026-11-10（北京时间）完成生产备份、两条获批 SQL 和只读安全验收。网站合并、Cloudflare 部署及正式冒烟将单独记录。
 
 | 阶段 | 状态 | 证据 |
 | --- | --- | --- |
 | P1 仓库、项目和数据库基线 | PASS | 功能分支与已验收提交一致，生产健康，未发现超出已知历史版本差异的应用 schema 漂移 |
 | P2 生产数据库备份 | PASS | 五个 schema 的逻辑归档已完整解码，关键对象与权限覆盖核对通过。两件 PNG 单独备份并校验 |
-| P3 两条 SQL 静态核对 | PASS | 从验收提交提取原始 Git blob 计算 SHA-256，生产无同名残留 |
-| P0 生产写入确认 | BLOCKED | 备份验证已通过，仍需取得对下列两条 SQL 的明确操作确认 |
-| P4–P6 执行迁移、数据库安全验收 | BLOCKED | 尚未执行 SQL A 或 SQL B，PT409 与新策略的生产结果待验 |
+| P3 两条 SQL 静态核对 | PASS | 从验收提交提取原始 Git blob 计算 SHA-256，迁移前生产无同名残留 |
+| P0 生产写入确认 | PASS | 所有者分别批准 A 和 B，工具按项目 Ref 应用两份原始 SQL |
+| P4–P6 执行迁移、数据库安全验收 | PASS | A、B 的生产历史及 SQL 哈希已复核，PT409 与权限确认，五种身份只读 smoke 通过，无新增安全顾问项 |
 | P7–P9 上线检查、合并和 Cloudflare 部署 | BLOCKED | 草稿 PR #10 保持开放，正式部署仍为原版本 |
 | P10 正式环境冒烟 | BLOCKED | 只记录了旧版公共 HTTP 基线，正式管理员登录和 M1 冒烟待发布后执行 |
 
@@ -31,7 +31,7 @@
 | Storage | `media` 桶公开，单文件上限 5 MiB，接受 JPEG、PNG、WebP。目录中 2 件 PNG，合计 3,476,452 字节 |
 | 已有结构、RLS 和 ACL | 与已验收 Staging 的应用基线相比，8 张已有应用表的列、约束、索引、触发器和 ACL 一致，25 条策略及 3 个已有函数一致。`storage.objects.id` 为 UUID 主键，`auth.users.id` 为 UUID |
 | M1 残留 | 四张分发表及同名对象、私有 schema、函数、策略、触发器、迁移记录均未发现 |
-| 安全顾问基线 | 既有 `RLS Enabled No Policy` 为 INFO，`Leaked Password Protection Disabled` 为 WARN。迁移后差异待核对 |
+| 安全顾问基线 | 既有 `RLS Enabled No Policy` 为 INFO，`Leaked Password Protection Disabled` 为 WARN。迁移后差异见后文 |
 
 [无策略 RLS 提示](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy) · [泄露密码保护](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)
 
@@ -79,9 +79,9 @@ pg_dump --format=custom --strict-names --no-password --lock-wait-timeout=10s `
 
 首次导出和归档清单检查通过，离线读取因遗漏 `--file` 参数失败，临时归档未保留。修正后以 `pg_restore --file=- --exit-on-error` 完整读取复跑归档并校验通过。两次均无生产写入。
 
-## 待确认的 SQL 与预计影响
+## 已批准的 SQL 与影响
 
-目标固定为生产 `song`（`vfgmptjfcfgptaqblydd`）。下面的 SHA-256 按验收提交的原始 Git blob 字节计算。核验备份并取得操作确认后，按 A、验证 A、B、验证 B 的顺序执行，逐条确认迁移历史。
+目标固定为生产 `song`（`vfgmptjfcfgptaqblydd`）。下面的 SHA-256 按验收提交的原始 Git blob 字节计算。备份已重新校验并保留。两次获批写入均提交下列原始 SQL，实际历史版本见后文。
 
 | 顺序 | 文件 | 字节 | SHA-256 |
 | --- | --- | ---: | --- |
@@ -93,3 +93,20 @@ A 在事务中创建四张启用 FORCE RLS 的空表、私有 schema、外键、
 事务失败时停在对应步骤，核对迁移历史及已提交对象。若 A 成功而 B 失败，保留新私有表和现有前端，等待修复方案复审。若数据库通过后前端部署异常，回到已记录的稳定 Worker 版本并保留数据库结构。破坏性数据库回滚需要独立备份、审查及所有者另行确认。[M1 回滚 SQL 供审查](https://github.com/Songbreezegit/song/blob/b2a21ae36a97428c096ec7a8b9e69cadd69238c8/supabase/rollbacks/distribution_m1.sql)
 
 正式管理员密码与 MFA 由所有者在正式站完成。生产临时稿件和账号需要另行明确批准，尤其是归档账号会保留历史。生产 Storage 删除一致性沿用真实 Staging 证据，生产验收范围为权限、元数据和非破坏性访问。
+
+## 生产迁移与只读安全验收
+
+**P4–P6 PASS。** 目标为 `song`（`vfgmptjfcfgptaqblydd`）。在各自明确审批后，依次用 Supabase 的迁移工具执行 A、验收 A、执行 B、验收 B。首次 B 确认卡过期后，只读确认 B 未执行、A 未变化，再完成新的确认。生产复核时间 2026-11-10 03:00:04（北京时间）。
+
+| 迁移 | 仓库版本 | 生产历史实际版本 | 数据库内 SQL 与已批准文件 |
+| --- | --- | --- | --- |
+| A | `20261108173132` | `20261109184705 add_private_distribution_m1` | 字节数和 SHA-256 完全一致 |
+| B | `20261109161000` | `20261109185903 report_distribution_version_conflicts` | 字节数和 SHA-256 完全一致 |
+
+生产历史中的两条新版本由迁移工具分配，原有四条记录保留。后续应通过版本与名称映射识别这两条已执行迁移，避免因文件时间戳不同而重跑或擅改历史。
+
+- A 验证了 `distribution_accounts`、`distribution_posts`、`distribution_post_targets`、`distribution_post_media` 四张空表。四张表均启用并强制 RLS；9 条策略、6 个外键、4 个触发器、13 个索引通过核对。`storage.objects` 外键是 `ON DELETE RESTRICT`，账号仅支持归档。
+- B 后逐字比对 RPC 定义，唯一差异是版本冲突从 `40001` 改为 `PT409`。`SECURITY INVOKER`、空 `search_path`、签名、`EXECUTE` 授权、所有分发表 RLS 和约束保持不变。生产只读验收未制造冲突写入；真实 HTTP 409 已在 Staging 验收。
+- 原有 8 张应用表的结构和 ACL、25 条既有策略、3 个既有函数和 Storage 主键未变化。项目、文章、站点设置、管理员和两件 Storage 对象的行指纹均与迁移前一致；统计计数、管理员资格和已验证 TOTP 数量也一致。
+- 运行验收提交上的 [只读安全 smoke](https://github.com/Songbreezegit/song/blob/b2a21ae36a97428c096ec7a8b9e69cadd69238c8/supabase/tests/distribution_security_smoke.sql)，SHA-256 为 `bb26497cc1c1c4503e585f0343790f38d307027677afd87ca9658d5b198bbffb`。在只读事务中模拟匿名、普通用户 aal2、管理员 aal1、管理员缺少 aal、管理员 aal2，五种身份均符合预期；未插入测试数据，未执行生产写入。
+- Security Advisor 与迁移前对比无新增项。既有两条统计私表 [RLS 无策略提示](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy)（INFO）和一条 [泄露密码保护未开启](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)（WARN）保持原样。
