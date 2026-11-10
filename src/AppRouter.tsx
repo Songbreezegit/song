@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
+import { createBrowserRouter, createRoutesFromElements, RouterProvider, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
 import App from './App';
 import { NotFoundPage } from './components/NotFoundPage';
 import { I18nProvider } from './i18n/I18nProvider';
@@ -64,37 +64,37 @@ function LocalizedDeepNotFound() {
   );
 }
 
+const appRouter = createBrowserRouter(createRoutesFromElements(
+  <>
+    {/* Root language detection redirect */}
+    <Route path="/" element={<RootRedirect />} />
+
+    {/* Admin Login & Protected Console */}
+    <Route path="/admin/*" element={
+      <RouteErrorBoundary fallback={
+        <div role="alert" style={{ padding: '60px', textAlign: 'center' }}>
+          <p>无法加载管理模块，请重新加载页面。</p>
+          <button type="button" onClick={() => window.location.reload()}>重新加载页面</button>
+        </div>
+      }>
+        <Suspense fallback={<div role="status" style={{ padding: '60px', textAlign: 'center' }}>正在加载管理模块...</div>}>
+          <AdminApp />
+        </Suspense>
+      </RouteErrorBoundary>
+    } />
+
+    {/* Public Multilingual Routes */}
+    <Route path="/:lang" element={<LocalizedRoute />} />
+    <Route path="/:lang/:section" element={<LocalizedRoute />} />
+    <Route path="/:lang/*" element={<LocalizedDeepNotFound />} />
+
+    {/* Fallback */}
+    <Route path="*" element={<RootRedirect />} />
+  </>,
+));
+
 export function AppRouter() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        {/* Root language detection redirect */}
-        <Route path="/" element={<RootRedirect />} />
-
-        {/* Admin Login & Protected Console */}
-        <Route path="/admin/*" element={
-          <RouteErrorBoundary fallback={
-            <div role="alert" style={{ padding: '60px', textAlign: 'center' }}>
-              <p>无法加载管理模块，请重新加载页面。</p>
-              <button type="button" onClick={() => window.location.reload()}>重新加载页面</button>
-            </div>
-          }>
-            <Suspense fallback={<div role="status" style={{ padding: '60px', textAlign: 'center' }}>正在加载管理模块...</div>}>
-              <AdminApp />
-            </Suspense>
-          </RouteErrorBoundary>
-        } />
-
-        {/* Public Multilingual Routes */}
-        <Route path="/:lang" element={<LocalizedRoute />} />
-        <Route path="/:lang/:section" element={<LocalizedRoute />} />
-        <Route path="/:lang/*" element={<LocalizedDeepNotFound />} />
-
-        {/* Fallback */}
-        <Route path="*" element={<RootRedirect />} />
-      </Routes>
-    </BrowserRouter>
-  );
+  return <RouterProvider router={appRouter} />;
 }
 
 export default AppRouter;

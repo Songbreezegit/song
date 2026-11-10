@@ -8,6 +8,7 @@ import { AdminLoading } from './components/AdminLoading';
 import { ADMIN_HOME, adminRoutes } from './routes';
 import { ThemeProvider } from '../context/ThemeContext';
 import './admin.css';
+import './features/distribution/distribution.css';
 
 const AdminLogin = lazy(() => import('./pages/AdminLogin').then(m => ({ default: m.AdminLogin })));
 

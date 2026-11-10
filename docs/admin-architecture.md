@@ -6,6 +6,8 @@
 
 后续内容工作台、主题切换与统计组件见 [后台内容工作台](admin-content-workspace.md) 和 [访问统计](admin-analytics.md)。
 
+基于最新 main `38d27ae` 新增的内容分发 M1，见 [模块架构与操作](admin-distribution-m1.md)、[独立 SQL 与权限审查](admin-distribution-security.md)。
+
 ## 分层与职责
 
 ```text
