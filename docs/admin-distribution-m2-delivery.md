@@ -31,16 +31,19 @@ M2 支持按账号独立的平台稿、规则检查、预览、差异同步、�
 
 | 顺序 | 完整 SQL | Git LF 文件 SHA-256 | 审批及远端记录 |
 | --- | --- | --- | --- |
-| 1 | [新增平台稿与独立素材](../supabase/migrations/20261110100401_add_distribution_platform_variants.sql) | `48ba065036b71438dddcb548fb8f733e2475b9e09da80e197873799179c69174` | BLOCKED，已单独送审，等待明确写入审批 |
+| 1 | [新增平台稿与独立素材](../supabase/migrations/20261110100401_add_distribution_platform_variants.sql) | `48ba065036b71438dddcb548fb8f733e2475b9e09da80e197873799179c69174` | BLOCKED，已获用户批准，Supabase 写入确认未完成，远端无记录 |
 | 2 | [新增字段核对、保留和确认](../supabase/migrations/20261110114036_review_distribution_source_fields.sql) | `acc63a2cf5d088da312353a8adc652dc5b01119518433a3fb2db8f6ffb081d21` | BLOCKED，待第 1 条执行并核对后单独送审 |
 
-第 1 条 SQL 新增两张表、索引、约束、触发器、强制 RLS 和三个 Invoker RPC。第 2 条新增一个核对字段及约束，更新同步入口并新增保留和确认入口。每条获批执行后，单独核对远端迁移记录与 SQL 摘要、对象、约束、触发器和权限。真实 runner 还需完成 `song-staging` 项目级短效 Scoped PAT 的本机加密交接。[安全与验收步骤](admin-distribution-m2-security.md#真实-staging-验收步骤)
+第 1 条 SQL 新增两张表、索引、约束、触发器、强制 RLS 和三个 Invoker RPC。第 2 条新增一个核对字段及约束，更新同步入口并新增保留和确认入口。每条获批执行后，单独核对远端迁移记录与 SQL 摘要、对象、约束、触发器和权限。[安全与验收步骤](admin-distribution-m2-security.md#真实-staging-验收步骤)
+
+2026-11-11 收到迁移 1 的明确批准和加密凭据交接。首次 Supabase 独立确认超时，第二次请求在连接阶段中断，第三次确认再次超时。每次均只读复查项目目录，确认无 M2 迁移记录、新表、约束、策略、触发器或 RPC。短效 Scoped PAT 已通过 `song-staging` 项目及 API Keys 读取检查，未创建临时 Secret API Key。
 
 | 检查 | 状态 | 证据或阻塞 |
 | --- | --- | --- |
 | Staging 项目、M1 迁移与保存 RPC 预检 | PASS | 已执行真实只读数据库查询和安全顾问基线检查。 |
+| Staging Scoped PAT 加密交接 | PASS | 本机完成解密与指定项目只读检查，验收写权限尚未使用。 |
 | 迁移后对象、约束、权限和只读 smoke | BLOCKED | 两条 M2 迁移均未执行。 |
-| GoTrue TOTP 登录，anon、管理员 aal1、普通用户 aal2 拒绝，管理员 aal2 创建 | BLOCKED | 等待两条迁移和该项目的 Scoped PAT。 |
+| GoTrue TOTP 登录，anon、管理员 aal1、普通用户 aal2 拒绝，管理员 aal2 创建 | BLOCKED | 等待两条迁移执行并核验。 |
 | 同平台独立稿件、源更新隔离、同版正文与标题分步同步、明确保留、仅元数据确认 | BLOCKED | 等待真实 PostgREST 和 RPC 验收。 |
 | 多次源更新、双版本冲突、HTTP 409 / PT409、RPC 原子回滚 | BLOCKED | 等待真实 PostgREST 和 RPC 验收。 |
 | 独立 Storage 引用、拒删保留字节、解除引用后删除 | BLOCKED | 等待真实 Storage 验收。 |
