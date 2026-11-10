@@ -27,21 +27,23 @@ M2 支持按账号独立的平台稿、规则检查、预览、差异同步、�
 
 ## 云端 Staging
 
-2026-11-11 核对了二次审查提交 `3acd6f8d7d0124349f42922ba4b25f7b4d4e972a`、GitHub 来源分支和 Staging 项目。目标为 `song-staging`（`uartrtcmskyuqxawjqlx`），状态为 `ACTIVE_HEALTHY`，PostgreSQL 为 17.11。远端历史中有 `20261109153506 add_private_distribution_m1`、`20261109161000 report_distribution_version_conflicts`。M1 四张表均启用并强制 RLS，保存 RPC 使用 `PT409`。当日 00:19（北京时间）只读复核时，两条 M2 迁移记录及其表、策略、触发器和 RPC 均未出现。
+2026-11-11 核对了二次审查提交 `3acd6f8d7d0124349f42922ba4b25f7b4d4e972a`、GitHub 来源分支和 Staging 项目。目标为 `song-staging`（`uartrtcmskyuqxawjqlx`），状态为 `ACTIVE_HEALTHY`，PostgreSQL 为 17.11。远端历史中有 `20261109153506 add_private_distribution_m1`、`20261109161000 report_distribution_version_conflicts`。M1 四张表均启用并强制 RLS，保存 RPC 使用 `PT409`。当日 01:20（北京时间）复核时，两条 M2 迁移记录及其表、策略、触发器和 RPC 均不存在。
 
 | 顺序 | 完整 SQL | Git LF 文件 SHA-256 | 审批及远端记录 |
 | --- | --- | --- | --- |
-| 1 | [新增平台稿与独立素材](../supabase/migrations/20261110100401_add_distribution_platform_variants.sql) | `48ba065036b71438dddcb548fb8f733e2475b9e09da80e197873799179c69174` | BLOCKED，已获用户批准，Supabase 写入确认未完成，远端无记录 |
+| 1 | [新增平台稿与独立素材](../supabase/migrations/20261110100401_add_distribution_platform_variants.sql) | `48ba065036b71438dddcb548fb8f733e2475b9e09da80e197873799179c69174` | BLOCKED，原通道已获用户批准但写入确认未完成。切换通道及写入待重新审批 |
 | 2 | [新增字段核对、保留和确认](../supabase/migrations/20261110114036_review_distribution_source_fields.sql) | `acc63a2cf5d088da312353a8adc652dc5b01119518433a3fb2db8f6ffb081d21` | BLOCKED，待第 1 条执行并核对后单独送审 |
 
 第 1 条 SQL 新增两张表、索引、约束、触发器、强制 RLS 和三个 Invoker RPC。第 2 条新增一个核对字段及约束，更新同步入口并新增保留和确认入口。每条获批执行后，单独核对远端迁移记录与 SQL 摘要、对象、约束、触发器和权限。[安全与验收步骤](admin-distribution-m2-security.md#真实-staging-验收步骤)
 
-2026-11-11 收到迁移 1 的明确批准和加密凭据交接。首次 Supabase 独立确认超时，第二次请求在连接阶段中断，第三次确认再次超时。每次均只读复查项目目录，确认无 M2 迁移记录、新表、约束、策略、触发器或 RPC。短效 Scoped PAT 已通过 `song-staging` 项目及 API Keys 读取检查，未创建临时 Secret API Key。
+迁移 1 首次和第三次收到 Supabase 独立确认过期，第二次收到 MCP 传输失败。三次均未取得 SQL 执行回执。限定时间窗的 Staging PostgreSQL 日志未发现匹配 M2 的 SQL 超时、取消或数据库错误。现有 `song-staging-m2-review` Scoped PAT 的项目和 API Keys 读取通过，访问迁移历史返回 HTTP 403。候选通道为官方单条迁移 API，采用平台原生登记历史，切换和写入均待新批准。[通道复核、完整命令及回退方案](admin-distribution-m2-staging-channel.md)
 
 | 检查 | 状态 | 证据或阻塞 |
 | --- | --- | --- |
 | Staging 项目、M1 迁移与保存 RPC 预检 | PASS | 已执行真实只读数据库查询和安全顾问基线检查。 |
-| Staging Scoped PAT 加密交接 | PASS | 本机完成解密与指定项目只读检查，验收写权限尚未使用。 |
+| 原 MCP 迁移执行通道 | FAIL | 两次独立确认超时，一次请求传输失败。此结果反映工具执行，远端无迁移。 |
+| Staging Scoped PAT 加密交接 | PASS | 指定项目及 API Keys 只读检查通过，凭据继续留作验收。 |
+| 官方单条迁移通道 | BLOCKED | 现有凭据访问迁移历史返回 403，等待通道切换审批及有效迁移权限。完整命令的离线检查通过。 |
 | 迁移后对象、约束、权限和只读 smoke | BLOCKED | 两条 M2 迁移均未执行。 |
 | GoTrue TOTP 登录，anon、管理员 aal1、普通用户 aal2 拒绝，管理员 aal2 创建 | BLOCKED | 等待两条迁移执行并核验。 |
 | 同平台独立稿件、源更新隔离、同版正文与标题分步同步、明确保留、仅元数据确认 | BLOCKED | 等待真实 PostgREST 和 RPC 验收。 |
