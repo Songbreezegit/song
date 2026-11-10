@@ -1,6 +1,6 @@
 # 松屿内容分发 M1 生产发布记录
 
-**生产数据库验收 PASS。** 2026-11-10（北京时间）完成生产备份、两条获批 SQL 和只读安全验收。网站合并、Cloudflare 部署及正式冒烟将单独记录。
+**生产数据库和正式部署 PASS。** 2026-11-10（北京时间）完成两条获批 SQL、生产只读安全验收、PR #10 合并和 Cloudflare 正式部署。公共与匿名冒烟通过，管理员 MFA 后的冒烟待所有者登录。
 
 | 阶段 | 状态 | 证据 |
 | --- | --- | --- |
@@ -9,14 +9,15 @@
 | P3 两条 SQL 静态核对 | PASS | 从验收提交提取原始 Git blob 计算 SHA-256，迁移前生产无同名残留 |
 | P0 生产写入确认 | PASS | 所有者分别批准 A 和 B，工具按项目 Ref 应用两份原始 SQL |
 | P4–P6 执行迁移、数据库安全验收 | PASS | A、B 的生产历史及 SQL 哈希已复核，PT409 与权限确认，五种身份只读 smoke 通过，无新增安全顾问项 |
-| P7–P9 上线检查、合并和 Cloudflare 部署 | BLOCKED | 草稿 PR #10 保持开放，正式部署仍为原版本 |
-| P10 正式环境冒烟 | BLOCKED | 只记录了旧版公共 HTTP 基线，正式管理员登录和 M1 冒烟待发布后执行 |
+| P7–P9 上线检查、合并和 Cloudflare 部署 | PASS | 已验收提交经 PR #10 合并，Cloudflare main 构建成功，新 Worker 版本承接 100% 生产流量 |
+| P10 公共页面和匿名冒烟 | PASS | 正式站页面及资源通过，未登录分发页面跳转登录，四张分发表均拒绝匿名读取 |
+| P10 MFA 后的正式后台冒烟 | BLOCKED | 等待所有者在正式站完成管理员登录及 TOTP |
 
-## 仓库和当前部署
+## 上线前仓库和部署基线
 
 - 仓库 `Songbreezegit/song`，`main` 为 `38d27ae2f43764e6a97b0a879d17aac1edcd3966`。
 - `feat/admin-distribution-m1` 及 PR #10 的 HEAD 为 `b2a21ae36a97428c096ec7a8b9e69cadd69238c8`。功能分支领先 6 个提交，落后 0 个。GitHub 确认可合并，PR 仍为草稿。该提交的 lint、build、253 项单元、208 项 E2E、12 项浏览器安全测试及真实 Staging 验收记录有效。[PR #10](https://github.com/Songbreezegit/song/pull/10) · [已验收的 Staging 报告](https://github.com/Songbreezegit/song/blob/b2a21ae36a97428c096ec7a8b9e69cadd69238c8/docs/admin-distribution-integration-report.md)
-- Cloudflare Worker `song` 连接 `Songbreezegit/song`。控制台显示生产分支 `main` 使用 `npm run build` 和 `npx wrangler deploy`，非生产分支使用 `npx wrangler versions upload`。当前稳定版本 `f3b60489-fe7c-4c63-b304-277f1eaf6470` 对应 `38d27ae`，控制台显示其承担 100% 流量。[生产构建回执](https://github.com/Songbreezegit/song/runs/128780579873) · [Cloudflare 分支构建规则](https://developers.cloudflare.com/workers/ci-cd/builds/build-branches/)
+- Cloudflare Worker `song` 连接 `Songbreezegit/song`。控制台显示生产分支 `main` 使用 `npm run build` 和 `npx wrangler deploy`，非生产分支使用 `npx wrangler versions upload`。当前稳定版本 `f3b60489-fe7c-4c63-b304-277f1eaf6470` 对应 `38d27ae`，上线前控制台显示其承担 100% 流量。[生产构建回执](https://github.com/Songbreezegit/song/runs/128780579873) · [Cloudflare 分支构建规则](https://developers.cloudflare.com/workers/ci-cd/builds/build-branches/)
 - 正式站 `/`、`/zh/`、`/zh/work`、`/zh/notes`、`/admin/login` 的 HTML 均返回 HTTP 200。后台登录 HTML 含强制 CSP、`X-Frame-Options: DENY` 和 `Cache-Control: no-store`。这些是旧版 HTTP 基线，正式上线后的登录和功能冒烟另行验收。[正式站](https://songisle.xyz/)
 
 ## 生产数据库基线
@@ -110,3 +111,12 @@ A 在事务中创建四张启用 FORCE RLS 的空表、私有 schema、外键、
 - 原有 8 张应用表的结构和 ACL、25 条既有策略、3 个既有函数和 Storage 主键未变化。项目、文章、站点设置、管理员和两件 Storage 对象的行指纹均与迁移前一致；统计计数、管理员资格和已验证 TOTP 数量也一致。
 - 运行验收提交上的 [只读安全 smoke](https://github.com/Songbreezegit/song/blob/b2a21ae36a97428c096ec7a8b9e69cadd69238c8/supabase/tests/distribution_security_smoke.sql)，SHA-256 为 `bb26497cc1c1c4503e585f0343790f38d307027677afd87ca9658d5b198bbffb`。在只读事务中模拟匿名、普通用户 aal2、管理员 aal1、管理员缺少 aal、管理员 aal2，五种身份均符合预期；未插入测试数据，未执行生产写入。
 - Security Advisor 与迁移前对比无新增项。既有两条统计私表 [RLS 无策略提示](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy)（INFO）和一条 [泄露密码保护未开启](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)（WARN）保持原样。
+
+## PR #10 合并与正式部署
+
+- 发布前核对 `song` Worker 关联 `Songbreezegit/song`，正式分支为 `main`，正式域名为 `songisle.xyz`。生产构建使用 `npm run build` 和 `npx wrangler deploy`，非生产分支使用 `npx wrangler versions upload`。配置中两个 Vite 变量分别匹配生产 Supabase URL 和已验证的公开客户端密钥。正式站资源只指向 `vfgmptjfcfgptaqblydd`。
+- 控制台显示 GitHub 用户或组织资料读取告警。验收提交的预览、独立报告分支的预览和本次正式构建均成功，未调整集成配置。
+- PR #10 沿用仓库近期的 merge commit 方式。来源为已验收的 `b2a21ae36a97428c096ec7a8b9e69cadd69238c8`，`main` 合并提交为 `ae35d4a39b361ce0cf773e357d652e3aa18142ba`，合并后的 Git 文件树与验收提交完全一致。[PR #10](https://github.com/Songbreezegit/song/pull/10)
+- Cloudflare 正式构建 ID 为 `82e07a7f-5226-4da7-bb27-ffd28e7c2b6c`，GitHub 检查于 2026-11-10 12:20:09（北京时间）报告成功。Cloudflare 显示活动版本 `12ca0ad9` 承接 100% 流量。正式站入口 JS 与该版本预览的内容哈希一致，JS 和 CSS 均返回正确的类型。[正式提交检查](https://github.com/Songbreezegit/song/commit/ae35d4a39b361ce0cf773e357d652e3aa18142ba/checks)
+- 发布后 2026-11-10 12:22:04（北京时间）复核 `/`、`/zh/`、`/zh/work`、`/zh/notes`、`/admin/login` 和 `/admin/distribution` 均返回 HTTP 200 的 SPA 页面。后台 CSP、`X-Frame-Options: DENY` 和 `Cache-Control: no-store` 生效。浏览器中确认首页、已发布项目、笔记空态和深浅主题切换，未登录访问内容分发跳转登录页。
+- 正式生产 PostgREST 的公共查询返回 200。使用公开客户端密钥向四张分发表发起匿名 GET，均返回 HTTP 401 / `42501`。管理员 MFA 后的概览、列表、编辑器及原有后台冒烟待所有者登录。
