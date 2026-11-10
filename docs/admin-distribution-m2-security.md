@@ -21,12 +21,12 @@ M2 基础迁移新增两张表。首轮审查的增量迁移新增 `source_retai
 
 1. 确认项目为 `song-staging`，Ref 为 `uartrtcmskyuqxawjqlx`。读取迁移记录和 M1 RPC，确认 `add_private_distribution_m1`、`report_distribution_version_conflicts` 已生效，源保存使用 `PT409`。确认 M2 尚未应用或核对已应用 SQL。
 2. 以本轮确认卡片中核对的项目和两份完整 SQL 为准。两条都未应用时，先执行基础迁移 `20261110100401_add_distribution_platform_variants.sql`，再执行 `20261110114036_review_distribution_source_fields.sql`。基础已应用时先核对实际记录、SQL 哈希和对象，只申请缺失的增量。两条都通过后才开始真实 API 验收。
-3. 使用仅限该项目的 Scoped PAT，范围为 Project Settings Read 和 API Keys Read/Write。将令牌通过本机安全输入传给执行进程，运行后清除进程变量与加密交接副本。脚本读取 `DISTRIBUTION_STAGING_PROJECT_REF`、`DISTRIBUTION_STAGING_API_URL` 和 `DISTRIBUTION_STAGING_MANAGEMENT_TOKEN`，拒绝非目标 Ref 和非规范 HTTPS 地址。
-4. 从仓库根目录运行 `node scripts/verify-distribution-m2-staging.mjs`。在 `admin-registered` 检查点，用 Staging 管理连接核对输出的管理员 UUID、邮箱和 `auth.users.raw_app_meta_data.distribution_staging_run_id`，只把该用户加入 `admin_users`。确认普通测试用户无登记后输入 `admin-registered`。
+3. 使用仅限该项目的 Scoped PAT，范围为 Project Settings Read 和 API Keys Read/Write。将令牌通过本机安全输入传给执行进程，运行后清除进程变量。脚本读取 `DISTRIBUTION_STAGING_PROJECT_REF`、`DISTRIBUTION_STAGING_API_URL` 和 `DISTRIBUTION_STAGING_MANAGEMENT_TOKEN`，拒绝非目标 Ref 和非规范 HTTPS 地址。
+4. 从仓库根目录运行 `node scripts/verify-distribution-m2-staging.mjs`。在 `admin-registered` 检查点，用 Staging 管理连接核对输出的管理员 UUID、邮箱和 `auth.users.raw_app_meta_data.distribution_staging_run_id`，只把该用户加入 `admin_users`。确认普通测试用户无登记并通过只读 SQL smoke 后，输入 `admin-registered`。
 5. Runner 验证临时管理员和普通用户的真实 GoTrue 密码登录与 TOTP，随后检查 anon、普通用户 aal2、管理员 aal1 的 REST 与 RPC 边界，以及管理员 aal2 的生成、保存、部分同步、同版再同步、仅版本确认、明确保留、双版本 409 和事务回滚。真实 Storage 测试核对只被平台稿引用的媒体无法删除、字节保持一致，解除引用后才可删除。
 6. 浏览器冒烟通过独立 Vite 监听 `127.0.0.1:5199`，只允许该地址和已确认的 Staging API。登录使用本轮临时账号，验证从页面生成、编辑、刷新与导出。禁止用可能带生产环境变量的分支预览进行写入测试。
 7. 在 `database-clean` 检查点，核对同一项目、run UUID、每个账号 UUID、名字和 `notes` 运行标记。确认本轮源、目标、平台稿和素材关联已清除，再删除这批账号。输入 `database-clean` 后脚本复查账号，退出阶段按 UUID、邮箱和运行标记删除 Auth 账号，并按 UUID、名称和描述撤销临时 Secret API Key。
-8. 独立复核 run UUID 对应的 Auth、MFA、管理员、分发数据、Storage 和临时密钥都已清理。若发生强制中断，以脱敏 manifest 为定位依据，逐项查证归属，使用 Storage API 清理文件。保留非本轮资源。记录实际服务版本、失败与受阻项。
+8. 独立复核 run UUID 对应的 Auth、MFA、管理员、分发数据、Storage 和临时密钥都已清理。若发生强制中断，以脱敏 manifest 为定位依据，逐项查证归属，使用 Storage API 清理文件。复核完成后撤销本轮临时 Scoped PAT，并核对原只读端点拒绝访问后删除本机加密副本。记录实际服务版本、失败与受阻项。[真实验收与清理记录](admin-distribution-m2-delivery.md#真实测试与资源清理)
 
 | 顺序 | Git 中 LF 文件的 SHA-256 |
 | --- | --- |

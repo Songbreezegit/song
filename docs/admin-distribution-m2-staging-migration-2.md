@@ -145,3 +145,9 @@ exit $exitStatus
 ```
 
 本机语法检查与离线夹具通过。成功夹具检查原 SQL 哈希并只发送一次模拟 POST。迁移 1 存储哈希不符或迁移 2 已存在时，命令在 POST 前退出。
+
+## 执行回执
+
+2026-11-11（UTC+08:00）取得迁移 2 的独立批准后，仅向 `song-staging`（`uartrtcmskyuqxawjqlx`）执行一次上述命令。官方单条迁移 API 返回 HTTP 200，远端登记为 `20261110175856 review_distribution_source_fields`。执行前核对 `20261110174923` 的原 SQL 哈希及迁移 2 缺失。执行后读取数据库历史的两条完整 SQL，分别与送审文件的 SHA-256 匹配。
+
+目录复核确认两张表强制 RLS，四条策略、23 个约束、七个索引、五个启用触发器和四个 Invoker RPC。新增 `source_retained_fields` 为非空 JSONB，默认值为 `{}`。M1 保存 RPC 仍使用 `PT409`。独立 SQL smoke 和真实 GoTrue、PostgREST、Storage、Edge 测试通过，已清理本轮测试资源和临时凭据。[完整验收结果](admin-distribution-m2-delivery.md#真实测试与资源清理)
