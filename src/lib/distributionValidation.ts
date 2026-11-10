@@ -1,5 +1,5 @@
 import { safeExternalUrl } from './safeUrl';
-import { distributionPlatforms, type DistributionAccountInput, type DistributionPostInput } from '../types/distribution';
+import { distributionAspectRatios, distributionPlatforms, distributionVariantFields, type DistributionAccountInput, type DistributionPostInput, type DistributionVariantField, type DistributionVariantInput } from '../types/distribution';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const fail = (message: string): never => { throw new Error(message); };
@@ -78,4 +78,47 @@ export function validateDistributionPost(value: unknown): DistributionPostInput 
     status: choice(input.status, ['draft', 'ready'], '内容状态'),
     account_ids: ids(input.account_ids, 50, '目标账号'), media_ids: ids(input.media_ids, 20, '媒体素材'),
   };
+}
+
+function variantText(value: unknown, max: number, label: string, required = false, trim = false): string {
+  if (typeof value !== 'string') return fail(`${label}必须是文本。`);
+  const result = trim ? value.trim() : value;
+  if ((required && !result.trim()) || Array.from(result.trim()).length > max || result.includes('\0')) {
+    return fail(`${label}${required ? '不能为空，且' : ''}最多 ${max} 个字符。`);
+  }
+  return result;
+}
+
+export function validateDistributionVariant(value: unknown): DistributionVariantInput {
+  const input = object(value, ['title', 'body', 'tags', 'content_type', 'status', 'media']);
+  if (!Array.isArray(input.tags) || input.tags.length > 20) return fail('标签最多 20 个。');
+  const tags = input.tags.map(tag => variantText(tag, 50, '标签', true));
+  if (new Set(tags).size !== tags.length) return fail('标签不能重复。');
+  if (!Array.isArray(input.media) || input.media.length > 20) return fail('媒体最多选择 20 项。');
+  const media = input.media.map(item => {
+    const row = object(item, ['media_id', 'is_cover', 'aspect_ratio_hint', 'processing_notes']);
+    if (typeof row.is_cover !== 'boolean') return fail('封面标记无效。');
+    return {
+      media_id: distributionId(row.media_id).toLowerCase(),
+      is_cover: row.is_cover,
+      aspect_ratio_hint: choice(row.aspect_ratio_hint, distributionAspectRatios, '建议比例'),
+      processing_notes: text(row.processing_notes, 1000, '素材处理说明'),
+    };
+  });
+  if (new Set(media.map(row => row.media_id)).size !== media.length) return fail('媒体素材不能重复。');
+  if (media.filter(row => row.is_cover).length > 1) return fail('每份平台稿只能选一张封面。');
+  const body = variantText(input.body, 100000, '正文');
+  if (Array.from(body).length > 100000) return fail('正文最多 100000 个字符。');
+  return {
+    title: variantText(input.title, 200, '标题', true, true), body, tags,
+    content_type: choice(input.content_type, ['image_text', 'video', 'article', 'moment'], '内容类型'),
+    status: choice(input.status, ['draft', 'ready'], '平台稿状态'), media,
+  };
+}
+
+export function validateVariantSyncFields(value: unknown): DistributionVariantField[] {
+  if (!Array.isArray(value) || !value.length || value.length > distributionVariantFields.length) return fail('请至少选择一项源内容变化。');
+  const fields = value.map(field => choice(field, distributionVariantFields, '同步字段'));
+  if (new Set(fields).size !== fields.length) return fail('同步字段不能重复。');
+  return fields;
 }

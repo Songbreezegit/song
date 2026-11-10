@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
+import { pathToFileURL } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 import { check, createStagingTarget, dataOf, ProbeError, record } from './lib/distribution-staging-target.mjs';
 import { removeImage, runDistributionApiChecks, uploadImage } from './lib/distribution-staging-checks.mjs';
@@ -227,7 +228,9 @@ async function main() {
   }
 }
 
-main().catch(error => {
+export { signIn, elevate, recordServiceVersions };
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch(error => {
   if (error instanceof ProbeError) record(error.status, error.message, { severity: error.severity, ...error.evidence });
   else {
     const unavailable = error.name === 'TimeoutError' || /^(?:UND_ERR_|ECONN|ENET|EHOST|EAI_|ETIMEDOUT|ENOTFOUND)/.test(error.cause?.code);

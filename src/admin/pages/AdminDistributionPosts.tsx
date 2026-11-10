@@ -24,7 +24,7 @@ export function AdminDistributionPosts() {
     category: post.content_type, updatedAt: post.updated_at, stage: post.status, projectId: post.project_id, post })), ['draft', 'ready']);
   const navigationState = { returnTo: `/admin/distribution/posts${view.search}` };
   const remove = (post: DistributionPostRecord) => {
-    if (!window.confirm(`确定删除草稿「${post.title}」吗？此操作不可撤销。`)) return;
+    if (!window.confirm(`确定删除草稿「${post.title}」吗？关联的所有平台稿（包括历史稿件）会一起删除。请先导出需要保留的版本，此操作不可撤销。`)) return;
     void action.run(post.id, () => deleteDistributionDraft(post.id, post.version), { successMessage: '草稿已删除。', onSuccess: () => query.setData(previous => ({ ...previous, posts: previous.posts.filter(row => row.id !== post.id) })) });
   };
   return <div className="distribution-workspace"><AdminPageHeader title="分发内容库" description="集中准备内容源，为不同平台保留延展空间。" actions={<>

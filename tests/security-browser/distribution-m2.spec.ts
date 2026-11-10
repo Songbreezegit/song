@@ -1,0 +1,31 @@
+import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
+import { login } from '../e2e/fixtures/backend';
+import { distributionVariantsFixture, firstVariant, variantsPath } from '../e2e/fixtures/distributionVariants';
+import { safeImageUrl } from '../../src/lib/safeUrl';
+
+test('M2 renders author text literally, keeps media reads scoped and exports only saved fields under CSP', async ({ page }) => {
+  const fixture = await distributionVariantsFixture(page);
+  const row = fixture.variantState.variants[0];
+  row.body = '<em>展示为普通文本</em>\n保留换行';
+  const pageErrors: string[] = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
+  await page.route('https://fonts.googleapis.com/**', route => route.fulfill({ contentType: 'text/css', body: '' }));
+  await login(page);
+  await expect(page).toHaveURL(/dashboard$/);
+  await page.goto(`${variantsPath}/${firstVariant}`);
+  const preview = page.getByRole('region', { name: '平台预览' });
+  await expect(preview.getByText('<em>展示为普通文本</em>', { exact: false })).toBeVisible();
+  await expect(preview.locator('em')).toHaveCount(0);
+  expect(safeImageUrl('javascript:void(0)')).toBeUndefined();
+  await page.getByLabel('平台正文', { exact: true }).fill('未保存的内容');
+  const receipt = page.waitForEvent('download');
+  await page.getByRole('button', { name: '导出平台稿 JSON' }).click();
+  const download = await receipt;
+  const payload = await readFile((await download.path())!, 'utf8');
+  expect(JSON.parse(payload).body).toBe(row.body);
+  expect(payload).not.toMatch(/access_token|refresh_token|service_role|sb_secret_/);
+  expect(fixture.backend.requests.filter(request => request.pathname.startsWith('/storage/v1/') && !/\/object\/list\//.test(request.pathname) && request.method !== 'GET')).toEqual([]);
+  expect(fixture.variantState.writes).toEqual([]);
+  expect(pageErrors).toEqual([]);
+});

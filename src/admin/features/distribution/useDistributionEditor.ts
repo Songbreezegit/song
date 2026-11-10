@@ -32,7 +32,7 @@ export function useDistributionEditor<Record extends { id: string; version: numb
   const isDirty = !query.loading && !query.error && JSON.stringify(draft) !== baseline;
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const action = useAdminAction('保存失败，请重试。');
-  const saving = action.pendingKey === 'save';
+  const saving = action.pendingKey === 'save' || action.pendingKey === 'sync';
   const shouldProtect = isDirty || saving;
   const shouldBlock = useCallback<BlockerFunction>(({ currentLocation, nextLocation }) => (
     shouldProtect && currentLocation.pathname !== nextLocation.pathname
@@ -69,15 +69,16 @@ export function useDistributionEditor<Record extends { id: string; version: numb
   const setField = <K extends keyof Draft>(key: K, value: SetStateAction<Draft[K]>) => {
     setDraftOverride(current => { const previous = current ?? query.data.draft; return { ...previous, [key]: typeof value === 'function' ? (value as (field: Draft[K]) => Draft[K])(previous[key]) : value }; });
   };
-  const save = () => {
+  const commit = (key: 'save' | 'sync', operation: () => Promise<Record>, successMessage: string) => {
     if (query.loading || query.error) return Promise.resolve(false);
-    return action.run('save', () => config.save(recordId, draft, query.data.record?.version ?? null), {
-      successMessage: '已保存。', onSuccess: record => {
+    return action.run(key, operation, {
+      successMessage, onSuccess: record => {
         setDraftOverride(null);
         query.setData({ record, draft: config.toDraft(record) });
         setLastSavedAt(Date.now());
       },
     });
   };
-  return { ...query, ...action, draft, setField, save, isNew, returnTo, isDirty, lastSavedAt, saving, blockedNavigation };
+  const save = () => commit('save', () => config.save(recordId, draft, query.data.record?.version ?? null), '已保存。');
+  return { ...query, ...action, draft, setField, save, commit, isNew, returnTo, isDirty, lastSavedAt, saving, blockedNavigation };
 }

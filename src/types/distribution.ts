@@ -51,10 +51,54 @@ export interface DistributionOverview {
   recent: DistributionPostRecord[];
 }
 
+export const distributionVariantFields = ['title', 'body', 'tags', 'content_type', 'media_ids'] as const;
+export type DistributionVariantField = typeof distributionVariantFields[number];
+export const distributionAspectRatios = ['', '1:1', '3:4', '4:3', '9:16', '16:9'] as const;
+export type DistributionAspectRatio = typeof distributionAspectRatios[number];
+
+export type DistributionVariantContent = Pick<DistributionPostInput, 'title' | 'body' | 'tags' | 'content_type'>;
+export type DistributionSourceSnapshot = DistributionVariantContent & Pick<DistributionPostInput, 'media_ids'>;
+
+export interface DistributionVariantMedia {
+  media_id: string;
+  is_cover: boolean;
+  aspect_ratio_hint: DistributionAspectRatio;
+  processing_notes: string;
+}
+
+export interface DistributionVariantInput extends DistributionVariantContent {
+  status: DistributionPostStatus;
+  media: DistributionVariantMedia[];
+}
+
+export interface DistributionVariantRecord extends DistributionVariantInput {
+  id: string;
+  post_id: string;
+  account_id: string;
+  platform: DistributionPlatform;
+  source_version: number;
+  source_snapshot: DistributionSourceSnapshot;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type DistributionVariantSummary = Pick<DistributionVariantRecord,
+  'id' | 'post_id' | 'account_id' | 'platform' | 'title' | 'status' | 'version' | 'source_version'>;
+
+export type DistributionMediaKind = 'image' | 'video' | 'unknown';
+
+export interface DistributionRuleIssue {
+  code: string;
+  severity: 'error' | 'warning' | 'info';
+  confidence: 'confirmed' | 'recommendation' | 'unconfirmed' | 'workspace';
+  message: string;
+}
+
 // Browser-side adapters only describe preparation capabilities. Future OAuth,
 // provider submissions and retries belong to a separate trusted worker API.
 export interface DistributionPreparationAdapter {
   platform: DistributionPlatform;
   supportedTypes: readonly DistributionContentType[];
-  validate: (source: DistributionPostInput) => readonly string[];
+  validate: (draft: DistributionVariantInput, kinds: ReadonlyMap<string, DistributionMediaKind>) => readonly DistributionRuleIssue[];
 }
