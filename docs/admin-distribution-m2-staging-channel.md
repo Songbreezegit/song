@@ -1,6 +1,8 @@
 # 内容分发 M2 Staging 迁移通道复核
 
-## 只读证据
+迁移 1 已通过获批的官方单条迁移 API 执行并读回核验，平台登记版本为 `20261110174923`。下面保留此前通道调查和第 1 条完整命令供审查。第 2 条另行审批。[迁移 2 完整命令与回退](admin-distribution-m2-staging-migration-2.md)
+
+## 迁移前的只读证据
 
 2026-11-11 复核的目标是 `song-staging`（`uartrtcmskyuqxawjqlx`），状态为 `ACTIVE_HEALTHY`，PostgreSQL 为 17.11。远端历史共六条，其中分发 M1 为 `20261109153506 add_private_distribution_m1` 和 `20261109161000 report_distribution_version_conflicts`。M1 四张分发表仍强制 RLS，保存 RPC 仍使用 `PT409`。两条 M2 记录、两张 M2 表、函数及触发器均不存在。
 
@@ -24,7 +26,7 @@
 
 已交接的 `song-staging-m2-review` Scoped PAT 仍能读取项目和 API Keys。用同一令牌读取该项目的迁移历史得到 HTTP 403。单条迁移的写入需要 `Migrations Read-write`。验收继续使用现有令牌。只有批准改走单条迁移 API，且现有令牌仍缺迁移权限时，才交接一枚仅限该项目、仅有 `Migrations Read-write` 的短效 Scoped PAT。[Scoped PAT 权限表](https://supabase.com/docs/guides/platform/personal-access-tokens#permission-scopes)
 
-## 待审批的第 1 条命令
+## 第 1 条的审批命令
 
 审查基线 `3acd6f8d7d0124349f42922ba4b25f7b4d4e972a`。两条迁移均保留文件原始 LF 字节及其显式事务。
 
@@ -33,7 +35,7 @@
 | 1 | [平台稿基础](../supabase/migrations/20261110100401_add_distribution_platform_variants.sql) · `48ba065036b71438dddcb548fb8f733e2475b9e09da80e197873799179c69174` | 新增两张表及约束、索引、五个触发器、强制 RLS 与三个 Invoker RPC。 |
 | 2 | [字段级核对增量](../supabase/migrations/20261110114036_review_distribution_source_fields.sql) · `acc63a2cf5d088da312353a8adc652dc5b01119518433a3fb2db8f6ffb081d21` | 新增一个字段与约束，更新同步入口及触发器函数，新增保留和版本确认 RPC。第 1 条读回通过后单独展示命令并申请写入审批。 |
 
-以下命令只提交第 1 条。执行前必须取得切换通道及该条写入的明确批准，并重新通过 Staging 只读对象和历史核对。现有验收令牌负责核验项目身份。迁移专用令牌由用户在 Windows 下以 DPAPI 加密交接至 `node_modules/.cache/song-staging-m2-migrations.dpapi`。
+以下为仅提交第 1 条的已审批命令。执行前已重新核验 Staging 对象和历史。现有验收令牌负责核验项目身份，迁移专用令牌由用户在 Windows 下以 DPAPI 加密交接至 `node_modules/.cache/song-staging-m2-migrations.dpapi`。此命令保留供核对历史操作。
 
 ```powershell
 $ErrorActionPreference = 'Stop'
