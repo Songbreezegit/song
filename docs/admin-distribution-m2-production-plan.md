@@ -1,6 +1,6 @@
 # 松屿内容分发 M2 生产迁移计划与预检
 
-2026-11-11（北京时间）完成生产只读预检。生产 `song`（`vfgmptjfcfgptaqblydd`）健康，M1 迁移和权限符合预期，生产中未发现 M2 历史或同名对象。M2 新备份和两条写入审批均是后续检查点。
+2026-11-11（北京时间）完成生产 `song`（`vfgmptjfcfgptaqblydd`）的只读预检和 M2 新备份。预检确认 M1 迁移和权限符合预期，生产中未发现 M2 历史或同名对象。新备份已通过独立复核，下一关口为迁移 A 的执行审批。
 
 | 检查 | 状态 | 证据 |
 | --- | --- | --- |
@@ -8,8 +8,8 @@
 | 生产项目、M1 历史和安全 | PASS | Management API 与 PostgreSQL 历史一致。M1 存储 SQL 哈希匹配已验收文件，只读 smoke 通过五种 JWT 条件。 |
 | M2 两份生产 SQL | PASS | 已从验收提交重新提取并计算 SHA-256，与 Staging 验收使用的原 SQL 一致。 |
 | M1 备份复核 | PASS | 两份旧归档均存在且重新计算 SHA-256 匹配回执，文件 ACL 的允许规则仅涉及当前用户和 SYSTEM。 |
-| M2 迁移前新备份 | 待执行 | 本轮已确定新备份范围与验证标准。尚未生成 M2 归档，当前路径和已知工具目录中未找到 PostgreSQL 客户端。 |
-| 生产迁移、PR 合并、正式发布 | 待审批 | 先验收新备份，再按 A、B、合并和正式发布的顺序独立放行。 |
+| M2 迁移前新备份 | PASS | 六个 schema 的数据库归档、两件媒体的独立 ZIP 和最终文件的离线复核均通过。见下方回执。 |
+| 生产迁移、PR 合并、正式发布 | 待审批 | 按 A、B、合并和正式发布的顺序独立放行。 |
 
 [Draft PR #11](https://github.com/Songbreezegit/song/pull/11) · [已验收的 Staging 报告](https://github.com/Songbreezegit/song/blob/91c96617043eb12ac1d04e0d48d1ed7ef4c1fb69/docs/admin-distribution-m2-delivery.md#云端-staging)
 
@@ -55,33 +55,56 @@ M1 生产存储 SQL SHA-256 分别为 `b61ddb41080441f7591582ecccd80fac494b7988b
 | `D:\Backups\Songisle\prod-pre-m1-20261110-015921-899ab5a9\song-pre-m1.dump` | 310,092 字节，`PGDMP` 归档头可读，SHA-256 `3da09357c45db240827198ef968c0d5c0a56ae59869a499498cf14c7f5e45fff`。M1 回执记录 PostgreSQL 17.11 的导出、目录读取和完整解码均退出 0，覆盖当时的五个 schema。 |
 | `%LOCALAPPDATA%\SongIsle\ProductionBackups\M1-20261110-012551\media-objects.zip` | 3,477,364 字节，SHA-256 `987ab74972824c3ba4a9a98f5fe602a18f7f41a327268acac94d32bbba8735a6`。重新打开 ZIP，两件 PNG 均可读取，共 3,476,452 字节。 |
 
-上述归档早于 M1 生产迁移，缺少现有 M1 对象及其后续数据。本轮复核了原件和既有离线验证回执，实际数据库恢复仍未演练。新归档须覆盖 M1 已上线后的生产状态。[M1 备份和恢复回执](admin-distribution-production-release.md#备份和恢复边界)
+上述归档早于 M1 生产迁移，缺少现有 M1 对象及其后续数据。使用 PostgreSQL 17.11 重新运行 M1 归档的 `pg_restore --list` 和完整离线解码，两项退出码均为 0，目录仍为 495 项。实际数据库恢复仍待隔离演练。[M1 备份和恢复回执](admin-distribution-production-release.md#备份和恢复边界)
 
 ### M2 新备份检查点
 
-1. 在迁移窗口使用 PostgreSQL 17 的可信 `psql`、`pg_dump`、`pg_restore`，记录版本和程序来源。本机尚需定位或准备客户端。以生产 Dashboard 的 Connect 配置为准，优先 Direct `db.vfgmptjfcfgptaqblydd.supabase.co:5432`。Direct 不可达时复核该项目的 Session Pooler、带 Ref 的用户名和 Dashboard CA。使用 `sslmode=verify-full`。连接后只读核对服务器版本、数据库、六个 schema 和两条 M1 存储哈希，再开始导出。密码如需输入，由所有者在本机隐藏提示交接，只存在于专用进程中。记录中只保留连接类型、目标 Ref 与 CA 指纹。[Supabase 连接方式](https://supabase.com/docs/guides/database/connecting-to-postgres)
+1. 使用已核验的 PostgreSQL 17 客户端和生产 Dashboard CA，固定连接 Direct `db.vfgmptjfcfgptaqblydd.supabase.co:5432`，采用 `sslmode=verify-full`。连接后只读核对服务器版本、数据库、六个 schema 和两条 M1 存储哈希，再开始导出。Direct 不可达时先复核该项目的 Session Pooler、带 Ref 的用户名和证书，再决定连接方式。所有者通过本机隐藏提示输入口令。[Supabase 连接方式](https://supabase.com/docs/guides/database/connecting-to-postgres)
 2. 在 `D:\Backups\Songisle\prod-pre-m2-<时间>-<run-id>` 新建受保护目录，复核目录和文件 ACL。以一个 `pg_dump --format=custom` 归档导出六个 schema。覆盖业务、统计、M1 私有函数、可恢复 Auth、迁移历史、Storage 元数据和定义，以及所有者、ACL、RLS、策略、外键、函数和触发器。沿用 M1 的临时 Auth 表数据排除项，保留这些表的定义，以及 `auth.users`、`auth.identities` 和 `auth.mfa_factors` 的数据。后台编辑和素材变更避开备份到迁移的窗口，统计允许正常更新。[pg_dump 选项与快照](https://www.postgresql.org/docs/17/app-pgdump.html)
 3. 分别记录预检、导出、`pg_restore --list` 和完整离线解码退出码。核对归档非空，目录中的 schema、表、数据段、函数、策略、ACL 和触发器与生产只读清单匹配，特别检查 M1 四张表及其数据段、`distribution_private`、`supabase_migrations.schema_migrations`、可恢复 Auth 数据与 Storage 元数据。完整解码输出流丢弃，验证后再将 `.partial` 改为最终文件名。记录北京时间、归档大小、SHA-256、命令退出码和覆盖结果，报告仅记录脱敏回执。[pg_restore 目录与读取](https://www.postgresql.org/docs/17/app-pgrestore.html)
 4. 将生产媒体文件独立保存到同一受保护的本机备份范围。按当时的桶、对象 UUID、路径、大小和内容类型对账，用 Storage API 只读下载，逐件核对长度和 SHA-256，记录二次读取及清单结果。数据库归档只覆盖对象元数据。新备份与可读性验证全部通过后才送审迁移 A，任一验证失败则停在备份检查点。[Supabase 数据库备份的 Storage 边界](https://supabase.com/docs/guides/platform/backups)
 
-备份命令模板如下。先在专用 PowerShell 进程设置 Dashboard CA、`PGSSLMODE=verify-full`、`PGOPTIONS=-c default_transaction_read_only=on` 和连接超时。以下路径变量在目标和 ACL 验证后赋值，`PGPASSWORD` 由本机隐藏提示设置并在 `finally` 中移除。每条命令成功才执行下一条。
+[生产只读备份脚本](../scripts/backup-distribution-m2-production.ps1) 将新归档写入唯一的受保护目录。传入已核验的 PostgreSQL 17 客户端目录、Dashboard CA 路径和 SHA-256。脚本在本机隐藏提示接收口令，只将其传给执行只读连接的客户端子进程。
 
 ```powershell
-& $prodPgDump --format=custom --strict-names --no-password --lock-wait-timeout=10s `
-  --schema=public --schema=analytics_private --schema=distribution_private `
-  --schema=auth --schema=supabase_migrations --schema=storage `
-  --exclude-table-data=auth.sessions --exclude-table-data=auth.refresh_tokens `
-  --exclude-table-data=auth.mfa_amr_claims --exclude-table-data=auth.mfa_challenges `
-  --exclude-table-data=auth.flow_state --exclude-table-data=auth.saml_relay_states `
-  --exclude-table-data=auth.one_time_tokens --exclude-table-data=auth.oauth_authorizations `
-  --exclude-table-data=auth.oauth_client_states --exclude-table-data=auth.webauthn_challenges `
-  -h db.vfgmptjfcfgptaqblydd.supabase.co -p 5432 -U postgres -d postgres --file=$prodPartial
-$prodToc = & $prodPgRestore --list $prodPartial
-& $prodPgRestore --exit-on-error --file=- $prodPartial | Out-Null
-Get-FileHash -LiteralPath $prodFinal -Algorithm SHA256
+$prodRun = 'prod-pre-m2-' + [DateTimeOffset]::UtcNow.ToOffset([TimeSpan]::FromHours(8)).ToString('yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,8)
+pwsh -NoProfile -File .\scripts\backup-distribution-m2-production.ps1 `
+  -PgBin $prodPg17Bin -CaFile $prodDashboardCa -CaSha256 $prodReviewedCaSha256 -RunName $prodRun
 ```
 
-恢复需在独立、受保护的 Supabase 兼容环境中核对托管角色、扩展、Auth 和 Storage 配置。按归档目录处理目标已存在的托管对象，再验证业务行、迁移历史、Auth 可恢复性、MFA、RLS 和 RPC。恢复后用户需要重新登录。真实文件通过受支持的 Storage 流程恢复，核对文件哈希及路径到对象 UUID 的映射，并验证分发外键在恢复环境仍可解析。解码通过只证明归档可读。恢复到生产须另行制定恢复范围、验证并审批。[Supabase 备份与恢复](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore)
+脚本独立检查 `pg_dump`、`pg_restore --list` 和完整离线解码的退出码。用生产目录的 OID 核对 schema、表、例程、RLS、策略、触发器及外键，逐表核对数据段并检查关键 ACL。Storage ZIP 在本机重新打开，核对清单和每件文件的长度及 SHA-256。备份前后比较历史、数据库目录与 Storage 对象路径、UUID 和版本。全部通过才将两份 `.partial` 改为最终文件名，重新计算最终文件的 SHA-256，最后写入 `backup-receipt.json`。只有带 PASS 回执的归档可用作迁移前备份。失败会停止并保留脱敏故障回执。
+
+本机现有路径未找到 PostgreSQL 17。使用 PostgreSQL 官网指向的 EDB 便携 ZIP，归档 SHA-256 `6eabdf00d2893713b75db4336a23c3fdf505f056e217ec6e2e95d901750cfea3`，与 M1 回执一致。实际 `psql.exe`、`pg_dump.exe`、`pg_restore.exe` 位于 `D:\code\song\.worktrees\production-release-report\node_modules\.cache\songisle-m2-pg17-6efceaff\bin`，三者均返回 `17.11`。Dashboard CA 的 SHA-256 为 `700723581420dd1ac98fd7e9ac529f0ef210eadcaf87fc868a3ad7d114c2f3b7`。本地测试覆盖三条命令非零退出、必需数据段缺失和意外包含已排除的数据段。[PostgreSQL Windows 客户端来源](https://www.postgresql.org/download/windows/) · [EDB 便携归档](https://www.enterprisedb.com/download-postgresql-binaries)
+
+### M2 生产备份回执
+
+**PASS，2026-11-11 10:18:37（北京时间）。** 生产 PostgreSQL `17.6` 通过 Direct、`verify-full` 和 TLS 1.3 连接，客户端会话为只读。前后清单中的六条迁移历史、M1 哈希、归档覆盖对象和 Storage 清单一致。
+
+| 最终文件 | 字节数 | 独立复算 SHA-256 |
+| --- | ---: | --- |
+| `D:\Backups\Songisle\prod-pre-m2-20261111-024634-b17bc8fc\song-pre-m2.dump` | 346,249 | `72379aa180a1aa23d398a978ae32f75ce54607833e185875e05c9f0b140b5ad5` |
+| `D:\Backups\Songisle\prod-pre-m2-20261111-024634-b17bc8fc\media-objects.zip` | 3,350,209 | `0ce264851818e1ecb790c85c7f60924986f276d866d6b2962f8ee8fd72f624a6` |
+
+本机回执为 `D:\Backups\Songisle\prod-pre-m2-20261111-024634-b17bc8fc\backup-receipt.json`。目录和三个最终文件的 ACL 允许当前用户及 SYSTEM 访问。Git 提交只包含脚本和脱敏报告。
+
+| 验证项 | 实际结果 |
+| --- | --- |
+| 客户端与只读连接 | 三个客户端的版本检查和备份前、后 `psql` 检查退出码均为 `0`。 |
+| 归档读取 | `pg_dump`、`pg_restore --list` 和 `pg_restore --exit-on-error --file=-` 均退出 `0`。独立复核对最终文件重新读取目录、完整解码，两项仍退出 `0`。 |
+| 数据与定义覆盖 | 六个 schema 共 554 个 TOC 条目，50 张表和 40 个表数据段。14 个关键数据段、34 个例程、34 条策略、38 项 RLS、15 个触发器、37 项外键及关键 ACL 均通过核对。 |
+| 独立 Storage ZIP | 两件对象合计 3,476,452 字节。备份前后对象路径、UUID、大小、类型与版本清单一致。重新打开最终 ZIP，逐件核对路径到 UUID 的映射、长度及 SHA-256。对象级清单位于 ZIP 的 `manifest.json`。 |
+
+### 托管依赖与恢复边界
+
+| 范围 | 隔离恢复时的核对 |
+| --- | --- |
+| PostgreSQL 和角色 | 目标使用兼容 PostgreSQL 17 的 Supabase 环境。源端核对了 `postgres`、`pg_database_owner`、`supabase_admin`、`supabase_auth_admin`、`supabase_storage_admin`、`anon`、`authenticated` 和 `service_role`。保留对象所有者和 ACL，集群级角色口令和服务器参数由目标环境单独配置。 |
+| 扩展和托管对象 | 本机回执记录了 `extensions` 中的 `pg_stat_statements 1.11`、`pgcrypto 1.3`、`uuid-ossp 1.1`，`pg_catalog` 中的 `plpgsql 1.0`，以及 `vault` 中的 `supabase_vault 0.3.1`。这些宿主 schema 在六个导出范围之外，由兼容目标环境提供。按 TOC 处理目标已存在的托管对象，并验证 SQL 函数、触发器、约束与 RLS。 |
+| Auth | 验证用户、身份、MFA 因子的可恢复性。临时会话等十张表仅保留结构，恢复后需要重新登录。Auth 配置、签名及外部身份提供商凭据由目标环境单独管理。 |
+| Storage | SQL 归档提供元数据，ZIP 提供实际对象字节和路径到 UUID 的清单。通过受支持的 Storage 流程恢复文件，校验哈希并处理重新上传产生的 UUID 映射，最后验证分发外键。 |
+| 迁移历史和业务 | 比对历史及存储 SQL、M1 业务数据、管理员权限和 RPC。目录读取和完整解码用于证明归档可读，实际恢复仍需在独立环境演练。生产恢复须另行审查和批准。 |
+
+[Supabase 备份与恢复](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore)
 
 ## 两条生产迁移与放行条件
 
@@ -104,5 +127,5 @@ Get-FileHash -LiteralPath $prodFinal -Algorithm SHA256
 ## 数据库通过后的合并和发布关口
 
 1. 生产数据库验收通过后，重新核对 PR #11 的 HEAD、`main`、合并预期差异和 GitHub 检查。若验收 SHA 或合并内容漂移，复审后再提交合并请求。记录当前稳定 Worker 版本及流量比例。
-2. M1 回执记录 Cloudflare Worker `song` 的生产 `main` 构建使用 `npx wrangler deploy`，会直接切换流量。届时先只读核对当前构建配置和其他发布触发器。若仍自动发布，在合并前单独送审阻断生产自动发布的配置方案，例如经验证将生产命令设为仅上传版本。确认 `main` 合并无法提前切换流量后，再申请 PR #11 合并审批。无法隔离时保持合并关口关闭。[Workers 构建分支](https://developers.cloudflare.com/workers/ci-cd/builds/build-branches/) · [Worker 版本和流量](https://developers.cloudflare.com/workers/versions-and-deployments/)
+2. 2026-11-11（北京时间）只读核对 Cloudflare Worker `song` 的 Builds 设置。生产分支为 `main`，部署命令为 `npx wrangler deploy`，当前配置下合并 `main` 会触发正式部署。非生产分支的版本命令为 `npx wrangler versions upload`。数据库通过后复核构建与其他发布触发器。如需变更自动部署配置，先在受控环境单独验证候选方案，记录预期流量、恢复方法和验收结果，再申请该配置的独立批准。验证 `main` 合并与生产流量切换可以独立控制后，才送审 PR #11 合并。[Workers 构建分支](https://developers.cloudflare.com/workers/ci-cd/builds/build-branches/) · [Worker 版本和流量](https://developers.cloudflare.com/workers/versions-and-deployments/)
 3. 合并后记录实际 `main` SHA 和该 SHA 的构建产物及 Worker 候选版本。核对正式域名、生产 Supabase Ref 与公开客户端配置，出示候选版本、原稳定版本、验证结果和恢复流量方案，再申请 Cloudflare 正式发布审批。获批后将指定版本承接生产流量并核对部署回执。上线后检查公开页面、匿名私有数据拒绝、CSP、管理员本机登录及 MFA 后后台只读页面。若应用异常，保留已验收数据库并按获批方案将流量恢复到之前的稳定版本。[Cloudflare Worker 回滚](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/)
