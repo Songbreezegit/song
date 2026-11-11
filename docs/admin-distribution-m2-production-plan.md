@@ -1,6 +1,6 @@
-# 松屿内容分发 M2 生产迁移计划与预检
+# 松屿内容分发 M2 生产迁移计划与验收
 
-2026-11-11（北京时间）完成生产 `song`（`vfgmptjfcfgptaqblydd`）的只读预检和 M2 新备份。预检确认 M1 迁移和权限符合预期，生产中未发现 M2 历史或同名对象。新备份已通过独立复核，下一关口为迁移 A 的执行审批。
+生产 `song`（`vfgmptjfcfgptaqblydd`）于 2026-11-11 完成只读预检和 M2 迁移前备份，于 2026-11-12（北京时间）完成两条独立获批的生产迁移和数据库验收。PR #11 合并与 Cloudflare 正式发布仍待独立审批。
 
 | 检查 | 状态 | 证据 |
 | --- | --- | --- |
@@ -9,7 +9,8 @@
 | M2 两份生产 SQL | PASS | 已从验收提交重新提取并计算 SHA-256，与 Staging 验收使用的原 SQL 一致。 |
 | M1 备份复核 | PASS | 两份旧归档均存在且重新计算 SHA-256 匹配回执，文件 ACL 的允许规则仅涉及当前用户和 SYSTEM。 |
 | M2 迁移前新备份 | PASS | 六个 schema 的数据库归档、两件媒体的独立 ZIP 和最终文件的离线复核均通过。见下方回执。 |
-| 生产迁移、PR 合并、正式发布 | 待审批 | 按 A、B、合并和正式发布的顺序独立放行。 |
+| 两条生产迁移与只读验收 | PASS | A、B 各获独立审批，官方 API 各返回 HTTP 200，历史、存储 SQL 哈希、安全与 M1 回归通过。见下方执行回执。 |
+| PR 合并与正式发布 | 待审批 | PR #11 仍为开放草稿。先复核生产部署触发器，再按独立关口放行。 |
 
 [Draft PR #11](https://github.com/Songbreezegit/song/pull/11) · [已验收的 Staging 报告](https://github.com/Songbreezegit/song/blob/91c96617043eb12ac1d04e0d48d1ed7ef4c1fb69/docs/admin-distribution-m2-delivery.md#云端-staging)
 
@@ -33,7 +34,7 @@ Management API 确认为 `song`、`ACTIVE_HEALTHY`、`ap-northeast-1`。生产 P
 
 ### 迁移历史
 
-以生产历史中的实际版本和名称为准。两条 M1 各有一条存储 SQL，按 UTF-8 复算 SHA-256 与验收提交的原始 Git blob 匹配。M2 两条均缺失。后续记录迁移工具生成的生产版本号，核对名称、存储 SQL 和实际对象。
+以生产历史中的实际版本和名称为准。迁移前只读预检确认两条 M1 的存储 SQL 哈希与原始 Git blob 匹配，M2 两条均缺失。下表已更新为迁移后的生产实际记录；M2 存储 SQL 哈希见执行回执。
 
 | 名称 | 仓库版本 | 当前生产记录 | Staging 记录供对照 |
 | --- | --- | --- | --- |
@@ -43,8 +44,8 @@ Management API 确认为 `song`、`ACTIVE_HEALTHY`、`ap-northeast-1`。生产 P
 | `add_private_analytics` | `20261007052225` | `20261007052225` | |
 | `add_private_distribution_m1` | `20261108173132` | `20261109184705` | `20261109153506` |
 | `report_distribution_version_conflicts` | `20261109161000` | `20261109185903` | `20261109161000` |
-| `add_distribution_platform_variants` | `20261110100401` | 无 | `20261110174923` |
-| `review_distribution_source_fields` | `20261110114036` | 无 | `20261110175856` |
+| `add_distribution_platform_variants` | `20261110100401` | `20261111162431` | `20261110174923` |
+| `review_distribution_source_fields` | `20261110114036` | `20261111163231` | `20261110175856` |
 
 M1 生产存储 SQL SHA-256 分别为 `b61ddb41080441f7591582ecccd80fac494b7988bfcb14f9c4f1ea985f3f9f62` 和 `3aaf6c8e6ec40071cd6c1a91e4fe80ac2c27cff95547172327bb9e261ee8ee77`。
 
@@ -123,6 +124,29 @@ pwsh -NoProfile -File .\scripts\backup-distribution-m2-production.ps1 `
 4. **B 后验收。** 独立读回 B 的实际版本和原 SQL SHA-256，再核对 A 与 M1 历史。验证新增字段非空、默认 `{}`、新增约束已验证，共 23 个约束、七个索引、五个启用触发器、四条 RLS 策略。核对四个公开 RPC 的签名、Invoker、空 `search_path`、授权及 `PT409`，私有核对函数不可通过公开 schema 调用。复跑 M1 与 M2 只读安全 smoke，复查 M1 数据、Storage 元数据、管理员 TOTP 和 Security Advisor 基线差异。生产 SQL smoke 使用合成 claims 并且不插入夹具，真实并发、回滚及拒删证据来自已验收 Staging。[M2 只读 smoke](https://github.com/Songbreezegit/song/blob/91c96617043eb12ac1d04e0d48d1ed7ef4c1fb69/supabase/tests/distribution_m2_security_smoke.sql)
 
 失败或结果不明时停止在对应步骤，保留日志和回执，读回历史、SQL 哈希与实际对象。历史与对象不一致需单独调查。A 已成功而 B 失败时保留 A 和现有生产前端，优先送审向前修复。回滚草案会移除整个 M2，仅供隔离审查，依赖备份、空表和独立审批。任何恢复、历史修复或补偿迁移均需明确方案和审批。[M2 回滚草案](https://github.com/Songbreezegit/song/blob/91c96617043eb12ac1d04e0d48d1ed7ef4c1fb69/supabase/rollbacks/distribution_m2.sql)
+
+## 生产迁移执行回执
+
+2026-11-12（北京时间）在生产 `song`（`vfgmptjfcfgptaqblydd`）完成 A 和 B。两条 SQL 均取得独立写入批准，保留验收提交中原有的 `BEGIN` / `COMMIT`，通过官方单条迁移 API 各提交一次。平台登记生产版本；只读查询独立复核两条记录均各存一份完整 SQL，UTF-8 SHA-256 与上表所列原始 Git blob 一致。
+
+| 顺序 | API 回执时间（北京时间） | 生产迁移记录 | API | 存储 SQL SHA-256 |
+| --- | --- | --- | --- | --- |
+| A | 2026-11-12 00:24:30 | `20261111162431` | HTTP 200 | `48ba065036b71438dddcb548fb8f733e2475b9e09da80e197873799179c69174` |
+| B | 2026-11-12 00:32:31 | `20261111163231` | HTTP 200 | `acc63a2cf5d088da312353a8adc652dc5b01119518433a3fb2db8f6ffb081d21` |
+
+A 的连接器确认超时及随后传输中断均通过只读查询确认未写入。切换至已获批的官方 API 后，首次历史 GET 返回 403，随后本机脚本的列表解析问题也在提交前停止。解析修复通过离线验证；项目、历史、备份指纹和锁复核通过后才发出 A。B 发出前独立核对七条历史、A 的存储 SQL 哈希和平台稿表锁。最终八条迁移记录中，原六条及 A 均保持原状。
+
+| 验收 | 结果 |
+| --- | --- |
+| A 数据库目录 | PASS。两张空表启用并强制 RLS，22 个已验证约束（含四个外键）、七个有效索引、五个启用触发器、四条策略和三个公开 `SECURITY INVOKER` RPC。素材外键仍为 `ON DELETE RESTRICT`。 |
+| B 数据库目录 | PASS。`source_retained_fields` 为非空 JSONB，默认 `{}`，对象检查已验证。共 23 个约束；A 已有表、索引、触发器、策略和公开 RPC 授权保持。四个公开 RPC 均为 Invoker、空 `search_path`，匿名无执行权。核对同步和保留模式的入口、私有核对函数以及来源与平台稿的 `PT409` 版本检查。 |
+| 生产只读权限 smoke | PASS。A、B 后均核对匿名、普通用户 `aal2`、管理员 `aal1`、管理员缺少 `aal`、管理员 `aal2` 五种合成 JWT 条件。B 额外探测同步、保留 RPC 共十次：四种不满足权限的条件返回 `42501`，管理员 `aal2` 进入参数校验并返回预期的 `22023`。均在只读事务中执行，未插入夹具或写业务数据。 |
+| M1 与原业务 | PASS。两次 M1 只读回归各通过五种条件，`save_distribution_post` 仍为 Invoker、保留 `PT409`。原有业务与 Storage 的九个关系指纹均匹配迁移前快照。有效管理员及已验证 TOTP 聚合值不变，仍为两件 PNG、3,476,452 字节的 Storage 元数据；实际文件字节的验证见备份回执。 |
+| Security Advisor | PASS。两条既有 INFO（`analytics_private.event_receipts`、`analytics_private.maintenance` 启用 RLS 无策略）及一条既有 WARN（泄露密码保护未开启）不变，没有 M2 新条目。 |
+
+真实 GoTrue、PostgREST 并发和事务回滚、Storage 引用保护与浏览器操作仍以 Staging 的实测报告为依据。本轮生产验收仅使用只读探测，未做数据库恢复演练。原备份保留在受保护的本机目录。短期 Scoped PAT 未写入本机文件，使用结束后本机进程释放凭据，用户已确认在 Supabase 撤销。
+
+数据库检查点已通过。GitHub 只读复核显示 PR #11 仍为开放草稿，来源提交与验收基线一致，目标仍为 `main`。合并、Cloudflare 部署配置和正式发布均未执行。
 
 ## 数据库通过后的合并和发布关口
 
