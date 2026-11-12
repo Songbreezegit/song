@@ -10,6 +10,7 @@ export interface MediaItem {
   path: string;
   url: string;
   created_at: string;
+  mime_type?: string;
 }
 
 export async function uploadMedia(
@@ -101,6 +102,7 @@ export async function listMedia(folder = ''): Promise<MediaItem[]> {
         path: fullPath,
         url: publicUrlData.publicUrl,
         created_at: item.created_at || new Date().toISOString(),
+        mime_type: typeof item.metadata?.mimetype === 'string' ? item.metadata.mimetype : undefined,
       });
     }
 

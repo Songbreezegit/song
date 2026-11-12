@@ -28,6 +28,8 @@ export const adminRoutes: AdminRoute[] = [
   { path: 'distribution/posts', title: '分发内容库', component: lazy(() => import('./pages/AdminDistributionPosts').then(m => ({ default: m.AdminDistributionPosts }))) },
   { path: 'distribution/posts/new', title: '新建分发内容', component: lazy(() => import('./pages/AdminDistributionPostEditor').then(m => ({ default: m.AdminDistributionPostEditor }))) },
   { path: 'distribution/posts/:id', title: '编辑分发内容', component: lazy(() => import('./pages/AdminDistributionPostEditor').then(m => ({ default: m.AdminDistributionPostEditor }))) },
+  { path: 'distribution/posts/:id/variants', title: '平台版本', component: lazy(() => import('./pages/AdminDistributionVariants').then(m => ({ default: m.AdminDistributionVariants }))) },
+  { path: 'distribution/posts/:id/variants/:variantId', title: '编辑平台稿', component: lazy(() => import('./pages/AdminDistributionVariantEditor').then(m => ({ default: m.AdminDistributionVariantEditor }))) },
   { path: 'distribution/accounts', title: '矩阵账号', component: lazy(() => import('./pages/AdminDistributionAccounts').then(m => ({ default: m.AdminDistributionAccounts }))) },
   { path: 'distribution/accounts/new', title: '新增矩阵账号', component: lazy(() => import('./pages/AdminDistributionAccountEditor').then(m => ({ default: m.AdminDistributionAccountEditor }))) },
   { path: 'distribution/accounts/:id', title: '编辑矩阵账号', component: lazy(() => import('./pages/AdminDistributionAccountEditor').then(m => ({ default: m.AdminDistributionAccountEditor }))) },

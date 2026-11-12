@@ -12,6 +12,7 @@ import { contentTypeLabels, createPostEditorDraft, goalLabels, platformLabels, p
 import { DistributionField, DistributionTabs } from '../features/distribution/DistributionChrome';
 import { DistributionLeaveDialog } from '../features/distribution/DistributionLeaveDialog';
 import { DistributionMediaPicker } from '../features/distribution/DistributionMediaPicker';
+import { variantWorkspacePath } from '../features/distribution/variantWorkspace';
 import { AdminEditorHeader } from '../components/AdminEditorChrome';
 import { AdminFeedback } from '../components/AdminFeedback';
 import { AdminLoading } from '../components/AdminLoading';
@@ -40,7 +41,10 @@ function PostEditor({ id }: { id?: string }) {
   return <div className="distribution-workspace admin-editor-workspace"><DistributionTabs />
     {editor.blockedNavigation && <DistributionLeaveDialog {...editor.blockedNavigation} isDirty={editor.isDirty} saving={editor.saving} />}
     <AdminEditorHeader title={editor.isNew ? '新建分发内容' : '编辑分发内容'} description="先准备内容源，再选择目标账号与素材。" backTo={editor.returnTo} isDirty={editor.isDirty} saving={editor.saving} lastSavedAt={editor.lastSavedAt}
-      actions={<button type="submit" form="distribution-post-form" className="admin-btn admin-btn-primary" disabled={disabled}><Save size={15} />{editor.saving ? '正在保存…' : '保存内容'}</button>} />
+      actions={<>
+        {editor.data.record && <Link className="admin-btn admin-btn-secondary" to={variantWorkspacePath(editor.data.record.id)}>平台版本</Link>}
+        <button type="submit" form="distribution-post-form" className="admin-btn admin-btn-primary" disabled={disabled}><Save size={15} />{editor.saving ? '正在保存…' : '保存内容'}</button>
+      </>} />
     <AdminFeedback feedback={editor.feedback} /><AdminQueryError error={options.error} onRetry={options.reload} />
     {options.loading && <AdminLoading message="正在加载账号、项目和媒体…" />}
     <form id="distribution-post-form" onSubmit={submit}><fieldset className="admin-editor-fields" disabled={disabled}><div className="admin-editor-layout">
