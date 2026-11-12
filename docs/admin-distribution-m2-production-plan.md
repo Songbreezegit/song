@@ -1,6 +1,6 @@
 # 松屿内容分发 M2 生产迁移计划与验收
 
-生产 `song`（`vfgmptjfcfgptaqblydd`）于 2026-11-11 完成只读预检和 M2 迁移前备份，于 2026-11-12（北京时间）完成两条独立获批的生产迁移和数据库验收。PR #11 合并与 Cloudflare 正式发布仍待独立审批。
+生产 `song`（`vfgmptjfcfgptaqblydd`）于 2026-11-11 完成只读预检和 M2 迁移前备份，于 2026-11-12（北京时间）完成两条独立获批的生产迁移和数据库验收。PR #11 合并与 Cloudflare 正式发布待最终审批。
 
 | 检查 | 状态 | 证据 |
 | --- | --- | --- |
@@ -10,7 +10,7 @@
 | M1 备份复核 | PASS | 两份旧归档均存在且重新计算 SHA-256 匹配回执，文件 ACL 的允许规则仅涉及当前用户和 SYSTEM。 |
 | M2 迁移前新备份 | PASS | 六个 schema 的数据库归档、两件媒体的独立 ZIP 和最终文件的离线复核均通过。见下方回执。 |
 | 两条生产迁移与只读验收 | PASS | A、B 各获独立审批，官方 API 各返回 HTTP 200，历史、存储 SQL 哈希、安全与 M1 回归通过。见下方执行回执。 |
-| PR 合并与正式发布 | 待审批 | PR #11 仍为开放草稿。先复核生产部署触发器，再按独立关口放行。 |
+| PR 合并与正式发布 | 待审批 | PR #11 仍为开放草稿。发布方案建议一次审批覆盖合并与现有自动部署。 |
 
 [Draft PR #11](https://github.com/Songbreezegit/song/pull/11) · [已验收的 Staging 报告](https://github.com/Songbreezegit/song/blob/91c96617043eb12ac1d04e0d48d1ed7ef4c1fb69/docs/admin-distribution-m2-delivery.md#云端-staging)
 
@@ -148,8 +148,46 @@ A 的连接器确认超时及随后传输中断均通过只读查询确认未写
 
 数据库检查点已通过。GitHub 只读复核显示 PR #11 仍为开放草稿，来源提交与验收基线一致，目标仍为 `main`。合并、Cloudflare 部署配置和正式发布均未执行。
 
-## 数据库通过后的合并和发布关口
+## Cloudflare 正式发布检查
 
-1. 生产数据库验收通过后，重新核对 PR #11 的 HEAD、`main`、合并预期差异和 GitHub 检查。若验收 SHA 或合并内容漂移，复审后再提交合并请求。记录当前稳定 Worker 版本及流量比例。
-2. 2026-11-11（北京时间）只读核对 Cloudflare Worker `song` 的 Builds 设置。生产分支为 `main`，部署命令为 `npx wrangler deploy`，当前配置下合并 `main` 会触发正式部署。非生产分支的版本命令为 `npx wrangler versions upload`。数据库通过后复核构建与其他发布触发器。如需变更自动部署配置，先在受控环境单独验证候选方案，记录预期流量、恢复方法和验收结果，再申请该配置的独立批准。验证 `main` 合并与生产流量切换可以独立控制后，才送审 PR #11 合并。[Workers 构建分支](https://developers.cloudflare.com/workers/ci-cd/builds/build-branches/) · [Worker 版本和流量](https://developers.cloudflare.com/workers/versions-and-deployments/)
-3. 合并后记录实际 `main` SHA 和该 SHA 的构建产物及 Worker 候选版本。核对正式域名、生产 Supabase Ref 与公开客户端配置，出示候选版本、原稳定版本、验证结果和恢复流量方案，再申请 Cloudflare 正式发布审批。获批后将指定版本承接生产流量并核对部署回执。上线后检查公开页面、匿名私有数据拒绝、CSP、管理员本机登录及 MFA 后后台只读页面。若应用异常，保留已验收数据库并按获批方案将流量恢复到之前的稳定版本。[Cloudflare Worker 回滚](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/)
+2026-11-12（北京时间）完成只读核对。建议把 PR #11 合并与现有 Workers Builds 自动部署纳入一次最终发布审批。`main` 推送本身会触发部署，审批范围应明确包含 `song` 的生产流量切换。现有构建设置支持这条路径。 [Cloudflare 生产分支触发规则](https://developers.cloudflare.com/workers/ci-cd/builds/build-branches/)
+
+| 项目 | 只读核对结果 |
+| --- | --- |
+| PR #11 与远端 `main` | PR 开放、Draft、可合并。来源 `feat/admin-distribution-m2` 为 `91c96617043eb12ac1d04e0d48d1ed7ef4c1fb69`，目标 `main` 为 `ae35d4a39b361ce0cf773e357d652e3aa18142ba`。`main` 是来源提交的祖先，差异包含 7 个提交、39 个文件，`git diff --check` 通过。仓库允许 merge commit。 |
+| 合并后的代码树 | 按当前两端提交创建 merge commit 时，预期树为 `8e6c0de31394589b8d23111fcfe6f9a7fd93febd`，与验收提交相同。差异涵盖 M2 应用、迁移文件、测试和验收资料。Wrangler、Vite、依赖锁、CSP 与 Supabase 客户端配置文件无差异。 |
+| CI | 验收 SHA 上 1 项 GitHub Check `Workers Builds: song`，结论 `success`，完成于 2026-11-11 02:09:57。Cloudflare 构建 `a5b77fde-ff60-433b-a498-851216712b39` 状态 Ready，用 `npm run build` 和 `npx wrangler versions upload` 上传预览 `c5397345`。PR 提交无 GitHub Actions 工作流。lint、单元、E2E、安全测试和真实 Staging 的结果见原交付报告。 |
+| 生产版本和域名 | Worker `song` 在 Production 的 Active deployment 为 `12ca0ad9-52eb-4d37-83c7-cb3f12f5ea61`，流量 100%。该版本来自 `main` 的 `ae35d4a39b361ce0cf773e357d652e3aa18142ba`，生产构建 `82e07a7f-5226-4da7-bb27-ffd28e7c2b6c`。正式自定义域为 `songisle.xyz`。 |
+| 自动部署设置 | 仓库 `Songbreezegit/song`、根目录 `/`、生产分支 `main`。Disable builds 关闭，监听包含 `*`、无排除。生产运行 `npm run build` 后执行 `npx wrangler deploy`。非生产构建启用并使用 `npx wrangler versions upload`。Deploy Hooks 列表为空。 |
+| 生产 Supabase | Workers Builds 的 `VITE_SUPABASE_URL` 为 `https://vfgmptjfcfgptaqblydd.supabase.co`。`VITE_SUPABASE_ANON_KEY` 使用该项目已启用的 publishable key，指纹与 Supabase 官方记录匹配。正式站和 M2 预览的 JS 产物也匹配该 URL 与 key。Worker 为静态资产应用，Vite 在构建时读取变量。 |
+
+[PR #11](https://github.com/Songbreezegit/song/pull/11) · [验收 SHA 的 GitHub Checks](https://github.com/Songbreezegit/song/commit/91c96617043eb12ac1d04e0d48d1ed7ef4c1fb69/checks) · [M2 已验收的测试与 Staging 报告](https://github.com/Songbreezegit/song/blob/91c96617043eb12ac1d04e0d48d1ed7ef4c1fb69/docs/admin-distribution-m2-delivery.md) · [Cloudflare 构建变量说明](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/)
+
+Cloudflare Builds 设置页仍提示读取 GitHub 用户或组织详情失败。PR 预览已通过，报告提交 `10620c6ff49c1c411de702e9408606037bac7ba0` 也已触发构建 `e6c2cebe-bd96-4a05-a345-618946fc61cd` 并达到 Ready。现有连接能完成自动构建，提示原因尚未确认。正式发布以新 `main` SHA 的构建及 Active deployment 为准。 [Cloudflare GitHub 仓库访问变更](https://developers.cloudflare.com/changelog/post/2026-11-10-user-scoped-github-repositories/)
+
+### 获批后的执行顺序
+
+1. 复核 PR #11 的来源仍是 `91c96617043eb12ac1d04e0d48d1ed7ef4c1fb69`，目标仍是 `ae35d4a39b361ce0cf773e357d652e3aa18142ba`，对应 Workers Builds 检查通过。记录当时承接 100% 的生产版本及域名，核对构建配置和 Supabase 项目。两端提交或生产版本若有漂移，先更新发布依据。生产迁移 A、B 以本报告的已验收回执为准。
+2. 最终批复覆盖 PR 转为 Ready、一次 merge commit 合入 `main`，以及该推送触发 Worker `song` 的生产部署。获批后将草稿转为 Ready，再核对两端 SHA 与检查结果，随后执行合并。合并命令固定已审查的来源 SHA。 [GitHub CLI 合并参数](https://cli.github.com/manual/gh_pr_merge)
+
+   ```powershell
+   gh pr ready 11 --repo Songbreezegit/song
+   gh pr merge 11 --repo Songbreezegit/song --merge --match-head-commit 91c96617043eb12ac1d04e0d48d1ed7ef4c1fb69
+   ```
+
+3. 读回实际 `main` 合并 SHA 与代码树 `8e6c0de31394589b8d23111fcfe6f9a7fd93febd`。跟踪该 SHA 在 Cloudflare 上的生产构建，记下 Build ID、终态、新 Worker 版本 UUID、流量和时间。新版本在 `songisle.xyz` 承接 100% 后执行下方生产验收。构建未出现或失败时，先核对 Active deployment 和具体错误，再决定修复。
+
+### 页面验收清单
+
+| 范围 | 发布前证据 | 发布后验收 |
+| --- | --- | --- |
+| 公开站点 | 正式 `/`、`/en/work`、`/ja/work` 均返回 200，HTML 入口为 `index-A39elzOf.js`，脚本正常，强制 CSP 包含生产 Supabase 域名。 | 用新会话在桌面和移动端检查首页、语言切换、作品列表和现有项目详情，确认封面加载、路由刷新、静态资源与 CSP 正常。 |
+| 登录与 M1 后台 | 正式 `/admin/login`、`/admin/distribution`、`/admin/distribution/posts` 的静态 SPA 入口均返回 200。 | 用未登录会话直接访问受保护路径，确认跳转登录。由管理员本机完成登录和 MFA，核对概览、内容库、账号矩阵及媒体只读页面。检查 `aal1` 保持 MFA 门槛。 |
+| M2 平台稿 | 预览入口为 `index-Cu-kXTQO.js`。平台版本列表、编辑器两个 JS 模块均返回 200，产物含 `/admin/distribution/posts/:id/variants` 路由。真实 MFA、同步、导出与 Storage 引用验证来自 Staging。 | 核对正式产物已包含平台稿入口。若有现成内容源和平台稿，打开平台版本列表及编辑器并刷新，核对现有字段和媒体展示。若生产数据为空，记录空态和无法打开现有稿件的边界。页面验收使用只读操作。 |
+| 匿名权限与项目 | 同一公开客户端 key 对生产 `projects` 执行只读 HEAD 返回 200，计数 1。对 `distribution_variants`、`distribution_variant_media` 的 HEAD 均返回 401。 | 确认新产物仍指向 `song`，重跑公开读取及两张私有表的匿名拒绝。检查浏览器加载错误及 Cloudflare 请求错误。 |
+
+### 回退到当前稳定 Worker
+
+回退目标为 `12ca0ad9-52eb-4d37-83c7-cb3f12f5ea61`，当前承接正式域 100% 流量。若新版本已经切流并出现公开页面不可用、鉴权越界、指向错误项目或核心后台阻断，按最终批复中的回退授权进入 Cloudflare Workers & Pages → `song` → Deployments。在目标版本行的菜单选择 Rollback 并确认。Cloudflare 会创建一条新的部署记录，让目标版本承接 100% 流量。 [Cloudflare Worker 回退步骤](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/)
+
+读回 Active deployment、版本 UUID 和 100% 流量，复测正式站入口 `index-A39elzOf.js`、公开页面、后台登录入口和匿名权限。将时间与故障证据记入发布回执。Worker 回退范围为前端产物与流量，生产数据库保留已验收的 M2 迁移。后续 `main` 推送仍会触发生产构建，应先查明故障再继续发布。
