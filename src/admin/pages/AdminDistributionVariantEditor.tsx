@@ -1,6 +1,6 @@
 import { useCallback, useMemo, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { RefreshCw, Save } from 'lucide-react';
+import { CalendarPlus, RefreshCw, Save } from 'lucide-react';
 import { getDistributionVariant, reviewDistributionVariantSource, saveDistributionVariant } from '../../services/distributionVariantService';
 import { listMedia } from '../../services/mediaService';
 import type { DistributionSourceReviewAction, DistributionVariantField, DistributionVariantInput } from '../../types/distribution';
@@ -12,6 +12,7 @@ import { DistributionField, DistributionStatus, DistributionTabs } from '../feat
 import { DistributionLeaveDialog } from '../features/distribution/DistributionLeaveDialog';
 import { contentTypeLabels, platformLabels, postStatusLabels } from '../features/distribution/distributionForm';
 import { getDistributionPlatform } from '../features/distribution/platforms/registry';
+import { newPublishTaskPath } from '../features/distribution/publishPaths';
 import { useDistributionEditor } from '../features/distribution/useDistributionEditor';
 import { VariantMediaPanel, VariantPreview, VariantRules, VariantSyncReview, VariantTags } from '../features/distribution/VariantPanels';
 import { createVariantExport, formatVariantCopy, type VariantCopyPart } from '../features/distribution/variantExport';
@@ -104,6 +105,8 @@ function VariantEditor({ postId, variantId }: { postId: string; variantId: strin
     <AdminEditorHeader title={readOnly ? '查看平台稿' : '编辑平台稿'} description={`${profile.name} · ${accountName} · 稿件 v${record.version}`}
       backTo={base} isDirty={editor.isDirty} saving={editor.saving} lastSavedAt={editor.lastSavedAt}
       actions={<>
+        {record.status === 'ready' && !editor.isDirty && !disabled &&
+          <Link className="admin-btn admin-btn-secondary" to={newPublishTaskPath({ variant: record.id, post: postId })}><CalendarPlus size={15} />安排发布</Link>}
         <button type="button" className="admin-btn admin-btn-secondary" disabled={options.loading || editor.saving} onClick={options.reload}><RefreshCw size={15} />刷新内容源</button>
         {!readOnly && <button type="submit" form="distribution-variant-form" className="admin-btn admin-btn-primary" disabled={disabled}><Save size={15} />{editor.saving ? '正在保存…' : '保存平台稿'}</button>}
       </>} />

@@ -5,14 +5,16 @@ import { variantMediaKinds } from './variantModel';
 
 export type VariantCopyPart = 'title' | 'body' | 'tags' | 'all';
 
-export function formatVariantCopy(variant: DistributionVariantRecord, part: VariantCopyPart): string {
+export function formatVariantCopy(variant: Pick<DistributionVariantRecord, 'title' | 'body' | 'tags'>, part: VariantCopyPart): string {
   const tags = variant.tags.map(tag => `#${tag}`).join(' ');
   if (part === 'tags') return tags;
   if (part === 'all') return [variant.title, variant.body, tags].filter(Boolean).join('\n\n');
   return variant[part];
 }
 
-export function createVariantExport(variant: DistributionVariantRecord, account: Pick<DistributionAccountRecord, 'id' | 'name'>, items: MediaItem[], at = new Date()) {
+type ExportVariant = Pick<DistributionVariantRecord, 'id' | 'post_id' | 'platform' | 'version' | 'source_version' | 'status' | 'content_type' | 'title' | 'body' | 'tags' | 'media'>;
+
+export function createVariantExport(variant: ExportVariant, account: Pick<DistributionAccountRecord, 'id' | 'name'>, items: MediaItem[], at = new Date()) {
   const profile = getDistributionPlatform(variant.platform);
   const checks = profile.validate(variant, variantMediaKinds(items));
   const media = variant.media.map((link, index) => {
