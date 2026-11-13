@@ -15,6 +15,8 @@ describe('Staging Storage deletion readback', () => {
     for (const response of [
       Response.json({ statusCode: '400', code: 'InvalidKey' }, { status: 400 }),
       Response.json({ statusCode: '404', code: 'NoSuchBucket' }, { status: 400 }),
+      Response.json({ code: 'NoSuchBucket' }, { status: 404 }),
+      Response.json({ statusCode: '404' }, { status: 400 }),
       new Response('not JSON', { status: 400 }),
       new Response('file bytes', { status: 200 }),
     ]) {

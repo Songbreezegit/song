@@ -2,7 +2,28 @@
 
 开发分支 feat/admin-distribution-m3，基线 e6e2f8ec481dbdc64fe5ae790aceaebab5523414。开发在独立工作树进行。
 
+## 首轮审查修复
+
+审查基线为 `34e09758e9cc13b53d60c14e21543f95c78d3864`。增量迁移保护已有任务素材的对象版本和路径。Staging runner 用同一项目的受限管理连接做清理前后读回，并保存每次执行的原始退出码。[增量 SQL](../supabase/migrations/20261113170022_protect_distribution_publish_media.sql) · [设计与执行边界](admin-distribution-m3-security.md#历史素材不可变保护)
+
+本轮 Staging 只读预检通过。预检时数据库登记九条迁移，原始 M3 SQL 哈希一致，`media` 未启用版本管理，管理员 aal2 有 UPDATE 权限，桶、M3 任务和 Auth 数据为空。Security Advisor 仍有两条既有 `analytics_private` INFO。
+
+| 检查 | 结果 | 证据 |
+| --- | --- | --- |
+| `npm run lint` / `npm run build` | PASS | 退出码均为 0，构建命令 9.84 秒，保留既有包体积提示 |
+| `npm test` | PASS | 22 个文件，317 项，Vitest 7.46 秒，退出码 0 |
+| `npm run test:e2e` | PASS | 230 项，零跳过，14.0 分钟，退出码 0 |
+| `npm run test:security` | PASS | 16 项，39.9 秒，退出码 0 |
+| 历史媒体与清理 | PASS（本地） | 验证版本、路径和归档保护，允许访问时间及自定义元数据更新。覆盖历史路径漂移、M1/M2 素材引用、清理提交前后超时、重复清理、清单外对象及临时凭据删除回执丢失 |
+| 真实覆盖、upsert 和移动基线 | BLOCKED | 等待独立 Staging 基线授权和项目限定短期凭据 |
+| Staging 增量迁移 | BLOCKED | 基线后单独审批。原始 M3 迁移维持既有登记 |
+| 完整真实 runner 及资源清理 | BLOCKED | 等待增量读回和完整测试授权。本轮预检阶段未创建夹具 |
+
+本地测试曾误将 UUID 改动断言为触发器的 `42501`。PostgreSQL 先返回既有外键的 `23503`，现断言具体外键名，路径和版本仍独立断言触发器拒绝。
+
 ## 本地回归
+
+本节保留首轮开发交付时的验证记录。
 
 使用 Node.js 24.12.0、npm 11.6.2 和 Microsoft Edge 157.0.4341.46。E2E 沿用现有礼账封面 PNG 夹具。浏览器套件使用受控 HTTP 响应，数据库套件使用隔离的 PGlite PostgreSQL，依次应用仓库中的迁移。
 

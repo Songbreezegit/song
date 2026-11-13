@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import type { PublishTask } from '../src/types/distributionPublish';
-import { publishRunDatabaseCleanup } from '../scripts/lib/distribution-m3-staging-cleanup.mjs';
+import { cleanPublishRunDatabase, publishRunDatabaseCleanup, publishRunDatabaseReadback } from '../scripts/lib/distribution-m3-staging-cleanup.mjs';
 
 const db = new PGlite();
 const admin = randomUUID(), secondAdmin = randomUUID(), member = randomUUID();
@@ -18,6 +18,7 @@ async function asRole<T>(user: string, aal: string, run: () => Promise<T>, role 
 }
 const asAdmin = <T,>(run: () => Promise<T>) => asRole(admin, 'aal2', run);
 const migrations = 'supabase/migrations/';
+const mediaGuard = '20261113170022_protect_distribution_publish_media.sql';
 
 async function rpc<T>(sql: string, args: unknown[]) {
   return (await db.query<{ result: T }>(sql, args)).rows[0].result;
@@ -61,7 +62,8 @@ beforeAll(async () => {
     "create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;" +
     "create function auth.jwt() returns jsonb language sql stable as $$ select jsonb_build_object('aal',nullif(current_setting('request.jwt.claim.aal',true),'')) $$;" +
     "create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);" +
-    "create table storage.objects(id uuid primary key,bucket_id text,name text,metadata jsonb);" +
+    "create table storage.objects(id uuid primary key,bucket_id text,name text,metadata jsonb,version text," +
+    "user_metadata jsonb,last_accessed_at timestamptz,archived_at timestamptz,is_delete_marker boolean,is_versioned boolean);" +
     "alter table storage.objects enable row level security;" +
     "grant usage on schema auth,storage,public to anon,authenticated;" +
     "grant select,insert,update,delete on storage.objects to anon,authenticated;");
@@ -75,7 +77,7 @@ beforeAll(async () => {
     await db.exec(readFileSync(migrations + name, 'utf8'));
     if (name.includes('enforce_admin_mfa')) await db.query('insert into admin_users(user_id) values ($1)', [secondAdmin]);
   }
-  await db.query("insert into storage.objects values ($1,'media','original.webp',$3),($2,'media','replacement.webp',$3)",
+  await db.query("insert into storage.objects(id,bucket_id,name,metadata) values ($1,'media','original.webp',$3),($2,'media','replacement.webp',$3)",
     [image, replacement, { mimetype: 'image/webp' }]);
 }, 30_000);
 afterAll(async () => { await db.close(); });
@@ -177,6 +179,89 @@ it('freezes snapshots, blocks source deletion, and retains media of explicitly s
   expect((await db.query('select variant_id from distribution_variant_media where media_id=$1', [originalAsset])).rows).toEqual([]);
   await expect(db.query('delete from storage.objects where id=$1', [originalAsset])).rejects.toMatchObject({
     code: expect.stringMatching(/^(23503|23001)$/), constraint: 'distribution_publish_task_media_media_id_fkey',
+  });
+});
+
+it('protects the UUID, path and byte version of media in current and superseded snapshots', async () => {
+  const asset = randomUUID();
+  await db.query("insert into storage.objects(id,bucket_id,name,metadata,version) values ($1,'media','audit.webp',$2,'v1')",
+    [asset, { mimetype: 'image/webp', size: 144 }]);
+  const variant = await asAdmin(() => fixtures(asset));
+  const task = await asAdmin(() => change('create', null, createInput(variant)));
+  const original = (await db.query('select id,bucket_id,name,version,metadata from storage.objects where id=$1', [asset])).rows[0];
+  expect(task.content_snapshot.media[0]).toMatchObject({ media_id: asset, original_storage_path: 'audit.webp' });
+  const newer = await asAdmin(() => saveVariant(variant.variant, variant.version, replacement));
+  const refreshed = await asAdmin(() => change('refresh_snapshot', task, { variant_version: newer.version }));
+  expect(refreshed.content_snapshot.media[0].media_id).toBe(replacement);
+  const changes = [
+    "set version='v2'",
+    "set name='moved.webp'",
+    "set metadata=metadata || '{\"mimetype\":\"image/png\"}'",
+    'set archived_at=clock_timestamp()',
+    'set is_delete_marker=true',
+    'set is_versioned=true',
+  ];
+  await asAdmin(async () => {
+    for (const update of changes) {
+      await expect(db.query('update storage.objects ' + update + ' where id=$1', [asset]))
+        .rejects.toMatchObject({ code: '42501', message: 'Media is retained by a distribution publish task' });
+    }
+    await expect(db.query(`insert into storage.objects(id,bucket_id,name,version) values ($1,'media','audit.webp','v3')
+      on conflict (id) do update set version=excluded.version`, [asset])).rejects.toMatchObject({ code: '42501' });
+    await db.query("update storage.objects set user_metadata='{\"reviewed\":true}',last_accessed_at=clock_timestamp() where id=$1", [asset]);
+  });
+  for (const update of ["set name='owner-bypass.webp'", "set bucket_id='other'"]) {
+    await expect(db.query('update storage.objects ' + update + ' where id=$1', [asset]))
+      .rejects.toMatchObject({ code: '42501', message: 'Media is retained by a distribution publish task' });
+  }
+  await expect(db.query('update storage.objects set id=gen_random_uuid() where id=$1', [asset]))
+    .rejects.toMatchObject({ code: '23503', constraint: 'distribution_publish_task_media_media_id_fkey' });
+  expect((await db.query('select id,bucket_id,name,version,metadata from storage.objects where id=$1', [asset])).rows).toEqual([original]);
+  expect(await asAdmin(() => read(task.id))).toEqual(refreshed);
+  expect((await asAdmin(() => logs(task.id))).rows[1].old_state).toEqual(task);
+});
+
+it('rejects installation over a moved historical object and can protect an existing consistent snapshot', async () => {
+  const asset = randomUUID();
+  await db.query("insert into storage.objects(id,bucket_id,name,metadata,version) values ($1,'media','pre-guard.webp',$2,'v1')",
+    [asset, { mimetype: 'image/webp' }]);
+  const task = await asAdmin(async () => change('create', null, createInput(await fixtures(asset))));
+  const migration = readFileSync(migrations + mediaGuard, 'utf8');
+  await db.exec('drop trigger distribution_protect_task_media on storage.objects; drop function distribution_publish_private.protect_task_media();');
+  try {
+    await db.query("update storage.objects set name='moved-before-install.webp' where id=$1", [asset]);
+    try {
+      await expect(db.exec(migration)).rejects.toThrow('Existing distribution publish media paths require review');
+    } finally { await db.exec('rollback'); }
+    expect(await asAdmin(() => read(task.id))).toEqual(task);
+    expect((await db.query("select to_regprocedure('distribution_publish_private.protect_task_media()') as guard")).rows)
+      .toEqual([{ guard: null }]);
+  } finally {
+    await db.query("update storage.objects set name='pre-guard.webp' where id=$1", [asset]);
+    await db.exec(migration);
+  }
+  await expect(db.query("update storage.objects set version='v2' where id=$1", [asset]))
+    .rejects.toMatchObject({ code: '42501' });
+});
+
+it('keeps M1/M2 upload metadata, reads and delete protection for media with no M3 reference', async () => {
+  const asset = randomUUID();
+  await asAdmin(async () => {
+    await db.query("insert into storage.objects(id,bucket_id,name,metadata,version) values ($1,'media','draft-only.webp',$2,'v1')",
+      [asset, { mimetype: 'image/webp' }]);
+    const fixture = await fixtures(asset);
+    await db.query('insert into distribution_post_media(post_id,media_id,sort_order) values ($1,$2,0)', [fixture.post, asset]);
+    expect((await db.query("update storage.objects set version='v2' where id=$1 returning id,name,version", [asset])).rows)
+      .toEqual([{ id: asset, name: 'draft-only.webp', version: 'v2' }]);
+    await expect(db.query('delete from storage.objects where id=$1', [asset])).rejects.toMatchObject({
+      code: expect.stringMatching(/^(23503|23001)$/), constraint: expect.stringMatching(/^distribution_(post|variant)_media_media_id_fkey$/),
+    });
+    await db.query('delete from distribution_post_media where post_id=$1 and media_id=$2', [fixture.post, asset]);
+    await expect(db.query('delete from storage.objects where id=$1', [asset])).rejects.toMatchObject({
+      code: expect.stringMatching(/^(23503|23001)$/), constraint: 'distribution_variant_media_media_id_fkey',
+    });
+    await db.query('delete from distribution_posts where id=$1', [fixture.post]);
+    expect((await db.query('delete from storage.objects where id=$1 returning id', [asset])).rows).toEqual([{ id: asset }]);
   });
 });
 
@@ -295,13 +380,34 @@ it('refuses cleanup for the wrong project or an unrelated event, then removes on
   const task = await asAdmin(() => change('create', null, { ...createInput(fixture), plan_note: marker }, request));
   await asAdmin(() => change('start', task, {}, startRequest));
   const scope = { project_ref: 'uartrtcmskyuqxawjqlx', run_id, actor_ids, source: fixture.post, account: fixture.account,
-    variant: fixture.variant, request_ids: [request, startRequest] };
+    variant: fixture.variant, request_ids: [request, startRequest], media_ids: [image] };
   expect(() => publishRunDatabaseCleanup({ ...scope, project_ref: 'vfgmptjfcfgptaqblydd' })).toThrow('Invalid Staging');
   try {
     await expect(db.exec(publishRunDatabaseCleanup({ ...scope, request_ids: [request] }))).rejects.toThrow('outside the run manifest');
   } finally { await db.exec('rollback'); }
   expect((await asAdmin(() => logs(task.id))).rows).toHaveLength(2);
+  try {
+    await expect(db.exec(publishRunDatabaseCleanup({ ...scope, media_ids: [replacement] }))).rejects.toThrow('media link outside the run manifest');
+  } finally { await db.exec('rollback'); }
+  expect((await asAdmin(() => logs(task.id))).rows).toHaveLength(2);
+  const database = {
+    read: async (sql: string) => (await db.query(sql)).rows,
+    write: async (sql: string) => { await db.exec(sql); throw new Error('Simulated lost receipt after commit'); },
+  };
+  let writes = 0;
+  await expect(cleanPublishRunDatabase({
+    ...database, write: () => { writes++; throw new Error('Simulated timeout before commit'); },
+  }, scope)).rejects.toMatchObject({ status: 'FAIL', message: 'M3 database cleanup readback still contains scoped data' });
+  expect(writes).toBe(1);
+  expect(await asAdmin(() => read(task.id))).toMatchObject({ id: task.id, version: 2 });
+  const outcomes: string[] = [];
+  expect(await cleanPublishRunDatabase(database, scope, (error: Error) => outcomes.push(error.message))).toBe('confirmed_by_readback');
+  expect(outcomes).toEqual(['Simulated lost receipt after commit']);
+  expect(await cleanPublishRunDatabase({ ...database, write: () => { throw new Error('unexpected duplicate write'); } }, scope))
+    .toBe('already_absent');
   await db.exec(publishRunDatabaseCleanup(scope));
+  expect(Object.values((await db.query<Record<string, boolean>>(publishRunDatabaseReadback(scope))).rows[0]))
+    .toEqual(Array(9).fill(false));
   expect((await db.query('select id from distribution_publish_tasks where id=$1', [task.id])).rows).toEqual([]);
   expect((await db.query('select media_id from distribution_publish_task_media where task_id=$1', [task.id])).rows).toEqual([]);
   expect((await asAdmin(() => logs(task.id))).rows).toEqual([]);

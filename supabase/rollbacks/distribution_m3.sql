@@ -10,6 +10,8 @@ begin
     or exists (select 1 from public.distribution_publish_logs)
   then raise exception 'Rollback blocked: preserve M3 task, media and audit history and use a forward fix.'; end if;
 end $$;
+drop trigger if exists distribution_protect_task_media on storage.objects;
+drop function if exists distribution_publish_private.protect_task_media();
 drop function public.change_distribution_publish_task(uuid,text,uuid,integer,jsonb);
 drop function distribution_publish_private.change_task(uuid,text,uuid,integer,jsonb);
 drop function distribution_publish_private.capture_snapshot(uuid,integer);

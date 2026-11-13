@@ -4,10 +4,15 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { createStagingTarget, ProbeError, record } from './lib/distribution-staging-target.mjs';
 
 const ref = 'uartrtcmskyuqxawjqlx';
-const name = 'add_distribution_publish_calendar';
-const reviewed = 'df5fc7b35224d420381c1d90d6697e6c61989298';
-const file = 'supabase/migrations/20261112190304_add_distribution_publish_calendar.sql';
-const sha256 = 'c9aa94c8a63df0fb8e521bf77c5bbb9bb71755bbf496224ea8f30dc12e260396';
+const calendar = {
+  name: 'add_distribution_publish_calendar',
+  file: 'supabase/migrations/20261112190304_add_distribution_publish_calendar.sql',
+  sha256: 'c9aa94c8a63df0fb8e521bf77c5bbb9bb71755bbf496224ea8f30dc12e260396',
+};
+const mediaGuard = {
+  name: 'protect_distribution_publish_media',
+  file: 'supabase/migrations/20261113170022_protect_distribution_publish_media.sql',
+};
 const endpoint = 'https://api.supabase.com/v1/projects/' + ref + '/database/migrations';
 const baseline = new Map([
   ['20261109123623', 'initial_schema'],
@@ -19,17 +24,27 @@ const baseline = new Map([
   ['20261110174923', 'add_distribution_platform_variants'],
   ['20261110175856', 'review_distribution_source_fields'],
 ]);
-const m2Hashes = new Map([
+const storedHashes = new Map([
   ['20261110174923', '48ba065036b71438dddcb548fb8f733e2475b9e09da80e197873799179c69174'],
   ['20261110175856', 'acc63a2cf5d088da312353a8adc652dc5b01119518433a3fb2db8f6ffb081d21'],
 ]);
 const cache = new URL('../node_modules/.cache/', import.meta.url);
-const attempt = new URL('song-staging-m3-migration-attempt.json', cache);
 const hash = content => createHash('sha256').update(content).digest('hex');
 
 async function apply() {
-  if (process.argv.length !== 3 || process.argv[2] !== '--execute-approved-sql') {
+  const args = process.argv.slice(2);
+  const guard = args[0] === '--execute-approved-media-guard';
+  if (!(args.length === 1 && args[0] === '--execute-approved-sql')
+    && !(guard && args.length === 3 && /^[\da-f]{40}$/.test(args[1]) && /^[\da-f]{64}$/.test(args[2]))) {
     throw new ProbeError('BLOCKED', 'Use only after explicit approval of the Staging Management API submission');
+  }
+  const { name, file } = guard ? mediaGuard : calendar;
+  const reviewed = guard ? args[1] : 'df5fc7b35224d420381c1d90d6697e6c61989298';
+  const sha256 = guard ? args[2] : calendar.sha256;
+  const attempt = new URL(guard ? 'song-staging-m3-media-guard-attempt.json' : 'song-staging-m3-migration-attempt.json', cache);
+  if (guard) {
+    baseline.set('20261113062649', calendar.name);
+    storedHashes.set('20261113062649', calendar.sha256);
   }
   const token = process.env.DISTRIBUTION_STAGING_MANAGEMENT_TOKEN;
   delete process.env.DISTRIBUTION_STAGING_MANAGEMENT_TOKEN;
@@ -68,7 +83,7 @@ async function apply() {
 
   await target.verifyProject();
   history(await read(), baseline.size);
-  for (const [version, expectedHash] of m2Hashes) await verifyDetail(version, baseline.get(version), expectedHash);
+  for (const [version, expectedHash] of storedHashes) await verifyDetail(version, baseline.get(version), expectedHash);
 
   await mkdir(cache, { recursive: true });
   try {

@@ -57,9 +57,11 @@ export async function removeImage(target, bucket, image) {
 }
 
 export async function requireMissingStorageObject(response, step) {
-  const legacy = response.status === 400 ? await response.json().catch(() => null) : null;
-  const storageStatus = legacy?.statusCode ?? response.status;
-  check(String(storageStatus) === '404' && (legacy?.code === undefined || legacy.code === 'NoSuchKey'),
+  const missing = response.status === 400 || response.status === 404;
+  const body = missing ? await response.json().catch(() => null) : null;
+  const storageStatus = body?.statusCode ?? response.status;
+  check(missing && String(storageStatus) === '404'
+    && (body?.code === 'NoSuchKey' || (response.status === 404 && body?.code === undefined)),
     step, { http: response.status, storage_status: Number(storageStatus) || undefined }, 'P1');
   return { http: response.status, storage_status: 404 };
 }

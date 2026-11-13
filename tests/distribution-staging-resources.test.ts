@@ -24,7 +24,8 @@ type User = {
 function setup() {
   vi.spyOn(console, 'log').mockImplementation(() => {});
   const project = { ref, organization_id: 'hzrxoowmgbfkxtechkoz', name: 'song-staging', region: 'ap-northeast-1', status: 'ACTIVE_HEALTHY' };
-  const switches = { loseKeyResponse: false, loseUserResponse: false, omitSecret: false, rejectUserDeletion: false, rateLimitKeyDelete: false };
+  const switches = { loseKeyResponse: false, loseUserResponse: false, loseDeleteResponse: false, omitSecret: false,
+    rejectUserDeletion: false, rateLimitKeyDelete: false };
   const otherKey = { ...stagingRunKey(otherRunId), id: otherKeyId };
   const otherUser = {
     id: otherUserId, email: 'existing@example.invalid', email_confirmed_at: 'confirmed',
@@ -58,6 +59,7 @@ function setup() {
       }
       deletions.push(keyId);
       keys.delete(keyId);
+      if (switches.loseDeleteResponse) throw new Error('Key delete response lost');
       return new Response(null, { status: 204 });
     }
     throw new Error(`Unexpected management route: ${url.pathname}`);
@@ -82,6 +84,7 @@ function setup() {
       if (switches.rejectUserDeletion) return { data: null, error: { status: 409, code: 'user_delete_failed' } };
       deletions.push(id);
       users.delete(id);
+      if (switches.loseDeleteResponse) throw new Error('User delete response lost');
       return { data: {}, error: null };
     },
   };
@@ -104,6 +107,17 @@ describe('Staging credential cleanup', () => {
       return 'complete';
     });
     expect(result).toBe('complete');
+    expect(s.deletions).toEqual([...s.createdUsers, keyId]);
+    expect([...s.users.values()]).toEqual([s.otherUser]);
+    expect([...s.keys.values()]).toEqual([s.otherKey]);
+  });
+
+  it('verifies committed credential deletes after transport failures without deleting again', async () => {
+    const s = setup();
+    s.switches.loseDeleteResponse = true;
+    await withStagingResources(s.options, async createUser => {
+      await createUser(firstEmail, password);
+    });
     expect(s.deletions).toEqual([...s.createdUsers, keyId]);
     expect([...s.users.values()]).toEqual([s.otherUser]);
     expect([...s.keys.values()]).toEqual([s.otherKey]);
