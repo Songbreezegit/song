@@ -5,6 +5,7 @@ import { isDeepStrictEqual as same } from 'node:util';
 import { createClient } from '@supabase/supabase-js';
 import { elevate, recordServiceVersions, signIn } from './verify-distribution-staging.mjs';
 import { apiEvidence, check, createStagingTarget, dataOf, isStagingResourceUuid, ProbeError, record } from './lib/distribution-staging-target.mjs';
+import { requireMissingStorageObject } from './lib/distribution-staging-checks.mjs';
 import { withStagingResources } from './lib/distribution-staging-resources.mjs';
 import { runPublishUiChecks } from './lib/distribution-m3-staging-ui.mjs';
 import { publishRunDatabaseCleanup } from './lib/distribution-m3-staging-cleanup.mjs';
@@ -24,6 +25,7 @@ async function run() {
   const runId = randomUUID();
   const target = createStagingTarget(process.env.DISTRIBUTION_STAGING_PROJECT_REF,
     process.env.DISTRIBUTION_STAGING_API_URL, process.env.DISTRIBUTION_STAGING_MANAGEMENT_TOKEN);
+  delete process.env.DISTRIBUTION_STAGING_MANAGEMENT_TOKEN;
   const project = await target.verifyProject();
   record('PASS', 'Staging project identity confirmed', { project_ref: target.ref, run_id: runId, postgres: project.database?.version });
   const publicKey = await target.publishableKey();
@@ -272,8 +274,8 @@ async function probe({ target, runId, client, secondClient, negativeActors, admi
           check(removed.length === 1 && !await findObject(name), 'Run file is absent after Storage delete', {}, 'P1');
         }
         const response = await target.fetchStaging(bucket.getPublicUrl(path).data.publicUrl + '?m3-clean=' + randomUUID(), { cache: 'no-store' });
-        check(response.status === 404, 'Public run file cannot be read after cleanup', { http: response.status }, 'P1');
-        record('PASS', 'Run Storage cleanup confirmed', { project_ref: target.ref, run_id: runId, path, object_id: knownId });
+        const evidence = await requireMissingStorageObject(response, 'Public run file cannot be read after cleanup');
+        record('PASS', 'Run Storage cleanup confirmed', { project_ref: target.ref, run_id: runId, path, object_id: knownId, ...evidence });
       } catch (error) {
         cleanupError ??= error;
         failure(error, 'M3 Storage cleanup incomplete');

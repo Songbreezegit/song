@@ -82,6 +82,10 @@ export async function runPublishUiChecks(target, publicKey, admin, fixture) {
     await page.reload();
     await expect(page.getByRole('heading', { level: 1, name: fixture.title })).toBeVisible();
     await expect(page.getByText('创建发布计划', { exact: true })).toBeVisible();
+    await page.getByText('查看素材（1）', { exact: true }).click();
+    const image = page.getByRole('img', { name: 'replacement.webp', exact: true });
+    await image.scrollIntoViewIfNeeded();
+    await expect.poll(() => image.evaluate(element => element.complete && element.naturalWidth > 0)).toBe(true);
     const downloadPromise = page.waitForEvent('download');
     await page.getByRole('button', { name: '导出发布资料', exact: true }).click();
     const download = await downloadPromise;
@@ -93,8 +97,8 @@ export async function runPublishUiChecks(target, publicKey, admin, fixture) {
     await page.goto(preview + calendar + '?view=list&date=' + fixture.date + '&tz=UTC&account=' + fixture.accountId);
     await expect(page.locator('a[href="' + calendar + '/' + taskId + '"]')).toBeVisible();
     if (guardError) throw guardError;
-    check(exceptions === 0 && counts.auth > 0 && counts.rest > 0 && counts.taskWrites === 1,
-      'Browser created one task and performed read-only refresh, calendar and export', { exceptions, counts });
+    check(exceptions === 0 && counts.auth > 0 && counts.rest > 0 && counts.storage > 0 && counts.taskWrites === 1,
+      'Browser created one task and performed read-only refresh, calendar, media and export', { exceptions, counts });
     record('PASS', 'Real M3 browser GoTrue login, create, calendar, reload, history and export', { task_id: taskId, exceptions, counts });
     return taskId;
   } catch (error) {

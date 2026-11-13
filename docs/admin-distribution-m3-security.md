@@ -38,7 +38,13 @@ SQL 使用一个显式事务。执行前核对目标、原始文件 SHA-256、�
 3. 使用仅限该项目的短期 Scoped PAT，授予 Project Settings Read 和 API Keys Read/Write。将凭据从本机隐藏提示交给进程。设置 DISTRIBUTION_STAGING_PROJECT_REF、DISTRIBUTION_STAGING_API_URL 和 DISTRIBUTION_STAGING_MANAGEMENT_TOKEN，再运行 node scripts/verify-distribution-m3-staging.mjs。脚本核验项目身份后进入 migration-verified 检查点。
 4. 到 admins-registered 检查点后，通过 Staging 管理连接核对三个 Auth UUID、临时邮箱和 app_metadata 中的运行标记。Staging 无既有管理员时，先登记本轮第一位管理员并执行要求唯一管理员的 M1 只读 SQL smoke，再登记第二位并执行 M2/M3 smoke。普通测试账号保持非管理员。核验两位临时管理员后让 runner 继续。
 5. Runner 使用真实 GoTrue 登录和 TOTP，执行 REST 负向、并发、重放、快照、人工报告、Storage 和真实 Edge 检查。在 atomic-probe 检查点填入本次运行标记、任务 UUID、操作者 UUID 和版本，执行回滚探针并读回确认临时触发器已经清理。
-6. 到 database-clean 检查点，在同一 Staging 管理连接审查并执行 runner 生成的单事务清理。脚本先验证两名 Auth 操作者、精确源/账号/稿件 UUID、账号和稿件的 run 标记、每个任务的创建事件及所有请求 UUID，发现外来引用即中止。依次清理日志、任务素材、任务、源及账号。实际文件经 Storage API 删除，校验路径、UUID、字节及删除后 404。
+6. 到 database-clean 检查点，在同一 Staging 管理连接审查并执行 runner 生成的单事务清理。脚本先验证两名 Auth 操作者、精确源/账号/稿件 UUID、账号和稿件的 run 标记、每个任务的创建事件及所有请求 UUID，发现外来引用即中止。依次清理日志、任务素材、任务、源及账号。实际文件经 Storage API 删除，校验路径、UUID、字节、列表缺失以及公开 GET 的 HTTP 404 或旧版 HTTP 400 中的对象缺失状态 404。[Storage 错误码](https://supabase.com/docs/guides/storage/debugging/error-codes)
 7. Runner 按 run 标记和 UUID 清理 Auth 用户、临时 Secret API Key，并读回验证。另行只读核对 MFA 因子、会话、管理员登记、分发数据和 Storage 的本轮行数。确认后撤销 Scoped PAT，核对凭据失效并清理本机交接副本。
+
+### 清理检查点超时
+
+先核对是否已经提交。若连接器确认超时且 Auth 操作者已由 runner 清理，从本机运行清单和此前对 Auth 标记的读回恢复范围。在 `song-staging` 只读核对所有任务 UUID、精确的创建事件和请求 UUID、账号/源/稿件标记、Storage UUID 及引用。逐项核对后可在项目 Dashboard SQL Editor 执行一次受同一清单约束的事务，校验关联和删除行数。范围不一致时保留数据和脱敏清单以供复核。
+
+数据库读回确认引用清零后，按本轮路径、UUID 和原始字节通过 Storage API 删除文件，再核对目录、公开 GET 及 `storage.objects`。单独撤销清理使用的临时密钥。[实际恢复记录](admin-distribution-m3-delivery.md#staging)
 
 官方参考覆盖 [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security)、[Data API 权限](https://supabase.com/docs/guides/api/securing-your-api)、[PostgreSQL 函数执行权限](https://www.postgresql.org/docs/17/sql-createfunction.html) 和 [PostgREST 自定义错误码](https://docs.postgrest.org/en/v16/references/errors.html)。

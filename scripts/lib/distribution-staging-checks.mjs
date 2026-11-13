@@ -52,9 +52,16 @@ export async function removeImage(target, bucket, image) {
   dataOf(await bucket.remove([image.path]), 'Delete unreferenced WebP via Storage API');
   check(!await findImage(bucket, image.folder, image.name), 'Deleted WebP absent from Storage list');
   const response = await downloadImage(target, bucket, image);
-  const status = response.status === 400 ? (await response.json()).statusCode : response.status;
-  check(String(status) === '404', 'Deleted WebP cannot be downloaded', { http: response.status }, 'P1');
+  await requireMissingStorageObject(response, 'Deleted WebP cannot be downloaded');
   return response.status;
+}
+
+export async function requireMissingStorageObject(response, step) {
+  const legacy = response.status === 400 ? await response.json().catch(() => null) : null;
+  const storageStatus = legacy?.statusCode ?? response.status;
+  check(String(storageStatus) === '404' && (legacy?.code === undefined || legacy.code === 'NoSuchKey'),
+    step, { http: response.status, storage_status: Number(storageStatus) || undefined }, 'P1');
+  return { http: response.status, storage_status: 404 };
 }
 
 function payload(title) {

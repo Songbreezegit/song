@@ -8,30 +8,52 @@
 
 | 命令 | 结果 | 用例、时间和退出码 |
 | --- | --- | --- |
-| npm run lint | PASS | 约 3.0 秒，退出码 0 |
-| npm run build | PASS | Vite 构建约 0.9 秒，退出码 0。既有主包大于 500 kB 的提示保留 |
-| npm test | PASS | 22 个文件、311 项通过，6.17 秒，退出码 0 |
-| npm run test:e2e | PASS | 230 项通过，14.3 分钟，退出码 0 |
-| npm run test:security | PASS | 两种 CSP 模式共 16 项通过，39.8 秒，退出码 0 |
+| npm run lint | PASS | 命令用时 2.24 秒，退出码 0 |
+| npm run build | PASS | 命令用时 6.38 秒，Vite 构建约 0.95 秒，退出码 0。既有主包大于 500 kB 的提示保留 |
+| npm test | PASS | 22 个文件、313 项通过，Vitest 6.90 秒，退出码 0 |
+| npm run test:e2e | PASS | 230 项通过，0 跳过，14.5 分钟，退出码 0 |
+| npm run test:security | PASS | 两种 CSP 模式共 16 项通过，43.1 秒，退出码 0 |
 
-M3 本地数据库覆盖四种 JWT 身份与缺失 aal、直接写入和伪造日志拒绝、额外 permissive 策略、创建与报告重放、过期版本、状态限制、审计写入失败回滚、源和素材保护、归档、数据清理及回滚草案。浏览器覆盖三种日历视图、两处创建入口、时区与 DST、冲突恢复、取消、报告及纠正、导出、刷新、分页和主题切换。最后一次表单与样式调整后，M3 专项 E2E 八项复跑通过，36.5 秒，退出码 0。
+M3 本地数据库覆盖四种 JWT 身份与缺失 aal、直接写入和伪造日志拒绝、额外 permissive 策略、创建与报告重放、过期版本、状态限制、审计写入失败回滚、源和素材保护、归档、数据清理及回滚草案。浏览器覆盖三种日历视图、两处创建入口、时区与 DST、冲突恢复、取消、报告及纠正、导出、刷新、分页和主题切换。最后一次表单与样式调整后，M3 专项 E2E 八项复跑通过，36.5 秒，退出码 0。Storage 缺失响应的兼容规则新增两项测试，覆盖已观察到的旧版响应和无关错误。
 
-开发期间，隔离数据库的 RESTRICT 返回 23001，已同时覆盖 23503 和 23001，并验证触发的具体外键。Storage 用例使用仅被本任务引用的对象，以单独验证 M3 外键。清理脚本最初出现变量与列重名，修正后已验证清单外事件会阻断清理。完整命令以上表最终结果为准。
+开发期间，隔离数据库的 RESTRICT 返回 23001，已同时覆盖 23503 和 23001，并验证触发的具体外键。Storage 用例使用仅被本任务引用的对象，以单独验证 M3 外键。清理脚本最初出现变量与列重名，修正后已验证清单外事件会阻断清理。本次复跑的浏览器套件在默认沙箱中因回环访问 EACCES 未启动用例，改用已授权的本机回环运行。
+
+一次完整 E2E 复跑耗时 14.2 分钟，228 项通过，英文 About 页桌面主题动画断言等候 5 秒超时。可选封面用例因未设置 `WORK_COVER_IMAGE` 跳过。该次退出码 1。保持原断言，配置本地礼账 PNG 后两个用例各复跑三次，6 项通过，41.7 秒，退出码 0。随后完整复跑 230 项全部通过。英文 About 页此次超时未复现。
 
 提交后的 SQL 复核发现同名临时表可以覆盖时区查询，导致伪造时区被接受。时区视图已限定为 pg_catalog.pg_timezone_names。新增回归先在原 SQL 重现问题，再验证非法时区拒绝和合法时区通过。
 
 ## Staging
 
+以下为 2026-11-13 在 `song-staging`（`uartrtcmskyuqxawjqlx`）的验收快照。测试使用短期项目限定凭据和临时夹具。
+
 | 核验 | 状态 | 证据 |
 | --- | --- | --- |
-| 项目身份与权限前置 | PASS | song-staging，uartrtcmskyuqxawjqlx，PostgreSQL 17.11。M1/M2 八条迁移已登记，六张分发表强制 RLS，四个 M2 RPC 为 Invoker。读取时 M3 表与私有 schema 尚不存在。 |
-| M2 存储 SQL | PASS | 20261110174923 的 SHA-256 为 48ba065036b71438dddcb548fb8f733e2475b9e09da80e197873799179c69174。20261110175856 的 SHA-256 为 acc63a2cf5d088da312353a8adc652dc5b01119518433a3fb2db8f6ffb081d21。 |
-| 迁移前 Security Advisor | PASS | 两条既有 INFO 涉及 analytics_private 的内部表。 |
+| 项目身份与 M1/M2 基线 | PASS | 迁移前有八条历史，六张分发表强制 RLS，四个 M2 RPC 为 Invoker，两条 M2 存储 SQL 哈希与 M2 验收一致。 |
 | `apply_migration` 通道 | FAIL | 已按最终 SQL 哈希批准并调用一次。连接器返回 HTTP 传输错误，未取得数据库执行回执。 |
-| M3 单条迁移 | BLOCKED | 独立读回仍为八条历史，M3 对象均不存在。待批准 [官方单条迁移 API](admin-distribution-m3-staging-migration.md)。 |
-| GoTrue TOTP、REST/RPC 并发与事务、Storage、真实浏览器、资源清理 | BLOCKED | 依赖已核验的 M3 迁移。当前阶段未创建测试资源。 |
+| M3 单条迁移及目录核对 | PASS | 读回确认原通道未执行。独立获批后，官方 API 提交一次，HTTP 200，退出码 0。远端登记 `20261113062649`，存储 SQL 哈希与批准版本一致。核对三张强制 RLS 表、六个 RESTRICT 外键、策略、约束、索引、公开 Invoker RPC 及受 RLS 约束的审计写入角色。[迁移回执](admin-distribution-m3-staging-migration.md#2026-11-13-staging-回执) |
+| Security Advisor | PASS | 迁移前后均只有两条既有 `analytics_private` INFO。 |
+| GoTrue 与 RLS | PASS | 两名管理员和一名普通用户分别从密码登录完成真实 TOTP。验证匿名、管理员 aal1、普通用户 aal2 的读取及写入边界，管理员 aal2 仅通过任务 RPC 写入。M1/M2/M3 的 PostgreSQL 只读 smoke 均通过。 |
+| PostgREST / RPC | PASS | 同请求重放、同稿多次排期、两个管理员并发只成功一次，冲突返回 HTTP 409 / `PT409`。覆盖快照隔离、显式采用新版、源删除限制、人工回填、纠正事件、取消和归档账号。 |
+| 事务回滚 | PASS | 两轮分别对单个请求注入审计写入失败，任务版本保持 3、日志仍为三条，回滚后注入触发器为零。 |
+| Storage | PASS | 两件真实 WebP 各 23,488 字节。仅剩任务历史引用时删除返回 `ResourceReferenced`，UUID 及字节保留。解除引用后用 Storage API 删除，公开 GET 及数据库读回确认缺失。 |
+| 真实 Edge | PASS | 本机 Vite 连接获批 Staging。管理员 TOTP、任务创建、刷新、日历、审计、素材加载及 JSON 导出均通过。复验记录 7 次 Auth、20 次 REST、1 次 Storage 请求。REST 含一次任务写入，页面异常 0。 |
+| PostgREST 精确版本 | BLOCKED | REST 根端点返回 HTTP 401。管理 API 的 REST 健康查询返回 HTTP 200 / ACTIVE_HEALTHY，响应未提供版本。权限、并发与 RPC 功能使用真实 PostgREST 实测通过。[服务健康接口](https://supabase.com/docs/reference/api/v1-get-services-health) |
 
-[M3 原始 SQL](../supabase/migrations/20261112190304_add_distribution_publish_calendar.sql) 为 25,929 字节，SHA-256 为 c9aa94c8a63df0fb8e521bf77c5bbb9bb71755bbf496224ea8f30dc12e260396。运行说明见 [安全审查](admin-distribution-m3-security.md#staging-执行步骤)。
+观察到 GoTrue `v2.197.0`、Storage `1.94.2`、PostgreSQL `17.11`（项目报告构建号 `17.11.0.018`）、Edge `157.0.4341.46`。
+
+### 执行与清理记录
+
+| 本轮运行 | 结果 | 证据 |
+| --- | --- | --- |
+| `1f6744d1-224f-4a64-b573-23dc4f29dddb` | FAIL，退出码 1 | 13 分 26 秒，含人工检查点。业务检查通过。清理时两件文件已经删除，公开 GET 返回 HTTP 400，响应体为 `404 / NoSuchKey`，被旧断言误报。独立 GET 和数据库读回确认该轮夹具均已清除。 |
+| `9c45aa8e-179e-4273-80cf-22c6441b9f3b` | FAIL，退出码 1 | 17 分 50 秒，含人工检查点。业务检查及真实浏览器素材加载通过。连接器清理确认两次过期，runner 清除了三名 Auth 用户和该轮密钥。数据库关联仍在时，两次 Storage 删除按预期被拒绝。 |
+| 第二轮限定范围恢复 | PASS | 核对 run_id、任务和素材 UUID、两名原操作者及九条审计请求。Dashboard 单事务删除三条任务、九条日志、四条历史素材关联及本轮源、账号和稿件。Storage 清理约 16 秒，退出码 0，删除两件测试图片后读回清零。 |
+| 测试资源最终核对 | PASS | 两轮的 Auth 用户、MFA 因子、会话、身份、管理员登记、账号、源、稿件、任务、日志及 Storage 元数据均无残留。两轮及恢复所用的三枚临时 Secret API Key 均已按 run_id 和 UUID 确认撤销。 |
+| Scoped PAT | PASS | 用户在 Supabase 撤销本轮短期令牌。2026-11-13 14:22 UTC 重查同一项目健康接口，由 HTTP 200 变为 HTTP 401。已删除本机 DPAPI 交接副本。 |
+
+完整 runner 两次均以退出码 1 结束，业务验证和最终资源清理由上述独立读回支撑。历史素材引用在正式采用保留策略前持续阻止删除。生产迁移及上线须另行审查。
+
+[原始迁移](../supabase/migrations/20261112190304_add_distribution_publish_calendar.sql) · [安全审查](admin-distribution-m3-security.md#staging-执行步骤) · [回滚草案](../supabase/rollbacks/distribution_m3.sql)
 
 ## 界面截图
 
