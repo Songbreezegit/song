@@ -17,7 +17,7 @@
 
 私有 writer 使用 SECURITY DEFINER，由 NOLOGIN、NOBYPASSRLS 的 distribution_publish_writer 所有。角色继承 authenticated 的现有权限与 RLS 身份，authenticated、authenticator 和匿名角色均不能切换为 writer。writer 额外获得 M3 三张表的 INSERT 和任务指定列的 UPDATE。日志没有 UPDATE、DELETE 或 TRUNCATE 权限。writer 在私有 schema 的 CREATE 权限仅用于迁移期间转移函数所有权，随后撤回。公开和私有入口均固定 search_path；私有入口先用真实 auth.uid()、JWT aal2 和成员资格授权，再处理读取、锁与重放。
 
-RPC 只接收操作、目标 UUID、预期版本、请求 UUID 和固定形状的业务字段。操作者、事件类型、前后状态、任务快照和时间戳由数据库生成。报告包含账号和稿件版本复核、实际时间、作品链接或备注及 manual_user_report 证据。纠正保留首次报告人、首次报告时间和原始事件，追加含理由及前后值的新事件。所有外部链接只在人工点击时打开。
+RPC 只接收操作、目标 UUID、预期版本、请求 UUID 和固定形状的业务字段。操作者、事件类型、前后状态、任务快照和时间戳由数据库生成。IANA 时区以 pg_catalog.pg_timezone_names 校验，避免同名临时表影响判定。报告包含账号和稿件版本复核、实际时间、作品链接或备注及 manual_user_report 证据。纠正保留首次报告人、首次报告时间和原始事件，追加含理由及前后值的新事件。所有外部链接只在人工点击时打开。
 
 ## 并发、外键和回滚
 

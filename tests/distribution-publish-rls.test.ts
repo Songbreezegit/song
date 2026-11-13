@@ -250,6 +250,17 @@ it('rejects past plans, unready variants and forged inputs without mutating a ta
   });
 });
 
+it('validates time zones against the system catalog even when the caller has a same-named temporary table', async () => {
+  const v = await asAdmin(fixtures);
+  await asAdmin(async () => {
+    await db.exec("create temporary table pg_timezone_names(name text); insert into pg_temp.pg_timezone_names values ('Europe/Imaginary');");
+    try {
+      await expect(change('create', null, { ...createInput(v), timezone: 'Europe/Imaginary' })).rejects.toMatchObject({ code: '22023' });
+      expect(await change('create', null, createInput(v))).toMatchObject({ timezone: 'Asia/Shanghai' });
+    } finally { await db.exec('drop table pg_temp.pg_timezone_names'); }
+  });
+});
+
 it('rolls back an existing task update when the audit insert fails', async () => {
   const task = await asAdmin(async () => change('create', null, createInput(await fixtures())));
   const request = randomUUID();

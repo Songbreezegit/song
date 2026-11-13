@@ -10,13 +10,15 @@
 | --- | --- | --- |
 | npm run lint | PASS | 约 3.0 秒，退出码 0 |
 | npm run build | PASS | Vite 构建约 0.9 秒，退出码 0。既有主包大于 500 kB 的提示保留 |
-| npm test | PASS | 22 个文件、310 项通过，6.63 秒，退出码 0 |
+| npm test | PASS | 22 个文件、311 项通过，6.17 秒，退出码 0 |
 | npm run test:e2e | PASS | 230 项通过，14.3 分钟，退出码 0 |
 | npm run test:security | PASS | 两种 CSP 模式共 16 项通过，39.8 秒，退出码 0 |
 
 M3 本地数据库覆盖四种 JWT 身份与缺失 aal、直接写入和伪造日志拒绝、额外 permissive 策略、创建与报告重放、过期版本、状态限制、审计写入失败回滚、源和素材保护、归档、数据清理及回滚草案。浏览器覆盖三种日历视图、两处创建入口、时区与 DST、冲突恢复、取消、报告及纠正、导出、刷新、分页和主题切换。最后一次表单与样式调整后，M3 专项 E2E 八项复跑通过，36.5 秒，退出码 0。
 
 开发期间，隔离数据库的 RESTRICT 返回 23001，已同时覆盖 23503 和 23001，并验证触发的具体外键。Storage 用例使用仅被本任务引用的对象，以单独验证 M3 外键。清理脚本最初出现变量与列重名，修正后已验证清单外事件会阻断清理。完整命令以上表最终结果为准。
+
+提交后的 SQL 复核发现同名临时表可以覆盖时区查询，导致伪造时区被接受。时区视图已限定为 pg_catalog.pg_timezone_names。新增回归先在原 SQL 重现问题，再验证非法时区拒绝和合法时区通过。
 
 ## Staging
 
@@ -28,7 +30,7 @@ M3 本地数据库覆盖四种 JWT 身份与缺失 aal、直接写入和伪造�
 | M3 单条迁移 | BLOCKED | 等待独立 Staging 写入批准。 |
 | GoTrue TOTP、REST/RPC 并发与事务、Storage、真实浏览器、资源清理 | BLOCKED | 依赖已核验的 M3 迁移。当前阶段未创建测试资源。 |
 
-[M3 原始 SQL](../supabase/migrations/20261112190304_add_distribution_publish_calendar.sql) 为 25,918 字节，SHA-256 为 0bcaa55d9d27da88703fa5d5ce260b19cb8988e89ffc6cdd17b957cfdff5046f。运行说明见 [安全审查](admin-distribution-m3-security.md#staging-执行步骤)。
+[M3 原始 SQL](../supabase/migrations/20261112190304_add_distribution_publish_calendar.sql) 为 25,929 字节，SHA-256 为 c9aa94c8a63df0fb8e521bf77c5bbb9bb71755bbf496224ea8f30dc12e260396。运行说明见 [安全审查](admin-distribution-m3-security.md#staging-执行步骤)。
 
 ## 界面截图
 

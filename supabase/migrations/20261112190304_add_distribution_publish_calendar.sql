@@ -344,7 +344,7 @@ begin
       raise exception 'A new schedule must be in the future' using errcode = '22023';
     end if;
     if (payload->>'timezone') !~ '^(UTC|[A-Za-z_]+/[A-Za-z0-9_+/-]+)$'
-      or not exists (select 1 from pg_timezone_names where name = payload->>'timezone')
+      or not exists (select 1 from pg_catalog.pg_timezone_names where name = payload->>'timezone')
     then raise exception 'Choose a valid IANA time zone' using errcode = '22023'; end if;
     if (schedule, payload->>'timezone', payload->>'plan_note') is not distinct from
       (task.scheduled_at, task.timezone, task.plan_note)
