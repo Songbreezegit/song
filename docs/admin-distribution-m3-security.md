@@ -36,7 +36,7 @@ SQL 使用一个显式事务。执行前核对目标、原始文件 SHA-256、�
 1. 固定 Supabase 项目 song-staging（uartrtcmskyuqxawjqlx），核对 M1/M2 八条迁移、M2 哈希、强制 RLS 和 Security Advisor。读回确认 M3 对象及记录均未存在后，展示完整 SQL 和哈希并取得独立写入批准。
 2. 用单条迁移通道提交原始 SQL。回执需核对远端实际登记版本、存储 SQL、角色、三张表、六个 RESTRICT 外键、索引、约束、策略、函数 owner 和 EXECUTE。执行后对照 Security Advisor 基线。
 3. 使用仅限该项目的短期 Scoped PAT，授予 Project Settings Read 和 API Keys Read/Write。将凭据从本机隐藏提示交给进程。设置 DISTRIBUTION_STAGING_PROJECT_REF、DISTRIBUTION_STAGING_API_URL 和 DISTRIBUTION_STAGING_MANAGEMENT_TOKEN，再运行 node scripts/verify-distribution-m3-staging.mjs。脚本核验项目身份后进入 migration-verified 检查点。
-4. 到 admins-registered 检查点后，通过 Staging 管理连接核对 UUID、临时邮箱和 Auth app_metadata 中的运行标记，只登记两个测试管理员。普通测试账号保持非管理员。随后运行 M1、M2、M3 的只读 SQL smoke，再让 runner 继续。
+4. 到 admins-registered 检查点后，通过 Staging 管理连接核对三个 Auth UUID、临时邮箱和 app_metadata 中的运行标记。Staging 无既有管理员时，先登记本轮第一位管理员并执行要求唯一管理员的 M1 只读 SQL smoke，再登记第二位并执行 M2/M3 smoke。普通测试账号保持非管理员。核验两位临时管理员后让 runner 继续。
 5. Runner 使用真实 GoTrue 登录和 TOTP，执行 REST 负向、并发、重放、快照、人工报告、Storage 和真实 Edge 检查。在 atomic-probe 检查点填入本次运行标记、任务 UUID、操作者 UUID 和版本，执行回滚探针并读回确认临时触发器已经清理。
 6. 到 database-clean 检查点，在同一 Staging 管理连接审查并执行 runner 生成的单事务清理。脚本先验证两名 Auth 操作者、精确源/账号/稿件 UUID、账号和稿件的 run 标记、每个任务的创建事件及所有请求 UUID，发现外来引用即中止。依次清理日志、任务素材、任务、源及账号。实际文件经 Storage API 删除，校验路径、UUID、字节及删除后 404。
 7. Runner 按 run 标记和 UUID 清理 Auth 用户、临时 Secret API Key，并读回验证。另行只读核对 MFA 因子、会话、管理员登记、分发数据和 Storage 的本轮行数。确认后撤销 Scoped PAT，核对凭据失效并清理本机交接副本。
