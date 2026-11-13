@@ -27,7 +27,8 @@ M3 本地数据库覆盖四种 JWT 身份与缺失 aal、直接写入和伪造�
 | 项目身份与权限前置 | PASS | song-staging，uartrtcmskyuqxawjqlx，PostgreSQL 17.11。M1/M2 八条迁移已登记，六张分发表强制 RLS，四个 M2 RPC 为 Invoker。读取时 M3 表与私有 schema 尚不存在。 |
 | M2 存储 SQL | PASS | 20261110174923 的 SHA-256 为 48ba065036b71438dddcb548fb8f733e2475b9e09da80e197873799179c69174。20261110175856 的 SHA-256 为 acc63a2cf5d088da312353a8adc652dc5b01119518433a3fb2db8f6ffb081d21。 |
 | 迁移前 Security Advisor | PASS | 两条既有 INFO 涉及 analytics_private 的内部表。 |
-| M3 单条迁移 | BLOCKED | 等待独立 Staging 写入批准。 |
+| `apply_migration` 通道 | FAIL | 已按最终 SQL 哈希批准并调用一次。连接器返回 HTTP 传输错误，未取得数据库执行回执。 |
+| M3 单条迁移 | BLOCKED | 独立读回仍为八条历史，M3 对象均不存在。待批准 [官方单条迁移 API](admin-distribution-m3-staging-migration.md)。 |
 | GoTrue TOTP、REST/RPC 并发与事务、Storage、真实浏览器、资源清理 | BLOCKED | 依赖已核验的 M3 迁移。当前阶段未创建测试资源。 |
 
 [M3 原始 SQL](../supabase/migrations/20261112190304_add_distribution_publish_calendar.sql) 为 25,929 字节，SHA-256 为 c9aa94c8a63df0fb8e521bf77c5bbb9bb71755bbf496224ea8f30dc12e260396。运行说明见 [安全审查](admin-distribution-m3-security.md#staging-执行步骤)。
