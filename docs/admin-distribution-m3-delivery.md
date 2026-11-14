@@ -15,11 +15,32 @@
 | `npm run test:e2e` | PASS | 230 项，零跳过，14.0 分钟，退出码 0 |
 | `npm run test:security` | PASS | 16 项，39.9 秒，退出码 0 |
 | 历史媒体与清理 | PASS（本地） | 验证版本、路径和归档保护，允许访问时间及自定义元数据更新。覆盖历史路径漂移、M1/M2 素材引用、清理提交前后超时、重复清理、清单外对象及临时凭据删除回执丢失 |
-| 真实覆盖、upsert 和移动基线 | BLOCKED | 等待独立 Staging 基线授权和项目限定短期凭据 |
-| Staging 增量迁移 | BLOCKED | 基线后单独审批。原始 M3 迁移维持既有登记 |
-| 完整真实 runner 及资源清理 | BLOCKED | 等待增量读回和完整测试授权。本轮预检阶段未创建夹具 |
+| 真实覆盖、upsert 和移动基线 | FAIL（已复现） | 管理员 aal2 三次操作均成功。UUID 和任务快照不变，覆盖与 upsert 更改字节，移动使原路径失效 |
+| 基线 runner 与资源清理 | PASS | 基线探针退出码 0，确认三种允许写入的现象及资源清理。独立只读复核临时账号、Auth、MFA、会话、分发行、历史和 Storage 均清零。临时 Secret API Key 已撤销 |
+| Staging 增量迁移 | PASS | 官方单条迁移 API HTTP 200，脚本退出码 0。远端登记 `20261114053707`，存储 SQL 哈希与批准版本一致 |
+| 完整真实 runner 及最终资源清理 | BLOCKED | 等待增量读回和完整测试授权 |
 
 本地测试曾误将 UUID 改动断言为触发器的 `42501`。PostgreSQL 先返回既有外键的 `23503`，现断言具体外键名，路径和版本仍独立断言触发器拒绝。
+
+### 2026-11-14 修复前实测
+
+13:32–13:33（Asia/Shanghai），使用 `f488b85534353d48ba01230b5650bed39fc7b37a` 的 runner，run_id 为 `f6a0be01-ec58-4b14-bf40-fd7d04e2cb54`。真实 GoTrue TOTP、M1/M2/M3 SQL smoke 均通过。Storage 版本为 `1.94.2`，桶版本管理为 `DISABLED`。
+
+| 管理员 aal2 操作 | 下载字节 SHA-256 变化 | 路径与对象版本 |
+| --- | --- | --- |
+| `update()` | `f03ddc09…` → `7416d1fe…` | 原路径保留，Storage 版本改变 |
+| `upload(..., { upsert: true })` | `7416d1fe…` → `f03ddc09…` | 原路径保留，Storage 版本再次改变 |
+| `move()` | `f03ddc09…` → `f03ddc09…` | 同 UUID 移至 `moved-frozen.webp`，原路径列表缺失，Storage 版本改变 |
+
+三次操作均改变 Storage 服务元数据，任务快照始终保留初始 UUID 和路径。覆盖与 upsert 的字节哈希变化证实内容被替换。移动前后字节相同，读取位置发生变化。原文件 SHA-256 为 `f03ddc0922c34d65c3e83f769805f983ac50521971972a2c4c4db8cc5fdfdc81`，替换文件为 `7416d1fe87f8d6fbb8756f9090b0018578bae3b3dd4c54eec6ad7c0ecb60e7a2`。
+
+清理后，原路径、移动目标和第二个夹具的公开 GET 均返回 HTTP 400 加对象缺失状态 404。独立读回确认测试数据清零及原始 M3 SQL 哈希。
+
+### 2026-11-14 Staging 增量迁移回执
+
+13:37（Asia/Shanghai），获批通道向 `song-staging`（`uartrtcmskyuqxawjqlx`）提交一次 `protect_distribution_publish_media`。原 SQL 3,300 字节，SHA-256 为 `28d22d496fb293bfaa731af6535a24e975ee146440f03de8eae3217a1adb25c9`。提交前未发现 Storage 写锁，数据库存储的原始 M3 哈希仍为 `c9aa94c8a63df0fb8e521bf77c5bbb9bb71755bbf496224ea8f30dc12e260396`。
+
+提交后由迁移 API 和 PostgreSQL 目录分别读回增量哈希，迁移历史共十条。触发器已启用，绑定私有函数，所有者为 `postgres`，固定空 `search_path`。`anon`、`authenticated`、`service_role` 及发布写入角色均无该函数的 EXECUTE。三张强制 RLS 表、六条已验证的 RESTRICT 外键及五条原 Storage 策略核对通过。Security Advisor 仅报告迁移前已有的两条 INFO。
 
 ## 本地回归
 
