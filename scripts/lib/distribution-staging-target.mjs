@@ -144,9 +144,11 @@ export function createStagingTarget(ref, origin, token) {
     }
     check(keyMatches(entry, identity), 'Cleanup must match the Secret API Key UUID and run marker', {}, 'P1');
     await verifyProject();
-    await management(`/api-keys/${encodeURIComponent(id)}?reveal=false`, 'DELETE');
+    const failure = await management(`/api-keys/${encodeURIComponent(id)}?reveal=false`, 'DELETE')
+      .then(() => undefined, error => error);
     const remaining = await management('/api-keys?reveal=false');
-    check(!remaining.some(key => key.id === id), 'Temporary Staging API key revoked');
+    if (remaining.some(key => key.id === id) && failure) throw failure;
+    check(!remaining.some(key => key.id === id || keyMatches(key, identity)), 'Temporary Staging API key revoked');
   }
 
   return { ref, origin, verifyProject, guardRequest, fetchStaging, publishableKey, createSecretKey, findSecretKey, revokeSecretKey };
