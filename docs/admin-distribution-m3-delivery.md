@@ -18,7 +18,9 @@
 | 真实覆盖、upsert 和移动基线 | FAIL（已复现） | 管理员 aal2 三次操作均成功。UUID 和任务快照不变，覆盖与 upsert 更改字节，移动使原路径失效 |
 | 基线 runner 与资源清理 | PASS | 基线探针退出码 0，确认三种允许写入的现象及资源清理。独立只读复核临时账号、Auth、MFA、会话、分发行、历史和 Storage 均清零。临时 Secret API Key 已撤销 |
 | Staging 增量迁移 | PASS | 官方单条迁移 API HTTP 200，脚本退出码 0。远端登记 `20261114053707`，存储 SQL 哈希与批准版本一致 |
-| 完整真实 runner 及最终资源清理 | BLOCKED | 等待增量读回和完整测试授权 |
+| 完整真实 runner | PASS | 独立获批后实跑一次，107.26 秒，原始退出码 0。真实 Storage 的覆盖、upsert 和移动均被拒绝，业务及浏览器验证完成 |
+| 最终资源及凭据清理 | PASS | 两轮测试资源经独立只读复核均为零，两枚临时 Secret API Key 已撤销。Scoped PAT 已撤销并验证失效，DPAPI 副本已移除 |
+| PostgREST 精确版本 | BLOCKED | REST 根端点返回 HTTP 401。管理 API 显示 REST 服务健康，未返回版本字段。实际 REST 权限与并发验证通过 |
 
 本地测试曾误将 UUID 改动断言为触发器的 `42501`。PostgreSQL 先返回既有外键的 `23503`，现断言具体外键名，路径和版本仍独立断言触发器拒绝。
 
@@ -41,6 +43,21 @@
 13:37（Asia/Shanghai），获批通道向 `song-staging`（`uartrtcmskyuqxawjqlx`）提交一次 `protect_distribution_publish_media`。原 SQL 3,300 字节，SHA-256 为 `28d22d496fb293bfaa731af6535a24e975ee146440f03de8eae3217a1adb25c9`。提交前未发现 Storage 写锁，数据库存储的原始 M3 哈希仍为 `c9aa94c8a63df0fb8e521bf77c5bbb9bb71755bbf496224ea8f30dc12e260396`。
 
 提交后由迁移 API 和 PostgreSQL 目录分别读回增量哈希，迁移历史共十条。触发器已启用，绑定私有函数，所有者为 `postgres`，固定空 `search_path`。`anon`、`authenticated`、`service_role` 及发布写入角色均无该函数的 EXECUTE。三张强制 RLS 表、六条已验证的 RESTRICT 外键及五条原 Storage 策略核对通过。Security Advisor 仅报告迁移前已有的两条 INFO。
+
+### 2026-11-14 完整 Staging 复验
+
+13:57:58–13:59:45（Asia/Shanghai）在 `song-staging`（`uartrtcmskyuqxawjqlx`）运行。测试提交为 `5f08b720179915c55b75f8ffc186e49e8ad4d4c1`，run_id 为 `2407c7eb-b39d-441c-9632-f38cc796ddb8`。启动前与结束后均确认十条迁移、媒体保护触发器和两条 M3 SQL 的存储哈希。Runner 实际用时 107.26 秒，退出码 0。原始 JSONL 与进程回执保存在本机 Git 忽略目录。
+
+| 真实验证 | 结果 | 证据 |
+| --- | --- | --- |
+| 已引用素材的 `update()`、upsert、`move()` | PASS | 同一管理员 aal2 的三个请求均返回 HTTP 400 / `AccessDenied`，响应匹配媒体保护触发器。每次重新下载，原字节 SHA-256 均为 `f03ddc0922c34d65c3e83f769805f983ac50521971972a2c4c4db8cc5fdfdc81`。对象 UUID、原路径、对象版本、Storage 服务元数据和完整任务快照一致，移动目标未创建 |
+| M1/M2 素材兼容和历史引用 | PASS | 两件新图可上传与读取。独立的 M1、M2 关联及仅剩 M3 历史引用时，Storage 删除返回 `ResourceReferenced` 且原字节可读。清理解除引用后，两件图片均可删除 |
+| GoTrue、PostgREST 和 RPC | PASS | 三个真实 TOTP 会话，匿名、管理员 aal1 和普通用户 aal2 的越权请求遭拒。M1/M2/M3 SQL smoke 各核对五种身份。覆盖幂等、并发 HTTP 409 / `PT409`、注入审计失败的原子回滚、人工报告和纠正 |
+| 真实 Edge | PASS | 任务创建、刷新、日历、历史、素材预览和导出通过。7 次 Auth、20 次 REST、1 次 Storage 请求，REST 含一次任务写入，页面异常为 0 |
+| 最终只读核对 | PASS | Auth 用户、MFA 因子、会话、身份、管理员登记、分发数据及引用、日志、Storage 对象、注入的临时审计触发器计数均为 0。三个保留路径的公开 GET 返回 HTTP 400，响应体确认对象缺失。独立复核两轮临时 Secret API Key 均已撤销 |
+| Scoped PAT | PASS | 14:02（Asia/Shanghai）同一项目健康接口从 HTTP 200 变为 HTTP 401，本机 DPAPI 交接文件已移除 |
+
+本次真实清理一次提交后读回成功。超时后的只读恢复、重复清理及自定义元数据更新由本地数据库回归覆盖。PostgREST 健康接口返回 HTTP 200 / ACTIVE_HEALTHY，精确版本查询仍受限。[服务健康接口](https://supabase.com/docs/reference/api/v1-get-services-health)
 
 ## 本地回归
 

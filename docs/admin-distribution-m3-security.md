@@ -52,6 +52,6 @@ UUID 外键能阻止删除。Storage v1.94.2 的覆盖写入会分配新对象�
 
 Runner 保存原始退出码。若只读核验仍显示残留，使用本机脱敏清单核对原 Auth 标记及当前对象。若临时 Auth 已清除，在 `song-staging` 核对任务 UUID、创建事件和请求 UUID、账号/源/稿件标记、Storage UUID 及引用后，再审查同范围的恢复事务。范围不一致时保留数据和清单以供复核。
 
-数据库读回确认引用清零后，按本轮路径、UUID 和原始字节通过 Storage API 删除文件，再核对目录、公开 GET 及 `storage.objects`。单独撤销清理使用的临时密钥。[实际恢复记录](admin-distribution-m3-delivery.md#staging)
+数据库读回确认引用清零后，按本轮路径、UUID 和原始字节通过 Storage API 删除文件，再核对目录、公开 GET 及 `storage.objects`。单独撤销清理使用的临时密钥。[增量复验回执](admin-distribution-m3-delivery.md#2026-11-14-完整-staging-复验) · [早期清理恢复记录](admin-distribution-m3-delivery.md#执行与清理记录)
 
 官方参考覆盖 [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security)、[Data API 权限](https://supabase.com/docs/guides/api/securing-your-api)、[PostgreSQL 函数执行权限](https://www.postgresql.org/docs/17/sql-createfunction.html) 和 [PostgREST 自定义错误码](https://docs.postgrest.org/en/v16/references/errors.html)。
