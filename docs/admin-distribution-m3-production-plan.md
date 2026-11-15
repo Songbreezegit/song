@@ -181,8 +181,8 @@ HTTP 超时、连接中断、服务端错误或数据库锁超时后，先只读
 | M2 备份模板 | 静态检查通过 | 可复用连接、导出与校验，实施前按节点 1 适配八条历史、M2 表、归档内容和 Storage 分支 |
 | 生产备份 | PASS | 新数据库归档及生产一致性校验通过。两件媒体验证后复用 M2 ZIP，详见本页节点 1 回执 |
 | 生产迁移 A | PASS | 已在生产登记 `20261115085958`，详见节点 2 执行回执 |
-| 生产迁移 B | 待正式批准 | 九条历史、空表、备份、Storage 及锁检查通过，详见节点 3 审批材料 |
-| 合并与正式发布 | 待审批 | 节点 3 验收通过后进入联合发布审批 |
+| 生产迁移 B | PASS | 已在生产登记 `20261115181800`，详见节点 3 执行回执 |
+| 合并与正式发布 | 待审批 | 等待节点 3 最终验收 |
 
 ## 节点 1 执行回执
 
@@ -318,4 +318,22 @@ $response = Invoke-WebRequest -Uri $endpoint -Method Post -Authentication Bearer
 
 出现 `55P03`、SQL 错误、HTTP 超时或回执不明时，先只读核对活动事务、锁、API 及数据库历史、B 函数与触发器。若事务已结束且仍为九条历史、B 对象缺失，记录失败并暂停。若新增唯一 B 记录且哈希与对象均匹配，继续验收。历史、对象与哈希不一致或结果仍未知时保留脱敏证据，停止后续步骤。这个处置保留已验收的 A 和迁移历史。
 
-B 的验收要求十条记录，A/B 存储哈希匹配各自原件。确认触发器启用及绑定正确，函数 `SECURITY DEFINER`、所有者的 `BYPASSRLS`、空 `search_path`、`row_security=off` 和触发器限定授权均与 Staging 一致。Staging `pg_get_functiondef` 的 SHA-256 为 `db265431038d3420b1829c28a4ca46fb2a70626cf39d40beef6eb267f9c758b7`，用于读回对照。读回 M1/M2/M3 安全边界、业务指纹、两件媒体、`media` 桶和原 Storage 策略，复核 Advisor。生产验收使用目录与只读查询。覆盖、upsert、移动和字节保留的实测沿用 Staging。节点 3 待用户正式批准后执行，送审范围仅为这次 B 的单条 POST。
+B 的验收要求十条记录，A/B 存储哈希匹配各自原件。确认触发器启用及绑定正确，函数 `SECURITY DEFINER`、所有者的 `BYPASSRLS`、空 `search_path`、`row_security=off` 和触发器限定授权均与 Staging 一致。Staging `pg_get_functiondef` 的 SHA-256 为 `db265431038d3420b1829c28a4ca46fb2a70626cf39d40beef6eb267f9c758b7`，用于读回对照。读回 M1/M2/M3 安全边界、业务指纹、两件媒体、`media` 桶和原 Storage 策略，复核 Advisor。生产验收使用目录与只读查询。覆盖、upsert、移动和字节保留的实测沿用 Staging。审批范围为这次 B 的单条 POST。
+
+## 节点 3 执行回执
+
+2026-11-16 02:17:58–02:18:00（北京时间），依照用户批准的提交 `6bb79065212847bb98a7171351c7915bb3b342bc`，在生产 Supabase `song`（`vfgmptjfcfgptaqblydd`）通过官方单条迁移 API 提交一次 B。HTTP 返回 200，平台登记为 `20261115181800 / protect_distribution_publish_media`。管理 API 和数据库目录分别读回十条历史，原九条逐项匹配，B 的存储 SQL 为一个 3,300 字节的语句条目，SHA-256 `28d22d496fb293bfaa731af6535a24e975ee146440f03de8eae3217a1adb25c9` 与批准的原始 Git blob 一致。请求体 SHA-256 `c476d7e6e0f6345f020921a68b410ca3f9aaaddcad01677d8121a1c886ba396c`。
+
+| 验收项 | 实际结果 |
+| --- | --- |
+| 备份及执行前状态 | PASS。节点 1 的数据库归档及旧 Storage ZIP 大小、SHA-256 正确。`pg_restore --list` 退出 0，含 617 个目录条目。15 张表的行数与内容指纹和归档一致。管理 API 已复核九条基线及迁移 A 的存储哈希。 |
+| Storage 锁及事务 | PASS。已暂停后台编辑和媒体上传。02:17:57 的数据库快照确认三张 M3 表为空、`media` 桶版本管理为 `DISABLED`、维护角色满足取锁及创建触发器所需权限。冲突锁、其他客户端事务及等待锁会话均为 0。原 SQL 的单事务及 5 秒取锁超时保留，单次请求标记已落盘。02:19:59 的验收快照见 B 活动事务和 Storage 冲突锁均为 0。 |
+| 保护对象 | PASS。`distribution_protect_task_media` 已启用，逐行在 `storage.objects` 更新后调用预期私有函数。函数定义和 ACL 与 Staging 一致，所有者为具有 `BYPASSRLS` 的 `postgres`，采用 `SECURITY DEFINER`、空 `search_path` 和 `row_security=off`。`PUBLIC`、`anon`、`authenticated`、`service_role` 和 `distribution_publish_writer` 均无 `EXECUTE`。 |
+| 既有数据库安全边界 | PASS。九张 M1/M2/M3 表的权限，以及相关约束、索引、策略、既有触发器、例程和审计写入角色授权的目录指纹与提交前一致。三张 M3 表仍为空且启用强制 RLS，六条 RESTRICT 外键均有效。六张 M1/M2 表的强制 RLS 通过复核，M1、M2、M3 各五种身份的只读检查均通过。M3 只读检查覆盖表权限、MFA 谓词和 RPC 定义及授权。 |
+| 业务与媒体 | PASS。15 张基础业务、分发、Auth 及 Storage 元数据表与节点 1 归档继续一致。两个现有 PNG 的对象 UUID、路径和版本指纹一致，公开 Storage GET 均为 200，长度、MIME 和实际字节 SHA-256 均与已验收的 ZIP 一致。`media` 桶版本管理为 `DISABLED`，五条既有对象策略均在位。 |
+| Security Advisor | PASS。仍为两条既有 `analytics_private` RLS INFO 及一条 Auth 泄露密码防护 WARN。 |
+| 临时凭据 | PASS。用户已撤销本轮项目级 Scoped PAT。同一迁移历史 GET 返回 HTTP 401，本机窗口已释放凭据。 |
+
+生产验收只读目录、业务表和既有媒体。覆盖、upsert、移动与被引用字节保留的写操作证据来自 Staging。已通知用户恢复后台编辑和媒体上传。
+
+节点 3 状态为 `PASS`，等待用户最终验收。
