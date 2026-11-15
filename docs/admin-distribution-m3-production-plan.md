@@ -106,7 +106,7 @@
 
 A 的单个事务创建 `distribution_publish_tasks`、`distribution_publish_task_media`、`distribution_publish_logs`，建立索引、任务版本与审计幂等约束，以及六条 `ON DELETE RESTRICT` 外键。新增私有 schema 和 `NOLOGIN NOBYPASSRLS` 的最小权限写入角色。公开 `change_distribution_publish_task` 是 `SECURITY INVOKER`，私有写函数用 `SECURITY DEFINER` 绑定写入角色，并在处理输入、锁定与变更前校验管理员 `aal2`。三张表启用强制 RLS，客户端角色仅持有受限查询权限。日志在应用侧只能追加，任务变更与日志同事务提交。生效后仍由管理员手工确认，没有队列、计划执行器或外部平台调用。
 
-新备份 PASS 后单独送审 A。提交前确认生产 Ref、完整八条旧历史、A 的原文件哈希、维护窗口、后台编辑已暂停和最新锁状态。创建外键会在 M1/M2 的被引用表和 `storage.objects` 上申请与写入冲突的锁。查询 `pg_locks` 和 `pg_stat_activity`，发现冲突锁、活跃写事务或排队即推迟提交。A 原 SQL 没有设置 `lock_timeout`。先前只读会话的 `lock_timeout = 0`、`statement_timeout = 2min` 只说明该会话的参数。单条迁移 API 的数据库会话超时未获独立验证。
+节点 1 PASS 后沿用该备份，单独送审 A。提交前确认生产 Ref、完整八条旧历史、A 的原文件哈希、维护窗口、后台编辑已暂停和最新锁状态。创建外键会在 M1/M2 的被引用表和 `storage.objects` 上申请与写入冲突的锁。查询 `pg_locks` 和 `pg_stat_activity`，发现冲突锁、活跃写事务或排队即推迟提交。A 原 SQL 未设置 `lock_timeout`。生产管理 API 只读会话的参数、单条迁移 API 的能力边界及拟采用的中止步骤见本页审批材料。
 [PostgreSQL 外键锁](https://www.postgresql.org/docs/17/sql-altertable.html) · [M3 权限设计](https://github.com/Songbreezegit/song/blob/8de09e348349c148c79fad5694d89006b5673eb7/docs/admin-distribution-m3-security.md)
 
 生产执行端复用 M2 的 PowerShell 7 `Invoke-WebRequest` 参数。连接超时 15 秒（`ConnectionTimeoutSeconds`），响应流单次读取超时 60 秒（`OperationTimeoutSeconds`），关闭重定向和自动重试。60 秒是读取停滞上限。执行前在本机记录一次提交标记、目标、SQL 哈希和时间。HTTP 客户端超时会结束本地等待，PostgreSQL 的执行结果要从数据库读回确认。具体参数随 A 请求体一同送审。
@@ -204,4 +204,56 @@ HTTP 超时、连接中断、服务端错误或数据库锁超时后，先只读
 
 首次启动的窗口状态判断有误，两个窗口各导出一次。比对两份归档完整离线解码输出的 SHA-256 和目录条目摘要，均一致，因此清除了首次启动生成的副本。本机保留表列的一份 M3 数据库归档及本次回执，媒体沿用旧 ZIP。完整恢复演练未执行。
 
-节点 1 状态为 `PASS`，等待审查。迁移 A 的数据库端锁等待超时及中止行为将在节点 2 送审时确认。
+节点 1 状态为 `PASS`，已获用户审查通过。节点 2 沿用这份归档。
+
+## 节点 2 迁移 A 审批材料
+
+| 项目 | 本次拟授权范围 |
+| --- | --- |
+| 目标 | 生产 Supabase `song`，Project Ref `vfgmptjfcfgptaqblydd`，区域 `ap-northeast-1`，项目状态 `ACTIVE_HEALTHY` |
+| SQL | `20261112190304_add_distribution_publish_calendar.sql`，验收提交 `8de09e348349c148c79fad5694d89006b5673eb7` 中的 UTF-8 Git blob，25,929 字节，450 行 |
+| 原始 SQL SHA-256 | `c9aa94c8a63df0fb8e521bf77c5bbb9bb71755bbf496224ea8f30dc12e260396`，与 Staging 登记 `20261113062649` 存储 SQL 一致 |
+| 通道 | 官方单条迁移 API `POST https://api.supabase.com/v1/projects/vfgmptjfcfgptaqblydd/database/migrations`，仅提交一次 `name = add_distribution_publish_calendar` 和原始 `query`，由平台登记迁移历史 |
+| 影响 | 新增三张强制 RLS 表、六条 `ON DELETE RESTRICT` 外键、索引和唯一约束、私有 schema、审计写入角色及人工任务 RPC。现有四张被引用业务和 Storage 表会参与外键锁定 |
+| 凭据 | 仅限生产 `song` 的短期 `Migrations (Read-write)` Scoped PAT，使用本机专用输入。监控沿用节点 1 已核验的生产 Direct TLS 连接 |
+
+[完整原 SQL](https://github.com/Songbreezegit/song/blob/8de09e348349c148c79fad5694d89006b5673eb7/supabase/migrations/20261112190304_add_distribution_publish_calendar.sql) · [单条迁移 API](https://supabase.com/docs/reference/api/v1-apply-a-migration) · [官方 OpenAPI](https://api.supabase.com/api/v1-json)
+
+### 执行前只读复核
+
+2026-11-15 15:52（北京时间）生产八条迁移的名称、版本及存储 SHA-256 与基线一致，M3 的三张表、角色、schema、RPC 和媒体保护触发器尚未部署。目录与数据库角色权限满足当前 DDL 依赖，M1/M2 原有六张强制 RLS 表及两条 Storage RESTRICT 外键在位。M1、M2 只读 smoke 各通过五种身份。
+
+节点 1 的数据库归档及复用 ZIP 的路径、大小、SHA-256 已从最终文件读回并核对。数据库归档 `pg_restore --list` 退出 `0`，617 个目录条目与回执一致。将归档中的 15 张表与生产逐表比对，行数及字段内容均一致，覆盖基础业务、M1/M2、Auth 和 Storage 元数据。生产两件现有图片的只读 HEAD 与清单长度、MIME 一致。继续使用节点 1 已验收的备份。
+
+15:52:25 在 A 将引用的 `distribution_variants`、`distribution_posts`、`distribution_accounts` 和 `storage.objects` 上观测到 0 个冲突锁、0 个等待锁的其他客户端、0 个其他客户端事务。该结果为预检快照。实际提交前确认维护时段、暂停后台内容和媒体编辑，并立即复查相关锁和活动事务。
+
+### 数据库端锁超时与中止机制
+
+| 边界 | 已核实的行为 |
+| --- | --- |
+| 数据库默认值 | 在生产的管理 API 只读查询会话读到 `application_name = mgmt-api`、`session_user = postgres`、`lock_timeout = 0`（默认）、`statement_timeout = 120000ms`（配置文件）及 `transaction_timeout = 0`。相关数据库和角色没有目录级超时覆盖。生产 M2 实际迁移 DDL 的 `pg_stat_statements` 记录也归属 `postgres`。 |
+| A 的实际写入会话 | 官方单条迁移 API 的请求体只定义 `query`、`name` 和可选 `rollback`，公开规范未提供会话级锁超时参数或迁移取消端点。A 的原 SQL 没有超时设置。如果写会话沿用观测到的默认值，锁等待受单条语句 120 秒上限约束，`lock_timeout = 0` 表示无单独锁等待上限。写会话的最终参数和 HTTP 断开后的取消行为无法从只读检查核实。 |
+| HTTP 客户端 | `ConnectionTimeoutSeconds = 15`，`OperationTimeoutSeconds = 60`。后者限制响应读取停滞。超时只说明客户端停止等待，数据库事务状态以读回为准。 |
+| 可用的数据库取消机制 | 生产 `postgres` 具备 `pg_stat_activity` 可见性及 `pg_cancel_backend(integer)` 所需权限。该函数给目标后端当前查询发送取消信号。信号返回成功后仍须确认原事务是否结束及是否提交。此次只读预检已验证候选查询正常，返回 0 个等待中的 A 会话。 |
+
+[Supabase 超时文档](https://supabase.com/docs/guides/database/postgres/timeouts) · [PostgreSQL 超时参数](https://www.postgresql.org/docs/17/runtime-config-client.html) · [锁等待开始时间](https://www.postgresql.org/docs/17/view-pg-locks.html) · [数据库取消函数](https://www.postgresql.org/docs/17/functions-admin.html) · [PowerShell HTTP 超时](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/invoke-webrequest?view=powershell-7.6#-operationtimeoutseconds)
+
+本次方案采用独立数据库监控的 **5 秒取消阈值**，由用户在 A 的正式授权中一并确认。提交前建立生产 Direct `verify-full` 监控连接，并以服务器时钟记录本次请求起点。每秒只读查看 `pg_stat_activity` 和 `pg_locks`，使用 `waitstart` 计算实际等待时间。匹配生产库、`postgres`、管理 API 应用标识、本次请求后的事务和 A 独有的 SQL 起始片段，以及四张被引用表上的未授予外键锁。持续等待满 5 秒时，只有唯一候选且同一 PID、后端启动时间、事务与查询开始时间及等待锁再次确认匹配，才对该查询调用一次 `pg_cancel_backend`。识别不充分时保留现场并只读核实。这个阈值约束监控处置，数据库自身的固定 5 秒上限仍无法由该 API 保证。
+
+### 获批后的单次请求
+
+原始 SQL 按 Git 字节封装为本机准备好的 `production-migration-a-request.json`。请求体 26,465 字节，SHA-256 为 `2693ae74be1e093a1e94400e8dcafb6922ce6377aa33a70aab5e94a28016cc11`。离线读回 JSON 的 `query` 已逐字节比对，保留原 SQL 及其 `BEGIN` / `COMMIT`。正式执行前重算两个哈希，先只读 GET 核对历史，再记录绑定 Ref、SQL SHA-256 和时间的本机一次性提交标记。拟执行请求如下。
+
+```powershell
+$request = 'D:\code\song\.worktrees\m3-production-plan\node_modules\.cache\songisle-m3-migration-a\production-migration-a-request.json'
+$endpoint = 'https://api.supabase.com/v1/projects/vfgmptjfcfgptaqblydd/database/migrations'
+$headers = @{ 'Idempotency-Key' = 'song-production-m3-a-c9aa94c8a63df0fb8e521bf77c5bbb9bb71755bbf496224ea8f30dc12e260396' }
+$response = Invoke-WebRequest -Uri $endpoint -Method Post -Authentication Bearer -Token $migrationPat `
+    -ContentType 'application/json; charset=utf-8' -InFile $request -Headers $headers `
+    -ConnectionTimeoutSeconds 15 -OperationTimeoutSeconds 60 -MaximumRedirection 0 -MaximumRetryCount 0 -SkipHttpErrorCheck
+```
+
+A 的显式事务保护 DDL。若收到 `55P03`（取锁超时）、`57014`（语句取消）、连接中断或回执不明，先独立读回锁、活动事务、管理 API 及数据库历史、存储 SQL 和实际对象。八条历史且 A 对象缺失、事务已结束时，记录失败并暂停。九条历史、A 哈希及对象全匹配、事务已结束时进入验收。任一证据不一致或事务未结束时保持 `BLOCKED`，留存脱敏证据。HTTP 200 与取消信号分别需要同样的读回。已有备份用于恢复评估，回执异常时停在 A。
+[PostgreSQL 错误状态码](https://www.postgresql.org/docs/17/errcodes-appendix.html) · [迁移历史](https://supabase.com/docs/reference/api/v1-list-migration-history)
+
+验收要求生产新增且仅新增 A 一条记录，总数九条，历史与原 SQL 哈希匹配。核对三张空表、强制 RLS、六条已验证的 RESTRICT 外键、角色成员关系、Invoker RPC、Definer 所有者及授权、索引和约束。复跑 M1/M2/M3 只读 smoke、既有业务与媒体基线及 Advisor。节点 2 当前为 **待正式批准**，送审范围包括这次 A 的一个 POST 及上述限定的查询取消动作。
