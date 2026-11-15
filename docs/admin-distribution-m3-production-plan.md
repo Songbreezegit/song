@@ -181,7 +181,8 @@ HTTP 超时、连接中断、服务端错误或数据库锁超时后，先只读
 | M2 备份模板 | 静态检查通过 | 可复用连接、导出与校验，实施前按节点 1 适配八条历史、M2 表、归档内容和 Storage 分支 |
 | 生产备份 | PASS | 新数据库归档及生产一致性校验通过。两件媒体验证后复用 M2 ZIP，详见本页节点 1 回执 |
 | 生产迁移 A | PASS | 已在生产登记 `20261115085958`，详见节点 2 执行回执 |
-| 生产迁移 B、合并与正式发布 | 待审批 | 节点 2 回执审查通过后进入后续节点 |
+| 生产迁移 B | 待正式批准 | 九条历史、空表、备份、Storage 及锁检查通过，详见节点 3 审批材料 |
+| 合并与正式发布 | 待审批 | 节点 3 验收通过后进入联合发布审批 |
 
 ## 节点 1 执行回执
 
@@ -274,4 +275,47 @@ A 的显式事务保护 DDL。若收到 `55P03`（取锁超时）、`57014`（�
 
 首次令牌的历史 GET 及复核均返回普通 403，生产历史保持八条，POST 次数为 0。更换仅限生产 `song` 的 Scoped PAT 后，历史核对通过，执行器记录了唯一一次迁移请求。本机安全窗口已关闭并释放凭据。用户确认已在 Supabase 控制台撤销本轮使用的两枚短期 Scoped PAT。
 
-节点 2 状态为 `PASS`，等待验收。
+节点 2 状态为 `PASS`，用户已验收。
+
+## 节点 3 迁移 B 审批材料
+
+| 项目 | 本次拟授权范围 |
+| --- | --- |
+| 生产目标 | Supabase `song`，Project Ref `vfgmptjfcfgptaqblydd`，区域 `ap-northeast-1`，状态 `ACTIVE_HEALTHY` |
+| 完整 SQL | `20261113170022_protect_distribution_publish_media.sql`，取自 M3 验收提交 `8de09e348349c148c79fad5694d89006b5673eb7` 的原始 Git blob，3,300 字节，63 行 |
+| SQL SHA-256 | `28d22d496fb293bfaa731af6535a24e975ee146440f03de8eae3217a1adb25c9`，与 Staging 实际登记 `20261114053707` 的存储 SQL 一致 |
+| 通道和凭据 | 官方单条迁移 API `POST https://api.supabase.com/v1/projects/vfgmptjfcfgptaqblydd/database/migrations`。仅限生产 `song`，使用短期 `Migrations (Read-write)` Scoped PAT 在本机隐藏交接 |
+| 变更 | 新增 `distribution_publish_private.protect_task_media()` 和 `storage.objects` 的 `distribution_protect_task_media` 更新触发器，阻止历史引用对象的内容版本、路径或关键服务元数据被替换。DDL 之外包含既有快照路径的只读校验 |
+
+[完整原 SQL](https://github.com/Songbreezegit/song/blob/8de09e348349c148c79fad5694d89006b5673eb7/supabase/migrations/20261113170022_protect_distribution_publish_media.sql) · [官方单条迁移接口](https://supabase.com/docs/reference/api/v1-apply-a-migration) · [Staging 验收回执](https://github.com/Songbreezegit/song/blob/8de09e348349c148c79fad5694d89006b5673eb7/docs/admin-distribution-m3-delivery.md#2026-11-14-完整-staging-复验)
+
+### 执行前只读预检
+
+| 检查 | 2026-11-16 预检结果（北京时间） |
+| --- | --- |
+| 迁移历史和 A | 00:58 核对九条迁移的版本、名称和存储 SQL SHA-256，前八条匹配生产基线。A `20261115085958` 唯一，SHA-256 为 `c9aa94c8a63df0fb8e521bf77c5bbb9bb71755bbf496224ea8f30dc12e260396`。B 的历史、函数和触发器均缺失。 |
+| M3 空表与外键 | `distribution_publish_tasks`、`distribution_publish_task_media`、`distribution_publish_logs` 各 0 行且强制 RLS。六条已验证的 RESTRICT 外键、素材反查索引有效。历史审计快照的路径与 UUID 校验发现 0 个不一致。 |
+| Storage | 生产与 Staging 的 Storage API 均为 `1.94.2`，目录最新迁移均为 80，触发器涉及的列类型和空值约束一致。生产 `media.versioning_status = DISABLED`，两张现行 PNG 共 3,476,452 字节，归档和删除标记均为 0。两件对象 HEAD 均为 200，类型及长度匹配。现有五条对象策略以及两条 Storage 触发器均在位。 |
+| 执行权限 | 生产管理 API 的只读会话角色为 `postgres`，现有 A 私有 schema 与公开 RPC 所有者均为 `postgres`。维护角色具有 `BYPASSRLS`、私有 schema 的 `USAGE` 和 `CREATE`、`storage.objects` 的 `TRIGGER`，以及桶、对象、任务素材关联和审计日志的查询权限。01:04 核对该角色还具有 `storage.objects` 的 `MAINTAIN`、`UPDATE`、`DELETE` 和 `TRUNCATE`，满足所需取锁权限。B 的事务内仍会检查实际写入角色。[PostgreSQL 取锁权限](https://www.postgresql.org/docs/17/sql-lock.html#SQL-LOCK-NOTES) |
+| 启动窗口和锁 | 01:00:51，`storage.objects` 持有或排队的冲突锁均为 0，其他客户端事务及锁等待均为 0。此为只读快照。执行前确认维护时段，安排后台内容及媒体编辑暂停，并再次读取表、桶、活跃事务和锁。出现冲突或任何基线变化时暂停提交。 |
+| 备份及既有业务 | 节点 1 数据库归档和复用的旧 Storage ZIP 大小、SHA-256 复核通过。`pg_restore --list` 退出 `0`，617 个目录条目与回执一致。生产 15 张业务、Auth 与 Storage 元数据表的行数和内容指纹均与归档对账一致，沿用节点 1 备份。现有策略指纹与 A 验收一致，Advisor 仍为两条既有 INFO、一条既有 WARN。 |
+
+### 事务、执行与验收
+
+B 保留原始 `BEGIN` / `COMMIT`、`SET LOCAL lock_timeout = '5s'` 和 `SET LOCAL row_security = off`。事务对整张 `storage.objects` 获取 `SHARE ROW EXCLUSIVE`，普通 SELECT 可继续，Storage 写入会被阻塞到事务结束。5 秒限制每次取锁等待，超时时 PostgreSQL 中止语句并使事务失败，持锁时长取决于实际校验和 DDL。HTTP 层另用 15 秒连接超时和 60 秒响应读取停滞超时。
+[PostgreSQL 表锁](https://www.postgresql.org/docs/17/explicit-locking.html) · [PostgreSQL 锁超时](https://www.postgresql.org/docs/17/runtime-config-client.html#GUC-LOCK-TIMEOUT)
+
+本机已生成 `production-migration-b-request.json`，UTF-8 JSON 3,420 字节，SHA-256 `c476d7e6e0f6345f020921a68b410ca3f9aaaddcad01677d8121a1c886ba396c`。读回 `query` 与原 Git blob 逐字节一致。获批后重算两份哈希，通过官方 API 读取九条历史及 A 的记录详情，确认版本和存储 SQL 哈希。提交前写入绑定项目、SQL 哈希及时间的一次性标记，执行如下请求一次。
+
+```powershell
+$request = 'D:\code\song\.worktrees\m3-production-plan\node_modules\.cache\songisle-m3-migration-b\production-migration-b-request.json'
+$endpoint = 'https://api.supabase.com/v1/projects/vfgmptjfcfgptaqblydd/database/migrations'
+$headers = @{ 'Idempotency-Key' = 'song-production-m3-b-28d22d496fb293bfaa731af6535a24e975ee146440f03de8eae3217a1adb25c9' }
+$response = Invoke-WebRequest -Uri $endpoint -Method Post -Authentication Bearer -Token $migrationPat `
+    -ContentType 'application/json; charset=utf-8' -InFile $request -Headers $headers `
+    -ConnectionTimeoutSeconds 15 -OperationTimeoutSeconds 60 -MaximumRedirection 0 -MaximumRetryCount 0 -SkipHttpErrorCheck
+```
+
+出现 `55P03`、SQL 错误、HTTP 超时或回执不明时，先只读核对活动事务、锁、API 及数据库历史、B 函数与触发器。若事务已结束且仍为九条历史、B 对象缺失，记录失败并暂停。若新增唯一 B 记录且哈希与对象均匹配，继续验收。历史、对象与哈希不一致或结果仍未知时保留脱敏证据，停止后续步骤。这个处置保留已验收的 A 和迁移历史。
+
+B 的验收要求十条记录，A/B 存储哈希匹配各自原件。确认触发器启用及绑定正确，函数 `SECURITY DEFINER`、所有者的 `BYPASSRLS`、空 `search_path`、`row_security=off` 和触发器限定授权均与 Staging 一致。Staging `pg_get_functiondef` 的 SHA-256 为 `db265431038d3420b1829c28a4ca46fb2a70626cf39d40beef6eb267f9c758b7`，用于读回对照。读回 M1/M2/M3 安全边界、业务指纹、两件媒体、`media` 桶和原 Storage 策略，复核 Advisor。生产验收使用目录与只读查询。覆盖、upsert、移动和字节保留的实测沿用 Staging。节点 3 待用户正式批准后执行，送审范围仅为这次 B 的单条 POST。
