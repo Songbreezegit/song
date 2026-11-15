@@ -180,7 +180,8 @@ HTTP 超时、连接中断、服务端错误或数据库锁超时后，先只读
 | 旧 Storage ZIP 离线复核 | PASS | ZIP SHA-256 和两张归档图片的长度、SHA-256 与清单一致。生产实时文件对照及复用判定待节点 1 |
 | M2 备份模板 | 静态检查通过 | 可复用连接、导出与校验，实施前按节点 1 适配八条历史、M2 表、归档内容和 Storage 分支 |
 | 生产备份 | PASS | 新数据库归档及生产一致性校验通过。两件媒体验证后复用 M2 ZIP，详见本页节点 1 回执 |
-| 生产 A/B、合并与正式发布 | 待审批 | 依次审批并验收节点 2、3、4 |
+| 生产迁移 A | PASS | 已在生产登记 `20261115085958`，详见节点 2 执行回执 |
+| 生产迁移 B、合并与正式发布 | 待审批 | 节点 2 回执审查通过后进入后续节点 |
 
 ## 节点 1 执行回执
 
@@ -256,4 +257,21 @@ $response = Invoke-WebRequest -Uri $endpoint -Method Post -Authentication Bearer
 A 的显式事务保护 DDL。若收到 `55P03`（取锁超时）、`57014`（语句取消）、连接中断或回执不明，先独立读回锁、活动事务、管理 API 及数据库历史、存储 SQL 和实际对象。八条历史且 A 对象缺失、事务已结束时，记录失败并暂停。九条历史、A 哈希及对象全匹配、事务已结束时进入验收。任一证据不一致或事务未结束时保持 `BLOCKED`，留存脱敏证据。HTTP 200 与取消信号分别需要同样的读回。已有备份用于恢复评估，回执异常时停在 A。
 [PostgreSQL 错误状态码](https://www.postgresql.org/docs/17/errcodes-appendix.html) · [迁移历史](https://supabase.com/docs/reference/api/v1-list-migration-history)
 
-验收要求生产新增且仅新增 A 一条记录，总数九条，历史与原 SQL 哈希匹配。核对三张空表、强制 RLS、六条已验证的 RESTRICT 外键、角色成员关系、Invoker RPC、Definer 所有者及授权、索引和约束。复跑 M1/M2/M3 只读 smoke、既有业务与媒体基线及 Advisor。节点 2 当前为 **待正式批准**，送审范围包括这次 A 的一个 POST 及上述限定的查询取消动作。
+验收要求生产新增且仅新增 A 一条记录，总数九条，历史与原 SQL 哈希匹配。核对三张空表、强制 RLS、六条已验证的 RESTRICT 外键、角色成员关系、Invoker RPC、Definer 所有者及授权、索引和约束。复核 M1/M2/M3 只读权限、既有业务与媒体基线及 Advisor。用户已批准这次 A 的一个 POST 及上述限定的查询取消动作。
+
+## 节点 2 执行回执
+
+2026-11-15 16:59:56–17:00:01（北京时间），依照审批提交 `0cdac3c7f8fd9404b5f58db061d9e9b752596036`，在生产 `song`（`vfgmptjfcfgptaqblydd`）单次提交迁移 A。官方 API 返回 HTTP 200，执行器退出 `0`。实际登记为 `20261115085958 / add_distribution_publish_calendar`。生产元数据和官方 API 分别读回九条记录，前八条与审批基线一致，A 的存储 SHA-256 为 `c9aa94c8a63df0fb8e521bf77c5bbb9bb71755bbf496224ea8f30dc12e260396`，与原 SQL 完全一致。请求体 SHA-256 为 `2693ae74be1e093a1e94400e8dcafb6922ce6377aa33a70aab5e94a28016cc11`。
+
+| 验收项 | 实际结果 |
+| --- | --- |
+| 备份及提交前复核 | PASS。重新核对节点 1 的归档及复用 ZIP 哈希，继续沿用。提交前的生产八条历史、15 张基础业务及 Auth、M1/M2、Storage 表的数据均与已审基线一致。 |
+| 独立监控 | PASS。生产 Direct（TLS 1.3、`verify-full`）完成 3 次就绪检查。最后一次检查的冲突锁、其他事务及等待锁客户端均为 0。提交后采样 4 次，A 的匹配等待数为 0，取消阈值未触发。验收时 A 的活动事务为 0。 |
+| 数据库对象 | PASS。三张表均为空且启用强制 RLS。生产和 Staging 的 A 对象定义一致，包括 10 条策略、6 条已验证的 RESTRICT 外键、20 条其他约束、12 个索引、6 个例程及写入角色权限。公开入口为 `SECURITY INVOKER`，私有写函数的 Definer 所有者为 `distribution_publish_writer`。B 函数和触发器均缺失。 |
+| 生产只读权限 | PASS。M1/M2 原 smoke 各五种身份通过。M3 使用纯只读目录、五种身份的 ACL 与 RLS 谓词检查，以及私有表 SELECT。自动审查拒绝了原 M3 smoke，因为其中调用了生产写入 RPC，可能进入写逻辑或获取锁。该脚本的 RPC 调用未在生产发生，实际写入路径的验收证据来自 Staging。 |
+| 既有业务与 Storage | PASS。生产验收再次对照归档，15 张表的行数与内容摘要一致。两件 PNG 的 HEAD 均为 200，类型、长度及对象清单匹配。现有公共、统计私有及 Storage 策略的指纹与预检一致。 |
+| Security Advisor | PASS。与执行前一致，仅有既有的两条 `analytics_private` RLS INFO 和一条 Auth 泄露密码防护 WARN。 |
+
+首次令牌的历史 GET 及复核均返回普通 403，生产历史保持八条，POST 次数为 0。更换仅限生产 `song` 的 Scoped PAT 后，历史核对通过，执行器记录了唯一一次迁移请求。本机安全窗口已关闭并释放凭据。
+
+节点 2 状态为 `PASS`，等待验收。
