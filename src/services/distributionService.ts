@@ -104,5 +104,8 @@ export async function saveDistributionPost(id: string, input: DistributionPostIn
 export async function deleteDistributionDraft(id: string, version: number): Promise<void> {
   configured(); distributionId(id); distributionVersion(version);
   const { error } = await supabase.from('distribution_posts').delete().eq('id', id).eq('version', version).eq('status', 'draft').select('id').single();
+  if (error && ['23503', '23001'].includes(error.code ?? '') && /distribution_publish_tasks_(post|variant)_id_fkey/.test(error.message ?? '')) {
+    throw new Error('这份内容源已有发布任务。请在发布历史查看关联记录。');
+  }
   check(error);
 }

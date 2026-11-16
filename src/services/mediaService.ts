@@ -13,6 +13,10 @@ export interface MediaItem {
   mime_type?: string;
 }
 
+export function publicMediaUrl(path: string): string {
+  return supabase.storage.from('media').getPublicUrl(path).data.publicUrl;
+}
+
 export async function uploadMedia(
   file: File,
   folder = 'uploads'
@@ -51,12 +55,8 @@ export async function uploadMedia(
     throw error;
   }
 
-  const { data: publicUrlData } = supabase.storage
-    .from('media')
-    .getPublicUrl(filePath);
-
   return {
-    url: publicUrlData.publicUrl,
+    url: publicMediaUrl(filePath),
     path: filePath,
   };
 }
@@ -92,15 +92,11 @@ export async function listMedia(folder = ''): Promise<MediaItem[]> {
       }
 
       const fullPath = folder ? `${folder}/${item.name}` : item.name;
-      const { data: publicUrlData } = supabase.storage
-        .from('media')
-        .getPublicUrl(fullPath);
-
       items.push({
         name: item.name,
         id: item.id,
         path: fullPath,
-        url: publicUrlData.publicUrl,
+        url: publicMediaUrl(fullPath),
         created_at: item.created_at || new Date().toISOString(),
         mime_type: typeof item.metadata?.mimetype === 'string' ? item.metadata.mimetype : undefined,
       });

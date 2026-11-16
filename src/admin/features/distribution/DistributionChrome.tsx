@@ -1,13 +1,15 @@
 import type { ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { FileEdit, LayoutDashboard, Users } from 'lucide-react';
+import { CalendarDays, FileEdit, History, LayoutDashboard, Users } from 'lucide-react';
 import type { DistributionPostStatus } from '../../../types/distribution';
 import { postStatusLabels } from './distributionForm';
+import { publishCalendarPath, publishHistoryPath } from './publishPaths';
 
 export function DistributionTabs() {
   return <nav className="distribution-tabs" aria-label="内容分发导航">
     {[{ to: '/admin/distribution', label: '概览', Icon: LayoutDashboard }, { to: '/admin/distribution/posts', label: '内容库', Icon: FileEdit },
-      { to: '/admin/distribution/accounts', label: '矩阵账号', Icon: Users }].map(({ to, label, Icon }, index) =>
+      { to: '/admin/distribution/accounts', label: '矩阵账号', Icon: Users }, { to: publishCalendarPath, label: '发布日历', Icon: CalendarDays },
+      { to: publishHistoryPath, label: '发布历史', Icon: History }].map(({ to, label, Icon }, index) =>
       <NavLink key={to} to={to} end={index === 0} className={({ isActive }) => `distribution-tab${isActive ? ' is-active' : ''}`}><Icon size={16} />{label}</NavLink>)}
   </nav>;
 }

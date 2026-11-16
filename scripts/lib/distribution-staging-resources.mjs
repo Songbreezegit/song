@@ -10,7 +10,7 @@ function userNotFound(result) {
   return result.error?.status === 404 && result.error.code === 'user_not_found';
 }
 
-export async function withStagingResources({ target, runId, makeAuthAdmin, signal }, run) {
+export async function withStagingResources({ target, runId, makeAuthAdmin, signal, onUserReserved }, run) {
   const key = stagingRunKey(runId);
   const scope = { project_ref: target.ref, run_id: runId };
   const users = [];
@@ -25,6 +25,7 @@ export async function withStagingResources({ target, runId, makeAuthAdmin, signa
     const fixture = { id: randomUUID(), email };
     // GoTrue accepts an explicit UUID. Keep it even if the response is lost.
     users.push(fixture);
+    onUserReserved?.(fixture.id);
     record('NEXT', 'Reserved temporary Auth user UUID', { ...scope, user_id: fixture.id });
     const { user } = dataOf(await authAdmin.createUser({
       id: fixture.id, email, password, email_confirm: true,
@@ -75,9 +76,12 @@ export async function withStagingResources({ target, runId, makeAuthAdmin, signa
         if (userNotFound(lookup)) return;
         const { user } = dataOf(lookup, 'Read Auth user before cleanup');
         check(isRunUser(user, fixture, runId), 'Cleanup must match the Auth user UUID, email and protected run marker', {}, 'P1');
-        const deletion = await authAdmin.deleteUser(fixture.id);
+        // A transport failure can happen after deletion committed. Read back
+        // before reporting a leftover user and never replay an ambiguous delete.
+        const deletion = await authAdmin.deleteUser(fixture.id).catch(error => ({ transportError: error }));
         const after = await authAdmin.getUserById(fixture.id);
         if (userNotFound(after)) return;
+        if (deletion.transportError) throw deletion.transportError;
         dataOf(deletion, 'Delete this run’s temporary Auth user');
         dataOf(after, 'Verify Auth user deletion');
         check(false, 'GoTrue still returns the temporary Auth user after deletion');

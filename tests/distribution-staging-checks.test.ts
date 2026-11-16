@@ -1,5 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { requireDenied } from '../scripts/lib/distribution-staging-checks.mjs';
+import { requireDenied, requireMissingStorageObject } from '../scripts/lib/distribution-staging-checks.mjs';
+
+describe('Staging Storage deletion readback', () => {
+  const step = 'Deleted object is unavailable';
+
+  it('accepts HTTP 404 and the observed HTTP 400 with a NoSuchKey body', async () => {
+    await expect(requireMissingStorageObject(new Response(null, { status: 404 }), step))
+      .resolves.toEqual({ http: 404, storage_status: 404 });
+    const legacy = Response.json({ statusCode: '404', error: 'not_found', code: 'NoSuchKey' }, { status: 400 });
+    await expect(requireMissingStorageObject(legacy, step)).resolves.toEqual({ http: 400, storage_status: 404 });
+  });
+
+  it('rejects an unrelated error, a different missing resource, or a readable file', async () => {
+    for (const response of [
+      Response.json({ statusCode: '400', code: 'InvalidKey' }, { status: 400 }),
+      Response.json({ statusCode: '404', code: 'NoSuchBucket' }, { status: 400 }),
+      Response.json({ code: 'NoSuchBucket' }, { status: 404 }),
+      Response.json({ statusCode: '404' }, { status: 400 }),
+      new Response('not JSON', { status: 400 }),
+      new Response('file bytes', { status: 200 }),
+    ]) {
+      await expect(requireMissingStorageObject(response, step)).rejects.toThrow(step);
+    }
+  });
+});
 
 describe('Staging association INSERT probes', () => {
   const step = 'distribution_post_targets INSERT';
