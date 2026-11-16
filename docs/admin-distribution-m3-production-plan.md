@@ -182,7 +182,7 @@ HTTP 超时、连接中断、服务端错误或数据库锁超时后，先只读
 | 生产备份 | PASS | 新数据库归档及生产一致性校验通过。两件媒体验证后复用 M2 ZIP，详见本页节点 1 回执 |
 | 生产迁移 A | PASS | 已在生产登记 `20261115085958`，详见节点 2 执行回执 |
 | 生产迁移 B | PASS | 已在生产登记 `20261115181800`，详见节点 3 执行回执 |
-| 合并与正式发布 | 待正式批准 | 节点 3 已验收，联合发布预检通过，见节点 4 审批材料 |
+| 合并与正式发布 | 部署 PASS，管理员冒烟待补 | PR #13 已合并，新 Worker 承接 100% 正式流量，见节点 4 正式发布回执 |
 
 ## 节点 1 执行回执
 
@@ -365,4 +365,22 @@ B 的验收要求十条记录，A/B 存储哈希匹配各自原件。确认触�
 3. 只读冒烟覆盖首页、公开项目与既有素材、后台登录入口、匿名后台重定向及分发 API 拒绝。现有管理员完成 TOTP 后，在其会话内核对 M1 内容分发、M2 平台稿、M3 `/admin/distribution/calendar` 与 `/admin/distribution/history` 可读取并正常导航，核对空态或现有数据。记录正式时点的结果。
 4. 若新版本已切流且出现正式站不可用、鉴权越界、错误 Supabase 绑定或核心后台不可用，按联合授权进入 Cloudflare 的 `song` → Deployments，在稳定版本 `493cb30a-b84e-4b5c-bd9f-6d19f49017b7` 的菜单选择 Rollback，恢复该版本的 100% 流量。复核 Active deployment、正式域入口脚本、公开页面和后台权限。回退范围为 Worker 流量，生产 M3 的 A、B 迁移保留。 [Cloudflare 回退流程](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/#via-the-cloudflare-dashboard)
 
-节点 4 待用户正式批准。
+节点 4 的联合发布及条件回退已获用户明确批准。
+
+## 节点 4 正式发布回执
+
+2026-11-16 12:03:35（北京时间），按用户批准的方案提交 `b34324b576d56b4c22d4b5a942675a63d89b4e05` 执行联合发布。PR #13 转 Ready 后以 merge commit 合入 `main`，合并 SHA 为 `d86dbd8eee09c31b808dbc489d34726c4f198a57`。两个父提交依次为 `e6e2f8ec481dbdc64fe5ae790aceaebab5523414` 和 `8de09e348349c148c79fad5694d89006b5673eb7`，合并树 `44f2c4f3571b752eef135e29030a0d04a8705f4d` 与验收树一致。 [合并回执](https://github.com/Songbreezegit/song/pull/13) · [正式 main 提交](https://github.com/Songbreezegit/song/commit/d86dbd8eee09c31b808dbc489d34726c4f198a57)
+
+Cloudflare 自动构建 `b4b83acb-cf24-4dd5-9906-a8751da54a20` 由该 `main` 提交触发，构建用时 56 秒，12:04:35 的 GitHub 检查为 `SUCCESS`。构建日志确认 `npx wrangler deploy` 成功，Active deployment 显示 Worker `0d80345e-1720-416e-8f6f-c27d186c219f` 承接 `songisle.xyz` 的 100% 流量。 [Cloudflare 正式构建](https://dash.cloudflare.com/6ec81bfad4c5f66bb3a8901caefd1ee1/workers/services/view/song/production/builds/b4b83acb-cf24-4dd5-9906-a8751da54a20) · [GitHub 检查](https://github.com/Songbreezegit/song/commit/d86dbd8eee09c31b808dbc489d34726c4f198a57/checks)
+
+| 正式验收项 | 结果 |
+| --- | --- |
+| 正式域和公开数据 | PASS。首页、公开项目列表与礼账详情入口、后台登录入口的 HTTP 请求均为 200。公开 `projects` 查询读到一条项目记录，M3 的三份路由脚本均返回 HTTP 200 与 JavaScript 类型。 |
+| 产物与 Supabase | PASS。正式域及新 Worker 版本预览均提供 `index-D13p-8zH.js`，SHA-256 为 `d973cf08401e294d35f514423e0acb224f9c451263a0ff71bd40d42091ef2743`，与验收预览一致。编译产物及公开客户端请求均指向生产 `song`（`vfgmptjfcfgptaqblydd`）。两件现有 PNG 均为 200，文件字节 SHA-256 与节点 1 的既有 ZIP 一致。 |
+| 匿名权限 | PASS。Chrome 实测内容库、发布日历和发布历史均跳转到 `/admin/login`。用新正式产物的公开客户端凭据对 M1 账号、M2 平台稿、M3 任务与发布日志执行匿名读取，均返回 HTTP 401 / `42501`。 |
+| 管理员 MFA 和后台 | BLOCKED。正式站登录表单已渲染，已将 Chrome 登录页交给现有管理员，等待其在正式站完成 TOTP。登录后的 M1、M2、M3 浏览器验收待补。 |
+| 数据库 | PASS。生产十条迁移的版本、名称和 SQL 哈希与节点 3 验收一致。三张 M3 表仍为空且强制 RLS。历史媒体保护函数和触发器在位，`media` 版本管理为 `DISABLED`。继续沿用节点 1 的归档。 |
+
+公开页面采用 HTTP 与公开数据、素材的只读检查，后台采用 Chrome 冒烟。上述状态是本次发布验收的时间快照。
+
+上线后已完成的检查未触发严重故障回退条件。正式发布保留生产迁移，当前待补项为管理员 TOTP 后的功能读取与导航。
